@@ -1,0 +1,10 @@
+[
+  {
+    "agent": "pancakeswap-v3-rebalancer",
+    "params": {
+      "pool": "0x36696169C63e42cd08ce11f5deeBbCeBae652050",
+      "tickLower": "-67000",
+      "tickUpper": "-65000"
+    }
+  }
+]
