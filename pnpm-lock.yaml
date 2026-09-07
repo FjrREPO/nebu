@@ -23,6 +23,12 @@ importers:
       '@nebu/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@nebu/plugin-lending':
+        specifier: workspace:*
+        version: link:../../packages/plugins/lending
+      '@nebu/plugin-pancakeswap':
+        specifier: workspace:*
+        version: link:../../packages/plugins/pancakeswap
       '@nebu/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins/registry

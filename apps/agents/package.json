@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@nebu/core": "workspace:*",
-    "@nebu/plugins": "workspace:*"
+    "@nebu/plugins": "workspace:*",
+    "@nebu/plugin-lending": "workspace:*",
+    "@nebu/plugin-pancakeswap": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.20.6",
