@@ -1,0 +1,29 @@
+{
+  "name": "@nebu/app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "biome-write": "npx @biomejs/biome format --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@once-ui-system/core": "^1.7.6",
+    "classnames": "^2.5.1",
+    "next": "^16.2.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-icons": "^5.2.1",
+    "sass": "^1.77.6",
+    "sharp": "^0.33.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.9.4",
+    "@types/node": "20.17.23",
+    "@types/react": "19.0.1",
+    "@types/react-dom": "19.0.2",
+    "typescript": "5.8.2"
+  }
+}
