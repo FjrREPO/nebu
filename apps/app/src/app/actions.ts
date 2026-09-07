@@ -1,6 +1,6 @@
 "use server";
 
-import type { AgentParams, AgentStatus } from "@nebu/core";
+import type { AgentParams, AgentStatus, SessionScope } from "@nebu/core";
 import { POSITION_MANAGER, positionsOf } from "@nebu/plugin-pancakeswap";
 import { findPlugin, plugins } from "@nebu/plugins";
 import type { WirePlan } from "@/lib/types";
@@ -101,6 +101,20 @@ export async function scanWallet(wallet: string): Promise<ActionResult<Portfolio
         }),
       ),
     };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** The narrowest permissions a session needs for this agent to work. */
+export async function agentScope(
+  id: string,
+  params: AgentParams,
+): Promise<ActionResult<SessionScope>> {
+  const plugin = findPlugin(id);
+  if (!plugin) return { ok: false, error: "unknown agent" };
+  try {
+    return { ok: true, data: await plugin.scope(params) };
   } catch (err) {
     return fail(err);
   }

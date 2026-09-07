@@ -1,0 +1,24 @@
+{
+  "name": "@nebu/session",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "demo": "tsx src/demo.ts"
+  },
+  "dependencies": {
+    "@altananetwork/sdk": "^0.9.0",
+    "@nebu/core": "workspace:*",
+    "viem": "^2.40.0",
+    "@nebu/plugin-lending": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

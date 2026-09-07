@@ -14,6 +14,7 @@ const CONTRACTS = [
   ["PancakeSwap smart router", "0x13f4EA83D0bd40E75C8222255bc855a974568Dd4"],
   ["Aave V3 pool", "0x6807dc923806fE8Fd134338EABCA509979a7e0cB"],
   ["Venus comptroller", "0xfD36E2c2a6789Db23113685031d7F16329158384"],
+  ["Altana KeyStore (session grants)", "see @altananetwork/sdk BNB config"],
 ];
 
 export default async function StatusPage() {
@@ -115,6 +116,8 @@ export default async function StatusPage() {
             "Public BSC endpoints reject getLogs over roughly 20,000 blocks, so activity feeds cover the last 9,000.",
             "Fee APR is annualised from one day of volume against current liquidity — it is an estimate, and the page says so.",
             "Set BSC_RPC_URL to a private endpoint before pointing real traffic at this.",
+            "Sessions default to BNB testnet: a grant registers a key on chain and costs a fee. Set NEXT_PUBLIC_SESSION_NETWORK=mainnet to grant against the live protocols.",
+            "A session key is held in your browser. It is scoped to the agent's contracts, capped per day and expiring — but it is still a key, so revoke when you are done.",
           ].map((limit) => (
             <Row key={limit} gap="12" vertical="start">
               <Text variant="code-default-s" onBackground="neutral-weak">

@@ -64,6 +64,28 @@ export type ActivityEntry = {
   hash?: string;
 };
 
+/** A contract the session may call, and why. */
+export type ScopedCall = { to: `0x${string}`; label: string };
+
+/** A token the session may move, with a cap the user sets before granting. */
+export type ScopedSpend = {
+  token: `0x${string}`;
+  symbol: string;
+  decimals: number;
+  /** A sensible starting cap, in whole tokens, that the user can lower. */
+  suggested: string;
+};
+
+/**
+ * Exactly what a session key needs to be allowed to do for this agent to work,
+ * and nothing else. Derived from the same params plan() will use, so the grant
+ * cannot drift from the calls the agent actually makes.
+ */
+export type SessionScope = {
+  calls: ScopedCall[];
+  spend: ScopedSpend[];
+};
+
 /** Everything the agent detail page shows beyond a headline. */
 export type AgentInsights = {
   stats: StatTile[];
@@ -88,6 +110,8 @@ export interface AgentPlugin {
   status(params: AgentParams): Promise<AgentStatus>;
   /** The agent's working data for its detail page. */
   insights(params: AgentParams): Promise<AgentInsights>;
+  /** The narrowest session permissions under which plan() can still run. */
+  scope(params: AgentParams): Promise<SessionScope>;
   /** The tx to run, or null when there is nothing to do. */
   plan(params: AgentParams): Promise<AgentAction | null>;
 }

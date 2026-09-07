@@ -6,6 +6,7 @@ import { buildPlan, readStatus } from "@/app/actions";
 import type { AgentMeta, AgentStatus, WirePlan } from "@/lib/types";
 import { connect, sendPlan } from "@/lib/wallet";
 import { Frame } from "./Frame";
+import { SessionPanel } from "./SessionPanel";
 import { SpecLabel } from "./SpecLabel";
 
 type Phase = "idle" | "reading" | "planning" | "signing";
@@ -78,8 +79,8 @@ export function AgentRunner({
             {account ? `Connected ${short(account)}` : "Connect to run this agent"}
           </Text>
           <Text variant="body-default-s" onBackground="neutral-weak">
-            The agent reads your position and hands back the transactions. You sign each one from
-            your own wallet — nothing is delegated, and nothing can move out of your control.
+            Read the position and get the transactions back, then sign them yourself. Or grant the
+            agent a scoped session below and let it act on its own inside your limits.
           </Text>
         </Column>
 
@@ -134,6 +135,8 @@ export function AgentRunner({
           </Row>
         </Column>
       </Frame>
+
+      <SessionPanel agent={agent} params={params} />
 
       {status && (
         <Frame fillWidth radius="m" padding="20" gap="8">

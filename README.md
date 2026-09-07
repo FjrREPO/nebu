@@ -38,6 +38,38 @@ volume, swap rate and pool age before an agent will touch a pool.
 See [`docs/agent-advantage-report.md`](docs/agent-advantage-report.md) for three
 tasks measured against doing them by hand.
 
+## Two ways to run an agent
+
+**Sign it yourself.** `plan()` returns the transactions, your wallet signs them.
+Nothing is delegated.
+
+**Hire it.** Grant a scoped [Altana](https://docs.altana.network) session and
+the agent transacts on its own inside limits you set:
+
+```ts
+scope(params) -> {
+  calls: [{ to: "0x46A1…", label: "PancakeSwap position manager" }, …],
+  spend: [{ token: "0x55d3…", symbol: "USDT", decimals: 18, suggested: "270.87" }],
+}
+```
+
+Every agent derives that scope from the same params `plan()` uses, so the grant
+cannot drift from the calls the agent actually makes. The account contract
+enforces it — a call outside the grant reverts at validation, spend caps roll
+per day, the session expires on its own, and revoking is one transaction that
+takes effect immediately.
+
+Sessions default to BNB testnet, since a grant registers a key on chain and
+costs a fee. Prove the lifecycle end to end:
+
+```bash
+NEBU_ADMIN_KEY=0x... pnpm --filter @nebu/session demo
+```
+
+That grants, reads the key back out of the on-chain KeyStore, has the session
+sign a transaction with no admin signature, revokes, and reads the KeyStore
+again.
+
 ## Layout
 
 ```
@@ -48,6 +80,7 @@ apps/
   agents    headless runner that ticks a watchlist on an interval
 packages/
   core      plugin contract, shared BSC client, param validation
+  session   Altana session keys: grant, run, revoke
   plugins/
     pancakeswap  rebalancer + grid trader
     lending      yield router + health guard (Aave V3, Venus)
@@ -66,6 +99,8 @@ interface AgentPlugin {
   paramSchema: ParamSpec[];
   example: AgentParams;                        // live params for the card
   status(params): Promise<AgentStatus>;        // what is true right now
+  insights(params): Promise<AgentInsights>;    // the data it decided from
+  scope(params): Promise<SessionScope>;        // narrowest session that works
   plan(params): Promise<AgentAction | null>;   // the txs, or null if idle
 }
 ```

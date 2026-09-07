@@ -10,6 +10,7 @@ import {
   recentActivity,
   requireAddress,
   requireNumber,
+  type SessionScope,
 } from "@nebu/core";
 import {
   type Address,
@@ -239,6 +240,35 @@ export const healthMonitor: AgentPlugin = {
         : `At risk: ${account.healthFactor.toFixed(2)}`,
       detail: `$${account.collateralBase.toFixed(2)} collateral against $${account.debtBase.toFixed(2)} debt, liquidates below 1.00, your floor is ${account.minHealthFactor}`,
       actionable: !safe,
+    };
+  },
+
+  async scope(params): Promise<SessionScope> {
+    const account = await loadAccount(params);
+    const debt = await largestDebt(account.wallet).catch(() => null);
+    if (!debt) return { calls: [{ to: AAVE_POOL, label: "Aave V3 pool" }], spend: [] };
+
+    const repayBase = repayToReachHealth(
+      account.collateralBase,
+      account.debtBase,
+      account.thresholdBps,
+      account.minHealthFactor,
+    );
+    const price = Number(formatUnits(debt.price, BASE_DECIMALS));
+    return {
+      calls: [
+        { to: AAVE_POOL, label: "Aave V3 pool" },
+        { to: debt.asset, label: `${debt.symbol} token` },
+      ],
+      spend: [
+        {
+          token: debt.asset,
+          symbol: debt.symbol,
+          decimals: debt.decimals,
+          // Cap at the repayment that restores the floor, not the whole debt.
+          suggested: (price > 0 ? repayBase / price : 0).toPrecision(6),
+        },
+      ],
     };
   },
 

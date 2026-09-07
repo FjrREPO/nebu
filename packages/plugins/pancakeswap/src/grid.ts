@@ -9,6 +9,7 @@ import {
   requireAddress,
   requireInt,
   requireNumber,
+  type SessionScope,
 } from "@nebu/core";
 import { encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { erc20Abi, poolAbi, SMART_ROUTER, smartRouterAbi } from "./abi.ts";
@@ -218,6 +219,31 @@ export const pancakeGrid: AgentPlugin = {
           : "Balanced",
       detail: `${market.meta0.symbol}/${market.meta1.symbol} at ${formatPrice(market.price)} · holding ${(market.held * 100).toFixed(1)}% ${market.meta1.symbol}, ladder wants ${(market.target * 100).toFixed(1)}%`,
       actionable: !outside && Math.abs(off) > tolerance(market) && market.total > 0,
+    };
+  },
+
+  async scope(params): Promise<SessionScope> {
+    const market = await loadMarket(params);
+    return {
+      calls: [
+        { to: SMART_ROUTER, label: "PancakeSwap smart router" },
+        { to: market.meta0.address, label: `${market.meta0.symbol} token` },
+        { to: market.meta1.address, label: `${market.meta1.symbol} token` },
+      ],
+      spend: [
+        {
+          token: market.meta0.address,
+          symbol: market.meta0.symbol,
+          decimals: market.meta0.decimals,
+          suggested: (market.total / market.price / market.grids).toPrecision(4),
+        },
+        {
+          token: market.meta1.address,
+          symbol: market.meta1.symbol,
+          decimals: market.meta1.decimals,
+          suggested: (market.total / market.grids).toPrecision(4),
+        },
+      ],
     };
   },
 

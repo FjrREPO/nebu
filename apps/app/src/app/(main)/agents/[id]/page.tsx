@@ -102,7 +102,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                   ["Category", category?.label ?? agent.category],
                   ["Venue", agent.protocol],
                   ["Chain", `BNB Smart Chain (${agent.chainId})`],
-                  ["Custody", "Non-custodial — you sign every transaction"],
+                  ["Custody", "Non-custodial — you sign, or a capped session key does"],
                   ["Registry", "nebu"],
                 ].map(([label, value]) => (
                   <Row key={label} fillWidth horizontal="between" gap="16" padding="16">

@@ -21,7 +21,9 @@
     "@nebu/plugins": "workspace:*",
     "viem": "^2.40.0",
     "@nebu/plugin-pancakeswap": "workspace:*",
-    "@nebu/plugin-lending": "workspace:*"
+    "@nebu/plugin-lending": "workspace:*",
+    "@nebu/session": "workspace:*",
+    "@altananetwork/sdk": "^0.9.0"
   },
   "devDependencies": {
     "@types/node": "20.17.23",

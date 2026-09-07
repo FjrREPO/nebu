@@ -9,6 +9,7 @@ import {
   recentActivity,
   requireAddress,
   requireInt,
+  type SessionScope,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { AAVE_POOL, erc20Abi, liquidityRateToApy, poolAbi, reserveData } from "./aave.ts";
@@ -235,6 +236,28 @@ export const yieldOptimizer: AgentPlugin = {
           : "Nothing supplied yet",
       detail: `${market.symbol}: ${quotes}${funded.length ? ` · holding ${funded[0].supplied.toPrecision(6)} on ${funded[0].protocol}` : ""}`,
       actionable: move !== null,
+    };
+  },
+
+  async scope(params): Promise<SessionScope> {
+    const market = await loadMarket(params);
+    const calls = [
+      { to: AAVE_POOL, label: "Aave V3 pool" },
+      { to: market.asset, label: `${market.symbol} token` },
+    ];
+    if (market.vToken) calls.push({ to: market.vToken, label: `Venus v${market.symbol} market` });
+
+    const funded = market.venues.find((venue) => venue.supplied > 0);
+    return {
+      calls,
+      spend: [
+        {
+          token: market.asset,
+          symbol: market.symbol,
+          decimals: market.decimals,
+          suggested: funded ? funded.supplied.toPrecision(6) : "0",
+        },
+      ],
     };
   },
 

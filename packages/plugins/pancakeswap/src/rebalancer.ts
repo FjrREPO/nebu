@@ -8,6 +8,7 @@ import {
   InvalidParams,
   recentActivity,
   requireInt,
+  type SessionScope,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, maxUint128, parseAbiItem } from "viem";
 import { erc20Abi, POSITION_MANAGER, poolAbi, positionManagerAbi } from "./abi.ts";
@@ -174,6 +175,31 @@ export const pancakeRebalancer: AgentPlugin = {
       headline: live ? "In range, earning fees" : "Out of range, earning nothing",
       detail: describe(position),
       actionable: !live && position.liquidity > 0n,
+    };
+  },
+
+  async scope(params): Promise<SessionScope> {
+    const position = await loadPosition(tokenId(params));
+    return {
+      calls: [
+        { to: POSITION_MANAGER, label: "PancakeSwap position manager" },
+        { to: position.token0, label: `${position.meta0.symbol} token` },
+        { to: position.token1, label: `${position.meta1.symbol} token` },
+      ],
+      spend: [
+        {
+          token: position.token0,
+          symbol: position.meta0.symbol,
+          decimals: position.meta0.decimals,
+          suggested: "0",
+        },
+        {
+          token: position.token1,
+          symbol: position.meta1.symbol,
+          decimals: position.meta1.decimals,
+          suggested: "0",
+        },
+      ],
     };
   },
 
