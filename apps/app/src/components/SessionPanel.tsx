@@ -1,6 +1,6 @@
 "use client";
 
-import { BNB, BNB_TESTNET, createClient } from "@altananetwork/sdk";
+import { BNB, BNB_TESTNET, createClient, type PasskeySigner } from "@altananetwork/sdk";
 import type { SessionScope } from "@nebu/core";
 import {
   expiresAt,
@@ -29,6 +29,8 @@ const short = (address: string) => `${address.slice(0, 8)}…${address.slice(-6)
 
 type Phase = "idle" | "wallet" | "granting" | "running" | "revoking";
 
+type AgentWallet = { address: `0x${string}`; signer: PasskeySigner };
+
 export function SessionPanel({
   agent,
   params,
@@ -44,6 +46,8 @@ export function SessionPanel({
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [ranTx, setRanTx] = useState<string | null>(null);
+  // Cached so grant/run/revoke do not each fire their own passkey prompt.
+  const [agentWallet, setAgentWallet] = useState<AgentWallet | null>(null);
 
   useEffect(() => setGrant(readGrant(agent.id)), [agent.id]);
 
@@ -66,21 +70,27 @@ export function SessionPanel({
    * agent wallet is a passkey wallet. It is still the user's: the passkey
    * lives in their device, and only they can grant or revoke.
    */
+  async function openWallet(): Promise<AgentWallet> {
+    if (agentWallet) return agentWallet;
+    const client = createClient({ chains: [NETWORK_CONFIG] });
+    const wallet = await client
+      .recoverFromPasskey({ chainId: NETWORK_CONFIG.chainId })
+      .catch(() => client.createPasskeyWallet({ name: "nebu" }));
+    const opened: AgentWallet = { address: wallet.address, signer: wallet.signer };
+    setAgentWallet(opened);
+    return opened;
+  }
+
   async function connectWallet() {
     setPhase("wallet");
     setError(null);
     try {
-      const client = createClient({ chains: [NETWORK_CONFIG] });
-      const wallet = await client
-        .recoverFromPasskey({ chainId: NETWORK_CONFIG.chainId })
-        .catch(() => client.createPasskeyWallet({ name: "nebu" }));
+      const wallet = await openWallet();
       setNote(
-        `Agent wallet ${short(wallet.address)} ready. Fund it with a little BNB before granting.`,
+        `Agent wallet ${short(wallet.address)} ready. Fund it with a little BNB — the grant registers a key on chain.`,
       );
-      return wallet;
     } catch (err) {
       setError((err as Error).message.split("\n")[0]);
-      return null;
     } finally {
       setPhase("idle");
     }
@@ -92,10 +102,7 @@ export function SessionPanel({
     setError(null);
     setNote(null);
     try {
-      const client = createClient({ chains: [NETWORK_CONFIG] });
-      const wallet = await client
-        .recoverFromPasskey({ chainId: NETWORK_CONFIG.chainId })
-        .catch(() => client.createPasskeyWallet({ name: "nebu" }));
+      const wallet = await openWallet();
 
       const result = await grantAgentSession({
         network: NETWORK,
@@ -158,8 +165,7 @@ export function SessionPanel({
     setPhase("revoking");
     setError(null);
     try {
-      const client = createClient({ chains: [NETWORK_CONFIG] });
-      const wallet = await client.recoverFromPasskey({ chainId: NETWORK_CONFIG.chainId });
+      const wallet = await openWallet();
       await revokeAgentSession(
         grant.network,
         { address: grant.walletAddress },
