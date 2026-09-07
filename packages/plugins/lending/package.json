@@ -1,5 +1,5 @@
 {
-  "name": "@nebu/plugins",
+  "name": "@nebu/plugin-lending",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,15 +7,16 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx src/venue.test.ts"
   },
   "dependencies": {
     "@nebu/core": "workspace:*",
-    "@nebu/plugin-pancakeswap": "workspace:*",
-    "@nebu/plugin-lending": "workspace:*"
+    "viem": "^2.40.0"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "@types/node": "^24.9.2"
+    "@types/node": "^24.9.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }

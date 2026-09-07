@@ -7,7 +7,6 @@ const PUBLIC_RPCS = [
   "https://bsc-dataseed1.defibit.io",
   "https://bsc-dataseed1.ninicoin.io",
   "https://bsc-rpc.publicnode.com",
-  "https://binance.llamarpc.com",
 ];
 
 const endpoints = process.env.BSC_RPC_URL ? [process.env.BSC_RPC_URL] : PUBLIC_RPCS;
