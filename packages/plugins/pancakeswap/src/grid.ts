@@ -121,6 +121,13 @@ export const pancakeGrid: AgentPlugin = {
     { key: "upperPrice", label: "Upper price", placeholder: "0.0016" },
     { key: "grids", label: "Grid lines", placeholder: "10" },
   ],
+  example: {
+    pool: "0x36696169C63e42cd08ce11f5deeBbCeBae652050",
+    wallet: "0x8894E0a0c962CB723c1976a4421c95949bE2D4E3",
+    lowerPrice: "0.001",
+    upperPrice: "0.002",
+    grids: "10",
+  },
 
   async status(params): Promise<AgentStatus> {
     const market = await loadMarket(params);

@@ -144,6 +144,11 @@ export const yieldOptimizer: AgentPlugin = {
     { key: "wallet", label: "Wallet", placeholder: "0x..." },
     { key: "minGainBps", label: "Min gain (bps)", placeholder: "25" },
   ],
+  example: {
+    asset: "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409",
+    wallet: "0x498BeCEFB57f9a551E6E91941AaA48329caE5baF",
+    minGainBps: "25",
+  },
 
   async status(params): Promise<AgentStatus> {
     const market = await loadMarket(params);

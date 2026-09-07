@@ -50,6 +50,8 @@ export interface AgentPlugin {
   /** One-line pitch for the marketplace card. */
   summary: string;
   paramSchema: ParamSpec[];
+  /** Live params the marketplace card uses so a visitor sees real data first. */
+  example: AgentParams;
   status(params: AgentParams): Promise<AgentStatus>;
   /** The tx to run, or null when there is nothing to do. */
   plan(params: AgentParams): Promise<AgentAction | null>;

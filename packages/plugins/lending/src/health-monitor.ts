@@ -97,6 +97,7 @@ export const healthMonitor: AgentPlugin = {
     { key: "wallet", label: "Wallet", placeholder: "0x..." },
     { key: "minHealthFactor", label: "Minimum health factor", placeholder: "1.5" },
   ],
+  example: { wallet: "0x1e01000ba272c96013c913a6a6bC61722E24E9EB", minHealthFactor: "1.5" },
 
   async status(params): Promise<AgentStatus> {
     const account = await loadAccount(params);

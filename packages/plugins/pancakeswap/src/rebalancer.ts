@@ -91,6 +91,7 @@ export const pancakeRebalancer: AgentPlugin = {
   summary:
     "Watches a concentrated liquidity position and recentres its range on the live pool price when it drifts out and stops earning fees.",
   paramSchema: [{ key: "tokenId", label: "Position NFT id", placeholder: "7366225" }],
+  example: { tokenId: "7366237" },
 
   async status(params): Promise<AgentStatus> {
     const position = await loadPosition(tokenId(params));

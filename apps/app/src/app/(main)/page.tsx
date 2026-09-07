@@ -1,19 +1,16 @@
-import {
-  Badge,
-  Button,
-  Column,
-  Heading,
-  LetterFx,
-  Line,
-  Logo,
-  Schema,
-  Text,
-} from "@once-ui-system/core";
+import { Badge, Column, Heading, Line, Row, Schema, Text } from "@once-ui-system/core";
+import { Marketplace, WalletBar } from "@/components";
+import { agentCards } from "@/lib/agents";
 import { baseURL, meta } from "@/resources/seo";
 
-export default function Home() {
+/** Card numbers are read from chain, so let them go stale for a minute at most. */
+export const revalidate = 60;
+
+export default async function Home() {
+  const agents = await agentCards();
+
   return (
-    <Column fillWidth minHeight="100vh" center padding="l">
+    <Column fillWidth horizontal="center" paddingX="l" paddingY="24" gap="40">
       <Schema
         as="webPage"
         baseURL={baseURL}
@@ -21,40 +18,33 @@ export default function Home() {
         description={meta.home.description}
         path={meta.home.path}
       />
-      <Column maxWidth="s" horizontal="center" gap="l" align="center">
+
+      <Row fillWidth maxWidth="l" horizontal="between" vertical="center" gap="16">
+        <Text variant="heading-strong-m">nebu</Text>
+        <WalletBar />
+      </Row>
+
+      <Column maxWidth="m" horizontal="center" gap="16" align="center">
         <Badge
-          textVariant="code-default-s"
+          textVariant="label-default-s"
           border="neutral-alpha-medium"
           onBackground="neutral-medium"
-          vertical="center"
-          gap="16"
         >
-          <Logo dark icon="/trademarks/wordmark-dark.svg" href="https://once-ui.com" size="xs" />
-          <Logo light icon="/trademarks/wordmark-light.svg" href="https://once-ui.com" size="xs" />
-          <Line vert background="neutral-alpha-strong" />
-          <Text marginX="4">
-            <LetterFx trigger="instant">An ecosystem, not a UI kit</LetterFx>
-          </Text>
+          Agent marketplace for BNB Smart Chain
         </Badge>
-        <Heading variant="display-strong-xl" marginTop="24">
-          Presence that doesn't beg for attention
+        <Heading variant="display-strong-l" align="center">
+          Smart money, without the smart friends
         </Heading>
-        <Text
-          variant="heading-default-xl"
-          onBackground="neutral-weak"
-          wrap="balance"
-          marginBottom="16"
-        >
-          Build with clarity, speed, and quiet confidence
+        <Text variant="body-default-l" onBackground="neutral-weak" align="center">
+          Four agents that watch your positions on BNB Chain and hand you the exact transactions to
+          fix them. Every number on this page was read from mainnet, not written by hand.
         </Text>
-        <Button
-          id="docs"
-          href="https://docs.once-ui.com/once-ui/quick-start"
-          data-border="rounded"
-          arrowIcon
-        >
-          Explore docs
-        </Button>
+      </Column>
+
+      <Line background="neutral-alpha-weak" maxWidth="l" />
+
+      <Column fillWidth maxWidth="l">
+        <Marketplace agents={agents} />
       </Column>
     </Column>
   );
