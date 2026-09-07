@@ -19,15 +19,19 @@ app.get("/health", (c) => c.json({ ok: true, agents: plugins.length }));
 
 app.get("/agents", (c) =>
   c.json(
-    plugins.map(({ id, name, category, protocol, chainId, summary, paramSchema }) => ({
-      id,
-      name,
-      category,
-      protocol,
-      chainId,
-      summary,
-      paramSchema,
-    })),
+    plugins.map(
+      ({ id, name, category, protocol, chainId, summary, grants, paramSchema, example }) => ({
+        id,
+        name,
+        category,
+        protocol,
+        chainId,
+        summary,
+        grants,
+        paramSchema,
+        example,
+      }),
+    ),
   ),
 );
 
@@ -37,6 +41,17 @@ app.get("/agents/:id/status", async (c) => {
 
   try {
     return c.json(await plugin.status(c.req.query()));
+  } catch (err) {
+    return fail(c, err);
+  }
+});
+
+app.get("/agents/:id/insights", async (c) => {
+  const plugin = findPlugin(c.req.param("id"));
+  if (!plugin) return c.json({ error: "unknown agent" }, 404);
+
+  try {
+    return c.json(await plugin.insights(c.req.query()));
   } catch (err) {
     return fail(c, err);
   }

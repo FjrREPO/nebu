@@ -1,14 +1,16 @@
 import {
   type AgentAction,
+  type AgentInsights,
   type AgentPlugin,
   type AgentStatus,
   bscClient,
   InvalidParams,
+  recentActivity,
   requireAddress,
   requireInt,
   requireNumber,
 } from "@nebu/core";
-import { encodeFunctionData, formatUnits, parseUnits } from "viem";
+import { encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { erc20Abi, poolAbi, SMART_ROUTER, smartRouterAbi } from "./abi.ts";
 import { formatPrice, slot0, tickToPrice, tokenMeta } from "./pool.ts";
 
@@ -127,6 +129,79 @@ export const pancakeGrid: AgentPlugin = {
     lowerPrice: "0.001",
     upperPrice: "0.002",
     grids: "10",
+  },
+  grants: [
+    "Reads the pool price and your balance of the two pool tokens",
+    "Swaps only between those two tokens, on the pool you named",
+    "Approves the router for the exact swap amount, never an unlimited allowance",
+    "Every swap carries a 1% floor on the amount received",
+  ],
+
+  async insights(params): Promise<AgentInsights> {
+    const market = await loadMarket(params);
+    const lines = gridLines(market.lower, market.upper, market.grids);
+    const step = (market.upper / market.lower) ** (1 / market.grids) - 1;
+    const off = drift(market);
+
+    return {
+      stats: [
+        {
+          label: "Spot",
+          value: formatPrice(market.price),
+          hint: `${market.meta0.symbol}/${market.meta1.symbol}`,
+        },
+        {
+          label: "Cell width",
+          value: `${(step * 100).toFixed(2)}%`,
+          hint: `${market.grids} cells`,
+        },
+        {
+          label: "Ladder target",
+          value: `${(market.target * 100).toFixed(1)}%`,
+          hint: `${market.meta1.symbol} share`,
+        },
+        {
+          label: "Drift",
+          value: `${(off * 100).toFixed(1)}%`,
+          hint: Math.abs(off) > tolerance(market) ? "past the trigger" : "inside tolerance",
+        },
+      ],
+      table: {
+        title: "Ladder",
+        caption:
+          "Geometric grid lines across your range. The agent trades the line the price crosses, holding more quote as it climbs.",
+        columns: [
+          { key: "level", label: "Line" },
+          { key: "price", label: "Price", align: "end" },
+          { key: "side", label: "Side", align: "end" },
+          { key: "distance", label: "From spot", align: "end" },
+        ],
+        rows: lines.map((line, index) => ({
+          id: `line-${index}`,
+          level: String(index).padStart(2, "0"),
+          price: formatPrice(line),
+          side: line < market.price ? "buy" : "sell",
+          distance: `${(((line - market.price) / market.price) * 100).toFixed(2)}%`,
+        })),
+      },
+      activity: await recentActivity([
+        {
+          address: requireAddress(params, "pool"),
+          kind: "SWAP",
+          event: parseAbiItem(
+            "event Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick, uint128 protocolFeesToken0, uint128 protocolFeesToken1)",
+          ),
+          describe: (args) => {
+            const amount0 = args.amount0 as bigint;
+            const bought = amount0 < 0n;
+            const size = Number(
+              formatUnits(amount0 < 0n ? -amount0 : amount0, market.meta0.decimals),
+            );
+            return `${bought ? "Bought" : "Sold"} ${size.toPrecision(5)} ${market.meta0.symbol} at tick ${args.tick}`;
+          },
+        },
+      ]).catch(() => []),
+    };
   },
 
   async status(params): Promise<AgentStatus> {

@@ -1,0 +1,7 @@
+[build]
+  base = "apps/app"
+  command = "pnpm build"
+  publish = "apps/app/.next"
+
+[build.environment]
+  NODE_VERSION = "22"

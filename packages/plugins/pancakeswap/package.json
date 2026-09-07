@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/pool.test.ts && tsx src/grid.test.ts"
+    "test": "tsx src/pool.test.ts && tsx src/grid.test.ts && tsx src/pools.test.ts"
   },
   "dependencies": {
     "@nebu/core": "workspace:*",

@@ -1,13 +1,15 @@
 import {
   type AgentAction,
+  type AgentInsights,
   type AgentPlugin,
   type AgentStatus,
   type AgentTx,
   bscClient,
   InvalidParams,
+  recentActivity,
   requireInt,
 } from "@nebu/core";
-import { type Address, encodeFunctionData, maxUint128 } from "viem";
+import { type Address, encodeFunctionData, maxUint128, parseAbiItem } from "viem";
 import { erc20Abi, POSITION_MANAGER, poolAbi, positionManagerAbi } from "./abi.ts";
 import {
   formatPrice,
@@ -18,6 +20,7 @@ import {
   tickToPrice,
   tokenMeta,
 } from "./pool.ts";
+import { compactUsd, livePools, shortlist } from "./pools.ts";
 
 const DEADLINE_SECONDS = 20 * 60;
 
@@ -92,6 +95,77 @@ export const pancakeRebalancer: AgentPlugin = {
     "Watches a concentrated liquidity position and recentres its range on the live pool price when it drifts out and stops earning fees.",
   paramSchema: [{ key: "tokenId", label: "Position NFT id", placeholder: "7366225" }],
   example: { tokenId: "7366237" },
+  grants: [
+    "Reads your position NFT and the pool it sits in",
+    "Builds exit, collect and remint calldata for that one position",
+    "You sign every transaction from your own wallet — nothing is delegated",
+    "No transfer path exists: liquidity can only move back into a position you own",
+  ],
+
+  async insights(params): Promise<AgentInsights> {
+    const [position, pools] = await Promise.all([
+      loadPosition(tokenId(params)),
+      livePools().catch(() => []),
+    ]);
+    const shortlisted = shortlist(pools);
+    const best = shortlisted[0];
+    const live = inRange(position.tick, position.tickLower, position.tickUpper);
+
+    return {
+      stats: [
+        {
+          label: "Best fee APR",
+          value: best ? `${(best.feeApr * 100).toFixed(1)}%` : "—",
+          hint: best ? `${best.pair} ${best.feePercent}%` : undefined,
+        },
+        { label: "Pools in scope", value: String(shortlisted.length), hint: "of 60 scanned" },
+        {
+          label: "Your position",
+          value: live ? "In range" : "Out of range",
+          hint: `#${position.id}`,
+        },
+        { label: "Chain", value: "BNB Smart Chain" },
+      ],
+      table: {
+        title: "LP pools",
+        caption:
+          "PancakeSwap V3 pools clearing the agent's floor: $250k liquidity, $100k daily volume, 20 swaps an hour, at least a week old.",
+        columns: [
+          { key: "pair", label: "Pool" },
+          { key: "apr", label: "Fee APR", align: "end" },
+          { key: "volume", label: "Vol 24h", align: "end" },
+          { key: "swaps", label: "Swaps/h", align: "end" },
+        ],
+        rows: shortlisted.slice(0, 12).map((pool) => ({
+          id: pool.address,
+          pair: `${pool.pair} ${pool.feePercent}%`,
+          logo: pool.base.logo ?? "",
+          logoAlt: pool.quote.logo ?? "",
+          apr: `${(pool.feeApr * 100).toFixed(1)}%`,
+          volume: `$${compactUsd(pool.volume24hUsd)}`,
+          swaps: pool.swapsPerHour.toLocaleString("en-US"),
+        })),
+      },
+      activity: await recentActivity([
+        {
+          address: POSITION_MANAGER,
+          kind: "EXIT-LP",
+          event: parseAbiItem(
+            "event DecreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)",
+          ),
+          describe: (args) => `Position #${args.tokenId} pulled liquidity out of its range`,
+        },
+        {
+          address: POSITION_MANAGER,
+          kind: "ADD-LP",
+          event: parseAbiItem(
+            "event IncreaseLiquidity(uint256 indexed tokenId, uint128 liquidity, uint256 amount0, uint256 amount1)",
+          ),
+          describe: (args) => `Position #${args.tokenId} added liquidity`,
+        },
+      ]).catch(() => []),
+    };
+  },
 
   async status(params): Promise<AgentStatus> {
     const position = await loadPosition(tokenId(params));

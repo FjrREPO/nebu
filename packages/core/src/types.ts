@@ -40,6 +40,37 @@ export type ParamSpec = {
  */
 export type AgentParams = Record<string, string>;
 
+/** One number on the agent's performance strip. */
+export type StatTile = { label: string; value: string; hint?: string };
+
+export type TableColumn = { key: string; label: string; align?: "start" | "end" };
+export type TableRow = { id: string } & Record<string, string>;
+
+/** The agent's own working data — what it looks at to decide. */
+export type AgentTable = {
+  title: string;
+  caption?: string;
+  columns: TableColumn[];
+  rows: TableRow[];
+};
+
+export type ActivityEntry = {
+  id: string;
+  kind: string;
+  text: string;
+  status: "success" | "pending" | "failed";
+  /** Unix seconds, so the client can render it in the reader's locale. */
+  timestamp: number;
+  hash?: string;
+};
+
+/** Everything the agent detail page shows beyond a headline. */
+export type AgentInsights = {
+  stats: StatTile[];
+  table?: AgentTable;
+  activity?: ActivityEntry[];
+};
+
 export interface AgentPlugin {
   id: string;
   name: string;
@@ -52,7 +83,11 @@ export interface AgentPlugin {
   paramSchema: ParamSpec[];
   /** Live params the marketplace card uses so a visitor sees real data first. */
   example: AgentParams;
+  /** What the wallet hands over when it hires this agent. Plain, and true. */
+  grants: string[];
   status(params: AgentParams): Promise<AgentStatus>;
+  /** The agent's working data for its detail page. */
+  insights(params: AgentParams): Promise<AgentInsights>;
   /** The tx to run, or null when there is nothing to do. */
   plan(params: AgentParams): Promise<AgentAction | null>;
 }

@@ -1,15 +1,18 @@
 import {
   type AgentAction,
+  type AgentInsights,
   type AgentPlugin,
   type AgentStatus,
   type AgentTx,
   bscClient,
   InvalidParams,
+  recentActivity,
   requireAddress,
   requireInt,
 } from "@nebu/core";
-import { type Address, encodeFunctionData, formatUnits, parseUnits } from "viem";
+import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { AAVE_POOL, erc20Abi, liquidityRateToApy, poolAbi, reserveData } from "./aave.ts";
+import { bestApy, pct, spreadBps, yieldRadar } from "./radar.ts";
 import { bestMove, type Venue } from "./venue.ts";
 import { supplyRateToApy, underlyingBalance, venusMarketFor, vTokenAbi } from "./venus.ts";
 
@@ -148,6 +151,72 @@ export const yieldOptimizer: AgentPlugin = {
     asset: "0xc5f0f7b66764F6ec8C8Dff7BA683102295E16409",
     wallet: "0x498BeCEFB57f9a551E6E91941AaA48329caE5baF",
     minGainBps: "25",
+  },
+  grants: [
+    "Reads both protocols' supply rates and where your deposit currently sits",
+    "Withdraws only the asset you named, only to your own wallet",
+    "Approves the destination for the exact amount being moved",
+    "Cannot borrow, and cannot touch collateral backing a loan",
+  ],
+
+  async insights(params): Promise<AgentInsights> {
+    const [market, radar] = await Promise.all([loadMarket(params), yieldRadar().catch(() => [])]);
+    const move = bestMove(market.venues, market.minGainBps);
+    const here = radar.find((quote) => quote.symbol === market.symbol);
+    const funded = market.venues.filter((venue) => venue.supplied > 0);
+
+    return {
+      stats: [
+        { label: "Best APY", value: here ? pct(bestApy(here)) : "—", hint: market.symbol },
+        {
+          label: "Spread",
+          value: here && spreadBps(here) !== null ? `${spreadBps(here)} bps` : "—",
+          hint: "Aave vs Venus",
+        },
+        { label: "Assets watched", value: String(radar.length), hint: "listed on both" },
+        {
+          label: "Your deposit",
+          value: funded.length ? funded[0].protocol : "none",
+          hint: move ? `move worth ${(move.gainBps / 100).toFixed(2)}%` : "nothing to move",
+        },
+      ],
+      table: {
+        title: "Yield radar",
+        caption:
+          "Live supply APY on both venues for every asset Aave V3 lists on BNB Chain. Rates are compounded from each protocol's own rate unit, not copied from a dashboard.",
+        columns: [
+          { key: "asset", label: "Asset" },
+          { key: "aave", label: "Aave V3", align: "end" },
+          { key: "venus", label: "Venus", align: "end" },
+          { key: "spread", label: "Spread", align: "end" },
+        ],
+        rows: radar.map((quote) => ({
+          id: quote.asset,
+          asset: quote.symbol,
+          aave: pct(quote.aaveApy),
+          venus: pct(quote.venusApy),
+          spread: spreadBps(quote) === null ? "—" : `${spreadBps(quote)} bps`,
+        })),
+      },
+      activity: await recentActivity([
+        {
+          address: AAVE_POOL,
+          kind: "SUPPLY",
+          event: parseAbiItem(
+            "event Supply(address indexed reserve, address user, address indexed onBehalfOf, uint256 amount, uint16 indexed referralCode)",
+          ),
+          describe: (args) => `Deposit into Aave reserve ${String(args.reserve).slice(0, 10)}`,
+        },
+        {
+          address: AAVE_POOL,
+          kind: "WITHDRAW",
+          event: parseAbiItem(
+            "event Withdraw(address indexed reserve, address indexed user, address indexed to, uint256 amount)",
+          ),
+          describe: (args) => `Withdrawal from Aave reserve ${String(args.reserve).slice(0, 10)}`,
+        },
+      ]).catch(() => []),
+    };
   },
 
   async status(params): Promise<AgentStatus> {
