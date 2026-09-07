@@ -22,7 +22,9 @@ async function tick() {
       const action = await plugin.plan(params);
       // ponytail: log-only runner. Signing goes through an Altana session-key
       // wallet with spend limits — that is the bounty requirement, not a default.
-      console.log(action ? `  would run: ${action.reason}` : "  action due, plan() not implemented");
+      console.log(
+        action ? `  would run: ${action.reason}` : "  action due, plan() not implemented",
+      );
     } catch (err) {
       // One bad watch entry must not take the runner down.
       console.error(`[${agent}] ${(err as Error).message}`);

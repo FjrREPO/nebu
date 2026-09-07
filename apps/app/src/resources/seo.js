@@ -25,4 +25,4 @@ const schema = {
   email: "lorant@once-ui.com",
 };
 
-export { meta, schema, baseURL };
+export { baseURL, meta, schema };

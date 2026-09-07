@@ -1,0 +1,94 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/.next",
+      "!**/.turbo",
+      "!**/next-env.d.ts",
+      "!**/public",
+      "!pnpm-lock.yaml"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noUnusedFunctionParameters": "error"
+      },
+      "style": {
+        "useConst": "error",
+        "useImportType": "error",
+        "useNodejsImportProtocol": "error",
+        "noNonNullAssertion": "warn",
+        "useTemplate": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noDoubleEquals": "error"
+      },
+      "complexity": {
+        "noUselessTernary": "error"
+      },
+      "performance": {
+        "noAccumulatingSpread": "error"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "arrowParentheses": "always",
+      "bracketSpacing": true
+    }
+  },
+  "json": {
+    "formatter": { "enabled": true },
+    "parser": { "allowComments": true }
+  },
+  "css": {
+    "formatter": { "enabled": true },
+    "linter": { "enabled": true },
+    "parser": { "tailwindDirectives": true }
+  },
+  "overrides": [
+    {
+      // Long-running processes log to stdout on purpose; that is their output.
+      "includes": ["apps/api/**", "apps/agents/**", "**/*.test.ts"],
+      "linter": { "rules": { "suspicious": { "noConsole": "off" } } }
+    },
+    {
+      // Once UI ships its own conventions; do not fight the template.
+      "includes": ["apps/app/src/resources/**"],
+      "linter": { "enabled": false }
+    }
+  ]
+}

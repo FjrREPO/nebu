@@ -7,10 +7,15 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx src/params.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "@types/node": "^24.9.2"
+    "@types/node": "^24.9.2",
+    "tsx": "^4.20.6"
+  },
+  "dependencies": {
+    "viem": "^2.40.0"
   }
 }

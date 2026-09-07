@@ -1,6 +1,5 @@
 // Import and set font for each variant
-import { Geist } from "next/font/google";
-import { Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 
 const heading = Geist({
   variable: "--font-heading",
@@ -57,8 +56,8 @@ const dataStyle = {
   tick: {
     fill: "var(--neutral-on-background-weak)",
     fontSize: 11,
-    line: false
+    line: false,
   },
 };
 
-export { fonts, style, dataStyle };
+export { dataStyle, fonts, style };
