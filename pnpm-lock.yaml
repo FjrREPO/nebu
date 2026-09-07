@@ -125,6 +125,15 @@ importers:
 
   apps/landing:
     dependencies:
+      '@nebu/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@nebu/plugin-pancakeswap':
+        specifier: workspace:*
+        version: link:../../packages/plugins/pancakeswap
+      '@nebu/plugins':
+        specifier: workspace:*
+        version: link:../../packages/plugins/registry
       next:
         specifier: 16.3.4
         version: 16.3.4(@types/node@20.17.23)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.104.0)
