@@ -19,7 +19,9 @@
     "sharp": "^0.33.4",
     "@nebu/core": "workspace:*",
     "@nebu/plugins": "workspace:*",
-    "viem": "^2.40.0"
+    "viem": "^2.40.0",
+    "@nebu/plugin-pancakeswap": "workspace:*",
+    "@nebu/plugin-lending": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "20.17.23",

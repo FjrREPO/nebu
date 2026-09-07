@@ -2,9 +2,9 @@ import "@once-ui-system/core/css/styles.css";
 import "@once-ui-system/core/css/tokens.css";
 import "@/resources/custom.css";
 
-import { Column, Flex, Mask, MatrixFx, Meta, Schema, ThemeInit } from "@once-ui-system/core";
+import { Column, Flex, Meta, Row, Schema, ThemeInit } from "@once-ui-system/core";
 import classNames from "classnames";
-import { Providers } from "@/components/Providers";
+import { Providers, SpecLabel, TopBar } from "@/components";
 import { dataStyle, fonts, style } from "@/resources/once-ui.config";
 import { baseURL, meta } from "@/resources/seo";
 
@@ -66,19 +66,33 @@ export default function RootLayout({
       <Providers>
         <Column as="body" background="page" fillWidth margin="0" padding="0">
           <Column
+            className="blueprint"
             fillWidth
             maxHeight="100dvh"
-            aspectRatio="1"
             horizontal="center"
             position="absolute"
             top="0"
             left="0"
-          >
-            <Mask maxWidth="m" x={50} y={0} radius={50}>
-              <MatrixFx size={1.5} spacing={5} fps={24} colors={["brand-solid-strong"]} flicker />
-            </Mask>
+            pointerEvents="none"
+          />
+          <TopBar />
+          <Column fillWidth horizontal="center" zIndex={1}>
+            {children}
           </Column>
-          {children}
+          <Row
+            as="footer"
+            fillWidth
+            horizontal="center"
+            paddingX="l"
+            paddingY="32"
+            marginTop="40"
+            borderTop="neutral-alpha-weak"
+          >
+            <Row fillWidth maxWidth="xl" horizontal="between" gap="16" wrap>
+              <SpecLabel mark>{"nebu · agent marketplace · bnb smart chain"}</SpecLabel>
+              <SpecLabel>every figure read from mainnet at request time</SpecLabel>
+            </Row>
+          </Row>
         </Column>
       </Providers>
     </Flex>

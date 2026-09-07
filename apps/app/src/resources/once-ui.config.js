@@ -1,7 +1,7 @@
 // Import and set font for each variant
 import { Geist, Geist_Mono } from "next/font/google";
 
-const heading = Geist({
+const heading = Geist_Mono({
   variable: "--font-heading",
   subsets: ["latin"],
   display: "swap",
@@ -13,7 +13,7 @@ const body = Geist({
   display: "swap",
 });
 
-const label = Geist({
+const label = Geist_Mono({
   variable: "--font-label",
   subsets: ["latin"],
   display: "swap",
@@ -40,7 +40,7 @@ const style = {
   accent: "orange", // blue | indigo | violet | magenta | pink | red | orange | yellow | moss | green | emerald | aqua | cyan
   solid: "contrast", // color | contrast | inverse
   solidStyle: "flat", // flat | plastic
-  border: "playful", // rounded | playful | conservative | sharp
+  border: "sharp", // rounded | playful | conservative | sharp
   surface: "filled", // filled | translucent
   transition: "all", // all | micro | macro
   scaling: "100", // 90 | 95 | 100 | 105 | 110

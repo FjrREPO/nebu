@@ -58,3 +58,42 @@ export function formatPrice(price: number) {
   const digits = price >= 1000 ? 2 : price >= 1 ? 4 : 8;
   return price.toFixed(digits);
 }
+
+const enumerableAbi = [
+  {
+    name: "balanceOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "tokenOfOwnerByIndex",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ type: "address" }, { type: "uint256" }],
+    outputs: [{ type: "uint256" }],
+  },
+] as const;
+
+/** Every PancakeSwap V3 position NFT a wallet holds, newest first. */
+export async function positionsOf(manager: Address, owner: Address, limit = 12) {
+  const balance = await bscClient.readContract({
+    address: manager,
+    abi: enumerableAbi,
+    functionName: "balanceOf",
+    args: [owner],
+  });
+  const count = Number(balance < BigInt(limit) ? balance : BigInt(limit));
+  const ids = await Promise.all(
+    Array.from({ length: count }, (_, index) =>
+      bscClient.readContract({
+        address: manager,
+        abi: enumerableAbi,
+        functionName: "tokenOfOwnerByIndex",
+        args: [owner, balance - 1n - BigInt(index)],
+      }),
+    ),
+  );
+  return ids.map(String);
+}

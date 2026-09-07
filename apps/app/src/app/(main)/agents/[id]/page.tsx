@@ -1,11 +1,18 @@
-import { Button, Column, Heading, Row, Tag, Text } from "@once-ui-system/core";
+import { Column, Grid, Row, StatusIndicator, Text } from "@once-ui-system/core";
 import { notFound } from "next/navigation";
-import { AgentRunner, WalletBar } from "@/components";
-import { agentMeta, exampleStatus, findAgentMeta } from "@/lib/agents";
+import { ActivityFeed, AgentRunner, DataTable, Frame, SpecLabel, StatStrip } from "@/components";
+import { agentInsights, agentMeta, exampleStatus, findAgentMeta } from "@/lib/agents";
 import { CATEGORIES } from "@/lib/types";
 
-/** The example read is live, so do not serve a card from last week. */
+/** The whole page is live reads, so let it go stale for a minute at most. */
 export const revalidate = 60;
+
+const GLYPH: Record<string, string> = {
+  rebalancing: "[ ]",
+  grid: "###",
+  yield: "/\\/",
+  health: "<+>",
+};
 
 export function generateStaticParams() {
   return agentMeta().map((agent) => ({ id: agent.id }));
@@ -21,37 +28,97 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   if (!agent) notFound();
 
   const category = CATEGORIES.find((entry) => entry.key === agent.category);
-  const initialStatus = await exampleStatus(agent.id);
+  const [status, insights] = await Promise.all([exampleStatus(agent.id), agentInsights(agent.id)]);
 
   return (
-    <Column fillWidth horizontal="center" paddingX="l" paddingY="24" gap="40">
-      <Row fillWidth maxWidth="m" horizontal="between" vertical="center" gap="16">
-        <Button href="/" variant="tertiary" size="s">
-          nebu
-        </Button>
-        <WalletBar />
+    <Column fillWidth maxWidth="xl" paddingX="l" paddingY="40" gap="32">
+      <Row fillWidth gap="24" vertical="center" wrap>
+        <Frame radius="m" minWidth={7} minHeight={7} center>
+          <Text variant="display-strong-s" onBackground="neutral-weak">
+            {GLYPH[agent.category] ?? "( )"}
+          </Text>
+        </Frame>
+        <Column gap="12" flex={1} minWidth={16}>
+          <Text variant="display-strong-s">{agent.name}</Text>
+          <Row gap="8" vertical="center" wrap>
+            <Row paddingX="12" paddingY="4" border="neutral-alpha-weak" radius="xs">
+              <SpecLabel>{category?.label ?? agent.category}</SpecLabel>
+            </Row>
+            <Row paddingX="12" paddingY="4" border="neutral-alpha-weak" radius="xs">
+              <SpecLabel>{agent.protocol}</SpecLabel>
+            </Row>
+            <Row
+              paddingX="12"
+              paddingY="4"
+              border="neutral-alpha-weak"
+              radius="xs"
+              gap="8"
+              vertical="center"
+            >
+              <StatusIndicator size="s" color={status ? "green" : "gray"} />
+              <SpecLabel>{status ? "live" : "no feed"}</SpecLabel>
+            </Row>
+          </Row>
+        </Column>
       </Row>
 
-      <Column fillWidth maxWidth="m" gap="16">
-        <Row gap="8" vertical="center" wrap>
-          <Tag
-            variant="neutral"
-            size="s"
-            prefixIcon={agent.category}
-            label={category?.label ?? agent.category}
-          />
-          <Tag variant="neutral" size="s" label={agent.protocol} />
-          <Tag variant="neutral" size="s" label={`chain ${agent.chainId}`} />
-        </Row>
-        <Heading variant="display-strong-s">{agent.name}</Heading>
-        <Text variant="body-default-l" onBackground="neutral-weak">
-          {agent.summary}
-        </Text>
-      </Column>
+      <Row fillWidth gap="24" s={{ direction: "column" }} m={{ direction: "column" }}>
+        <Column maxWidth={22} minWidth={20} gap="16" m={{ maxWidth: undefined }}>
+          <AgentRunner agent={agent} initialStatus={status} />
+          <Column gap="12" paddingX="4">
+            <SpecLabel mark>about</SpecLabel>
+            <Text variant="body-default-s" onBackground="neutral-weak">
+              {agent.summary}
+            </Text>
+          </Column>
+        </Column>
 
-      <Column fillWidth maxWidth="m">
-        <AgentRunner agent={agent} initialStatus={initialStatus} />
-      </Column>
+        <Column fillWidth gap="32" minWidth={0}>
+          {insights && <StatStrip stats={insights.stats} />}
+          {insights?.table && <DataTable table={insights.table} />}
+
+          <Column fillWidth gap="12">
+            <Text variant="heading-strong-s">What this agent can do with your wallet</Text>
+            <Frame fillWidth radius="m" padding="20" gap="12">
+              {agent.grants.map((grant) => (
+                <Row key={grant} gap="12" vertical="start">
+                  <Text variant="code-default-s" onBackground="brand-medium">
+                    +
+                  </Text>
+                  <Text variant="body-default-s" onBackground="neutral-medium">
+                    {grant}
+                  </Text>
+                </Row>
+              ))}
+            </Frame>
+          </Column>
+
+          <Column fillWidth gap="12">
+            <Text variant="heading-strong-s">Details</Text>
+            <Frame fillWidth radius="m" padding="4">
+              <Grid fillWidth columns={2} s={{ columns: 1 }}>
+                {[
+                  ["Agent id", agent.id],
+                  ["Category", category?.label ?? agent.category],
+                  ["Venue", agent.protocol],
+                  ["Chain", `BNB Smart Chain (${agent.chainId})`],
+                  ["Custody", "Non-custodial — you sign every transaction"],
+                  ["Registry", "nebu"],
+                ].map(([label, value]) => (
+                  <Row key={label} fillWidth horizontal="between" gap="16" padding="16">
+                    <SpecLabel>{label}</SpecLabel>
+                    <Text variant="code-default-xs" align="right">
+                      {value}
+                    </Text>
+                  </Row>
+                ))}
+              </Grid>
+            </Frame>
+          </Column>
+
+          {insights?.activity && <ActivityFeed entries={insights.activity} />}
+        </Column>
+      </Row>
     </Column>
   );
 }

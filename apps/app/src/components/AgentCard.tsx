@@ -1,65 +1,96 @@
 "use client";
 
-import { Card, Column, Icon, Row, StatusIndicator, Tag, Text } from "@once-ui-system/core";
-import { type AgentCardData, CATEGORIES } from "@/lib/types";
+import { Column, Grid, Row, SmartLink, StatusIndicator, Text } from "@once-ui-system/core";
+import type { AgentCardData } from "@/lib/types";
+import { CATEGORIES } from "@/lib/types";
+import { Frame } from "./Frame";
+import { SpecLabel } from "./SpecLabel";
 
-const categoryLabel = (key: string) => CATEGORIES.find((c) => c.key === key)?.label ?? key;
+const categoryLabel = (key: string) => CATEGORIES.find((entry) => entry.key === key)?.label ?? key;
+
+/** Four glyphs, one per category — the agent's face in a UI with no images. */
+const GLYPH: Record<string, string> = {
+  rebalancing: "[ ]",
+  grid: "###",
+  yield: "/\\/",
+  health: "<+>",
+};
 
 export function AgentCard({ agent }: { agent: AgentCardData }) {
-  const tone = agent.error ? "gray" : agent.status?.actionable ? "orange" : "green";
+  const live = !agent.error;
 
   return (
-    <Card
-      href={`/agents/${agent.id}`}
-      direction="column"
-      fillWidth
-      fillHeight
-      gap="16"
-      padding="24"
-      radius="l"
-      border="neutral-alpha-weak"
-      background="surface"
-    >
-      <Row fillWidth horizontal="between" vertical="center" gap="8">
-        <Tag
-          variant="neutral"
-          size="s"
-          prefixIcon={agent.category}
-          label={categoryLabel(agent.category)}
-        />
-        <Icon name="arrowRight" size="s" onBackground="neutral-weak" />
-      </Row>
+    <SmartLink href={`/agents/${agent.id}`} unstyled style={{ height: "100%" }}>
+      <Frame fillWidth fillHeight radius="m" transition="micro-medium">
+        <Column fillWidth padding="20" gap="32" minHeight={20}>
+          <Row fillWidth horizontal="between" vertical="start" gap="12">
+            <Column gap="4">
+              <SpecLabel mark>agent</SpecLabel>
+              <Text variant="heading-strong-s">{agent.name}</Text>
+            </Column>
+            <Row gap="8" vertical="center">
+              <StatusIndicator size="s" color={live ? "green" : "gray"} />
+              <SpecLabel>{live ? "live" : "offline"}</SpecLabel>
+            </Row>
+          </Row>
 
-      <Column gap="4" fillWidth>
-        <Text variant="heading-strong-s">{agent.name}</Text>
-        <Text variant="label-default-s" onBackground="brand-medium">
-          {agent.protocol}
-        </Text>
-      </Column>
+          <Row fillWidth horizontal="center" paddingY="24">
+            <Text variant="display-strong-l" onBackground="neutral-weak">
+              {GLYPH[agent.category] ?? "( )"}
+            </Text>
+          </Row>
 
-      <Text variant="body-default-s" onBackground="neutral-weak">
-        {agent.summary}
-      </Text>
+          <Column gap="8" fillWidth>
+            <Text variant="body-default-s" onBackground="neutral-weak">
+              {agent.summary}
+            </Text>
+          </Column>
 
-      <Column
-        fillWidth
-        gap="8"
-        marginTop="8"
-        paddingY="12"
-        paddingX="16"
-        radius="m"
-        background="neutral-alpha-weak"
-      >
-        <Row gap="8" vertical="center">
-          <StatusIndicator size="s" color={tone} />
-          <Text variant="label-strong-s">
-            {agent.error ? "Live data unavailable" : (agent.status?.headline ?? "")}
-          </Text>
-        </Row>
-        <Text variant="body-default-xs" onBackground="neutral-weak">
-          {agent.error ?? agent.status?.detail}
-        </Text>
-      </Column>
-    </Card>
+          <Column
+            fillWidth
+            gap="8"
+            paddingY="12"
+            paddingX="16"
+            radius="s"
+            background="neutral-alpha-weak"
+          >
+            <SpecLabel>{agent.error ? "feed" : "reading now"}</SpecLabel>
+            <Text variant="label-strong-s">
+              {agent.error ? "unavailable" : (agent.status?.headline ?? "")}
+            </Text>
+            <Text variant="body-default-xs" onBackground="neutral-weak">
+              {agent.error ?? agent.status?.detail}
+            </Text>
+          </Column>
+        </Column>
+
+        <Grid
+          fillWidth
+          columns={4}
+          s={{ columns: 2 }}
+          borderTop="neutral-alpha-weak"
+          paddingX="20"
+          paddingY="16"
+          gap="16"
+        >
+          <Column gap="4">
+            <SpecLabel>id</SpecLabel>
+            <Text variant="code-default-xs">{agent.id.split("-")[0]}</Text>
+          </Column>
+          <Column gap="4">
+            <SpecLabel>class</SpecLabel>
+            <Text variant="code-default-xs">{categoryLabel(agent.category)}</Text>
+          </Column>
+          <Column gap="4">
+            <SpecLabel>venue</SpecLabel>
+            <Text variant="code-default-xs">{agent.protocol}</Text>
+          </Column>
+          <Column gap="4">
+            <SpecLabel>chain</SpecLabel>
+            <Text variant="code-default-xs">bsc {agent.chainId}</Text>
+          </Column>
+        </Grid>
+      </Frame>
+    </SmartLink>
   );
 }

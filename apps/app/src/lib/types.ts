@@ -10,6 +10,7 @@ export type AgentMeta = {
   protocol: string;
   chainId: number;
   summary: string;
+  grants: string[];
   paramSchema: ParamSpec[];
   example: AgentParams;
 };

@@ -1,5 +1,12 @@
+export { ActivityFeed } from "./ActivityFeed";
 export { AgentCard } from "./AgentCard";
 export { AgentRunner } from "./AgentRunner";
+export { DataTable } from "./DataTable";
+export { Frame } from "./Frame";
 export { Marketplace } from "./Marketplace";
+export { Portfolio } from "./Portfolio";
 export { Providers } from "./Providers";
+export { SpecLabel } from "./SpecLabel";
+export { StatStrip } from "./StatStrip";
+export { TopBar } from "./TopBar";
 export { WalletBar } from "./WalletBar";

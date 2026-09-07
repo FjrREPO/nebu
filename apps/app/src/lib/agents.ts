@@ -4,13 +4,14 @@ import type { AgentCardData, AgentMeta } from "./types";
 
 export function agentMeta(): AgentMeta[] {
   return plugins.map(
-    ({ id, name, category, protocol, chainId, summary, paramSchema, example }) => ({
+    ({ id, name, category, protocol, chainId, summary, grants, paramSchema, example }) => ({
       id,
       name,
       category,
       protocol,
       chainId,
       summary,
+      grants,
       paramSchema,
       example,
     }),
@@ -43,4 +44,11 @@ export async function exampleStatus(id: string) {
   const plugin = plugins.find((entry) => entry.id === id);
   if (!plugin) return null;
   return plugin.status(plugin.example).catch(() => null);
+}
+
+/** The agent's own working data for its detail page. */
+export async function agentInsights(id: string) {
+  const plugin = plugins.find((entry) => entry.id === id);
+  if (!plugin) return null;
+  return plugin.insights(plugin.example).catch(() => null);
 }
