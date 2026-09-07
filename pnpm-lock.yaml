@@ -32,6 +32,9 @@ importers:
       '@nebu/plugins':
         specifier: workspace:*
         version: link:../../packages/plugins/registry
+      '@nebu/session':
+        specifier: workspace:*
+        version: link:../../packages/session
     devDependencies:
       '@types/node':
         specifier: ^24.9.2
