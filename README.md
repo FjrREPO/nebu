@@ -21,12 +21,29 @@ per-block rate are both compounded to a real APY, and the block time behind the
 Venus figure is measured from chain rather than hardcoded — BSC has changed it
 three times.
 
+## The marketplace
+
+| Page | What it shows |
+|---|---|
+| `/` | Every agent, each card carrying a live reading taken when the page rendered |
+| `/agents/[id]` | The agent's stats, the table it decided from, what it can do with your wallet, and recent on-chain activity in its scope |
+| `/portfolio` | Every agent pointed at a connected wallet — including the PancakeSwap position NFTs it actually holds |
+| `/leaderboard` | The two boards the agents pick from: fee momentum, and Aave-vs-Venus spreads |
+| `/status` | Every feed and contract the site reads, checked on load, with the known limits stated |
+
+Pool discovery uses GeckoTerminal (free, no key) for the two numbers no
+contract exposes — 24h volume and swap counts — and screens on liquidity,
+volume, swap rate and pool age before an agent will touch a pool.
+
+See [`docs/agent-advantage-report.md`](docs/agent-advantage-report.md) for three
+tasks measured against doing them by hand.
+
 ## Layout
 
 ```
 apps/
   app       marketplace — Next 16 + Once UI, the thing judges open
-  landing   public marketing page
+  landing   public marketing page, live counters
   api       Hono service exposing the same agents over HTTP
   agents    headless runner that ticks a watchlist on an interval
 packages/
