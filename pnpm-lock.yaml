@@ -12,6 +12,44 @@ importers:
         specifier: ^2.5.8
         version: 2.10.12
 
+  apps/agents:
+    dependencies:
+      '@nebu/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@nebu/plugins':
+        specifier: workspace:*
+        version: link:../../packages/plugins/registry
+    devDependencies:
+      tsx:
+        specifier: ^4.20.6
+        version: 4.23.13
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  apps/api:
+    dependencies:
+      '@hono/node-server':
+        specifier: ^1.15.0
+        version: 1.19.17(hono@4.13.7)
+      '@nebu/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@nebu/plugins':
+        specifier: workspace:*
+        version: link:../../packages/plugins/registry
+      hono:
+        specifier: ^4.9.0
+        version: 4.13.7
+    devDependencies:
+      tsx:
+        specifier: ^4.20.6
+        version: 4.23.13
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   apps/app:
     dependencies:
       '@once-ui-system/core':
@@ -104,6 +142,19 @@ importers:
       tsx:
         specifier: ^4.20.6
         version: 4.23.13
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/plugins/registry:
+    dependencies:
+      '@nebu/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@nebu/plugin-pancakeswap':
+        specifier: workspace:*
+        version: link:../pancakeswap
+    devDependencies:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -343,6 +394,12 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
+
+  '@hono/node-server@1.19.17':
+    resolution: {integrity: sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -1087,6 +1144,10 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
+  hono@4.13.7:
+    resolution: {integrity: sha512-c8/gF9ac8Y78/agExVocyLevgR+JlpNB444Py0FSX8pJoPdYUfUzRcXtYEYGwt6l19qIlVZPN5Mfsw9jFShmQQ==}
+    engines: {node: '>=16.9.0'}
+
   immer@11.1.18:
     resolution: {integrity: sha512-EQyQtLiYW029lyoczMl/Hh4Xu7cDecSc58JRYpHyL4tIAu3eqd1yJzQX04d2BZHDkzFFvm6qJEJWOtfDSWAXbQ==}
 
@@ -1551,6 +1612,10 @@ snapshots:
       react-dom: 19.2.8(react@19.2.8)
 
   '@floating-ui/utils@0.2.12': {}
+
+  '@hono/node-server@1.19.17(hono@4.13.7)':
+    dependencies:
+      hono: 4.13.7
 
   '@img/colour@1.1.0':
     optional: true
@@ -2153,6 +2218,8 @@ snapshots:
     optional: true
 
   graceful-fs@4.2.11: {}
+
+  hono@4.13.7: {}
 
   immer@11.1.18: {}
 
