@@ -21,6 +21,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/plugins/registry
     devDependencies:
+      '@types/node':
+        specifier: ^24.9.2
+        version: 24.13.3
       tsx:
         specifier: ^4.20.6
         version: 4.23.13
@@ -43,6 +46,9 @@ importers:
         specifier: ^4.9.0
         version: 4.13.7
     devDependencies:
+      '@types/node':
+        specifier: ^24.9.2
+        version: 24.13.3
       tsx:
         specifier: ^4.20.6
         version: 4.23.13
@@ -126,6 +132,9 @@ importers:
 
   packages/core:
     devDependencies:
+      '@types/node':
+        specifier: ^24.9.2
+        version: 24.13.3
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -139,6 +148,9 @@ importers:
         specifier: ^2.40.0
         version: 2.56.3(typescript@5.9.3)
     devDependencies:
+      '@types/node':
+        specifier: ^24.9.2
+        version: 24.13.3
       tsx:
         specifier: ^4.20.6
         version: 4.23.13
@@ -155,6 +167,9 @@ importers:
         specifier: workspace:*
         version: link:../pancakeswap
     devDependencies:
+      '@types/node':
+        specifier: ^24.9.2
+        version: 24.13.3
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -997,6 +1012,9 @@ packages:
   '@types/node@20.17.23':
     resolution: {integrity: sha512-8PCGZ1ZJbEZuYNTMqywO+Sj4vSKjSjT6Ua+6RFOYlEvIvKQABPtrNkoVSLSKDb4obYcMhspVKmsw8Cm10NFRUg==}
 
+  '@types/node@24.13.3':
+    resolution: {integrity: sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==}
+
   '@types/react-dom@19.0.2':
     resolution: {integrity: sha512-c1s+7TKFaDRRxr1TxccIX2u7sfCnc3RxkVyBIUA2lCpyqCF+QoAwQ/CBg7bsMdVwP120HEH143VQezKtef5nCg==}
     peerDependencies:
@@ -1443,6 +1461,9 @@ packages:
 
   undici-types@6.19.8:
     resolution: {integrity: sha512-ve2KP6f/JnbPBFyobGHuerC9g1FYGn/F8n1LWTwNxCEzd6IfqTwUQcNXgEtmmQ6DlRrC1hrSrBnCZPokRrDHjw==}
+
+  undici-types@7.18.2:
+    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
   use-sync-external-store@1.6.0:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
@@ -2077,6 +2098,10 @@ snapshots:
     dependencies:
       undici-types: 6.19.8
 
+  '@types/node@24.13.3':
+    dependencies:
+      undici-types: 7.18.2
+
   '@types/react-dom@19.0.2(@types/react@19.0.1)':
     dependencies:
       '@types/react': 19.0.1
@@ -2526,6 +2551,8 @@ snapshots:
   typescript@5.9.3: {}
 
   undici-types@6.19.8: {}
+
+  undici-types@7.18.2: {}
 
   use-sync-external-store@1.6.0(react@19.2.8):
     dependencies:
