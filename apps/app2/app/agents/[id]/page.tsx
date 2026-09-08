@@ -28,10 +28,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 /** An 18px CDN token mark. next/image would add a proxy hop for nothing. */
 function TokenMark({ src, overlap }: { src?: string; overlap?: boolean }) {
   if (!src) return null;
-  // biome-ignore lint/performance/noImgElement: optimisation costs more than it saves at this size
-  return (
-    <img src={src} alt="" className={`size-[18px] rounded-full ${overlap ? "-ml-[6px]" : ""}`} />
-  );
+  const style = `size-[18px] rounded-full ${overlap ? "-ml-[6px]" : ""}`;
+  // biome-ignore lint/performance/noImgElement: too small to be worth optimising
+  return <img src={src} alt="" className={style} />;
 }
 
 const ago = (seconds: number) => {
