@@ -35,8 +35,14 @@ function cached<T>(key: string, load: () => Promise<T>, ttl = CACHE_MS): Promise
  * says no. Slower than parallel, and it actually returns data.
  */
 const GAP_MS = 2_100;
-/** How long to wait after each 429 before trying that request again. */
-const BACKOFF_MS = [2_000, 5_000];
+/**
+ * How long to wait after each 429 before trying again. The ladder is long
+ * because the candle endpoint's allowance is small and a whole build's charts
+ * queue behind each other: the last agent in line was reliably refused, and
+ * its card said "no history" on a site whose entire claim is live data. Half a
+ * minute of patience per call is cheaper than a blank chart.
+ */
+const BACKOFF_MS = [3_000, 8_000, 20_000];
 let queue: Promise<unknown> = Promise.resolve();
 
 function enqueue<T>(work: () => Promise<T>): Promise<T> {
