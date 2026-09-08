@@ -2,7 +2,12 @@ import { AgentNode } from "@/components/agent-card";
 import { Chip, GridLines, Muted } from "@/components/ui";
 import { agentCards } from "@/lib/agents";
 
-export const metadata = { title: "REGISTRY // NEBU" };
+export const metadata = {
+  title: "Agent registry",
+  description:
+    "Every Nebu agent on BNB Smart Chain with its live headline metric: what it watches, what it would do right now, and what it needs from your wallet.",
+  alternates: { canonical: "/agents" },
+};
 /** Every card is a live read, so a minute of staleness is the most it keeps. */
 export const revalidate = 60;
 

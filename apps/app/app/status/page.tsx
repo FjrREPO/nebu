@@ -3,7 +3,12 @@ import { livePools } from "@nebu/plugin-pancakeswap";
 import { plugins } from "@nebu/plugins";
 import { Chip, GridLines, Muted } from "@/components/ui";
 
-export const metadata = { title: "STATUS // NEBU" };
+export const metadata = {
+  title: "Status",
+  description:
+    "Live proof the feeds and contracts Nebu reads are answering: BNB Chain RPC, the pool screen, and every contract the agents call.",
+  alternates: { canonical: "/status" },
+};
 /** This page exists to prove the feeds are up, so it must not cache long. */
 export const revalidate = 30;
 
