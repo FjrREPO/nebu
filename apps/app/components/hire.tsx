@@ -75,6 +75,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   );
   /** The agent wallet this device has already made, before any passkey prompt. */
   const [knownAddress, setKnownAddress] = useState<`0x${string}` | null>(null);
+  /** Recovery of that wallet failed, so the way forward has to be offered. */
+  const [recoveryFailed, setRecoveryFailed] = useState(false);
   const [balance, setBalance] = useState<bigint | null>(null);
   const [auto, setAuto] = useState<AutoParams | null>(null);
   const [scope, setScope] = useState<SessionScope | null>(null);
@@ -158,6 +160,35 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     setError(null);
     try {
       await openWallet();
+      setRecoveryFailed(false);
+    } catch (err) {
+      setError(explain((err as Error).message.split("\n")[0]));
+      // Refusing to mint a second wallet silently is right; leaving someone
+      // with no way forward is not. If the known one will not open, say so and
+      // let them choose the other path deliberately.
+      if (knownAddress) setRecoveryFailed(true);
+    } finally {
+      setPhase("idle");
+    }
+  }
+
+  /** Deliberately abandon the remembered wallet and make a new one. */
+  async function startFresh() {
+    setPhase("opening");
+    setError(null);
+    try {
+      const client = createClient({ chains: [CONFIG] });
+      const opened = await client.createPasskeyWallet({ name: "nebu" });
+      const next = { address: opened.address, signer: opened.signer };
+      setWallet(next);
+      setKnownAddress(next.address);
+      setRecoveryFailed(false);
+      try {
+        localStorage.setItem(WALLET_KEY, next.address);
+      } catch {
+        // Blocked storage costs the memory, not the wallet.
+      }
+      await inspect(next.address);
     } catch (err) {
       setError(explain((err as Error).message.split("\n")[0]));
     } finally {
@@ -343,6 +374,24 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                     ? "Unlock agent wallet"
                     : "Create agent wallet"}
               </button>
+              {recoveryFailed && (
+                <div className="border border-white/15 p-[14px] space-y-[10px]">
+                  <p className="font-manrope text-white/70 text-[12px] leading-[17px]">
+                    That wallet would not open. Try again first — if this device no longer has its
+                    passkey, you can start a new one, but anything left in{" "}
+                    <span className="text-white">{short(knownAddress ?? "0x")}</span> stays there
+                    and this panel will not reach it.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={startFresh}
+                    className="w-full border border-white/30 px-[16px] py-[9px] font-manrope text-white text-[12px] uppercase tracking-wide hover:border-white disabled:opacity-40 transition-colors"
+                  >
+                    Start a new wallet instead
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <>
