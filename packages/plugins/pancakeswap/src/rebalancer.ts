@@ -234,7 +234,7 @@ export const pancakeRebalancer: AgentPlugin = {
   summary:
     "Watches a concentrated liquidity position and recentres its range on the live pool price when it drifts out and stops earning fees.",
   paramSchema: [{ key: "tokenId", label: "Position NFT id", placeholder: "7366225" }],
-  example: { tokenId: "7366237" },
+  example: { tokenId: "7368737" },
   grants: [
     "Reads your position NFT and the pool it sits in",
     "Builds exit, collect and remint calldata for that one position",
@@ -261,7 +261,7 @@ export const pancakeRebalancer: AgentPlugin = {
         { label: "Pools in scope", value: String(shortlisted.length), hint: "of 60 scanned" },
         {
           label: "Your position",
-          value: live ? "In range" : "Out of range",
+          value: position.liquidity === 0n ? "Closed" : live ? "In range" : "Out of range",
           hint: `#${position.id}`,
         },
         { label: "Chain", value: "BNB Smart Chain" },
@@ -329,10 +329,21 @@ export const pancakeRebalancer: AgentPlugin = {
 
     const position = await loadPosition(tokenId(params));
     const live = inRange(position.tick, position.tickLower, position.tickUpper);
+
+    // A closed position is out of range too, and reporting it that way reads
+    // as a problem the agent is refusing to fix. There is nothing in it.
+    if (position.liquidity === 0n) {
+      return {
+        headline: "Position is closed",
+        detail: `${describe(position)} — no liquidity left to recentre`,
+        actionable: false,
+      };
+    }
+
     return {
       headline: live ? "In range, earning fees" : "Out of range, earning nothing",
       detail: describe(position),
-      actionable: !live && position.liquidity > 0n,
+      actionable: !live,
     };
   },
 
