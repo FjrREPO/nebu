@@ -109,9 +109,6 @@ export default async function StatusPage() {
                 className="flex flex-wrap items-center justify-between gap-[12px] px-[20px] py-[16px]"
               >
                 <div className="flex items-start gap-[12px]">
-                  <span
-                    className={`mt-[6px] size-[6px] shrink-0 rounded-full ${feed.ok ? "bg-[#7ee2a8]" : "bg-[#ff9d9d]"}`}
-                  />
                   <span className="mt-[1px]">
                     <TokenMarks srcs={brandLogos(feed.name)} />
                   </span>
@@ -144,9 +141,6 @@ export default async function StatusPage() {
                 className="flex flex-wrap items-center justify-between gap-[12px] px-[20px] py-[16px]"
               >
                 <div className="flex items-start gap-[12px]">
-                  <span
-                    className={`mt-[6px] size-[6px] shrink-0 rounded-full ${agent.error ? "bg-[#ff9d9d]" : "bg-[#7ee2a8]"}`}
-                  />
                   <span className="mt-[1px]">
                     <TokenMarks srcs={brandLogos(agent.protocol)} />
                   </span>
