@@ -126,46 +126,6 @@ importers:
         specifier: ^5
         version: 5.9.3
 
-  apps/landing:
-    dependencies:
-      '@nebu/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@nebu/plugin-pancakeswap':
-        specifier: workspace:*
-        version: link:../../packages/plugins/pancakeswap
-      '@nebu/plugins':
-        specifier: workspace:*
-        version: link:../../packages/plugins/registry
-      next:
-        specifier: 16.3.4
-        version: 16.3.4(@types/node@20.17.23)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(sass@1.104.0)
-      react:
-        specifier: 19.2.8
-        version: 19.2.8
-      react-dom:
-        specifier: 19.2.8
-        version: 19.2.8(react@19.2.8)
-    devDependencies:
-      '@tailwindcss/postcss':
-        specifier: ^4
-        version: 4.3.3
-      '@types/node':
-        specifier: ^20
-        version: 20.17.23
-      '@types/react':
-        specifier: ^19
-        version: 19.0.1
-      '@types/react-dom':
-        specifier: ^19
-        version: 19.0.2(@types/react@19.0.1)
-      tailwindcss:
-        specifier: ^4
-        version: 4.3.3
-      typescript:
-        specifier: ^5
-        version: 5.8.2
-
   packages/core:
     dependencies:
       viem:
@@ -1291,11 +1251,6 @@ packages:
     resolution: {integrity: sha512-AswgMPnpOoaVZHrrSBejETzEbuIA69OVGwfkHwfrY0A23VjWXBANzgq9+OymWOHAIArB7D1+1z498WY8fGg1Jw==}
     hasBin: true
 
-  typescript@5.8.2:
-    resolution: {integrity: sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
@@ -2201,8 +2156,6 @@ snapshots:
       '@turbo/linux-arm64': 2.10.12
       '@turbo/windows-64': 2.10.12
       '@turbo/windows-arm64': 2.10.12
-
-  typescript@5.8.2: {}
 
   typescript@5.9.3: {}
 

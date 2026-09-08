@@ -27,9 +27,9 @@ three times.
 
 | Page | What it shows |
 |---|---|
-| `/` | Every agent, each card carrying a live reading taken when the page rendered |
-| `/agents/[id]` | The agent's stats, the table it decided from, what it can do with your wallet, and recent on-chain activity in its scope |
-| `/portfolio` | Every agent pointed at a connected wallet — including the PancakeSwap position NFTs it actually holds |
+| `/` | The pitch, with live counters: how many feeds answered, how many agents want action |
+| `/agents` | Every agent, each card carrying a live reading and the metric it watches |
+| `/agents/[id]` | Its stats, the table it decided from, what it may do with your wallet, and recent on-chain activity in its scope |
 | `/leaderboard` | The two boards the agents pick from: fee momentum, and Aave-vs-Venus spreads |
 | `/status` | Every feed and contract the site reads, checked on load, with the known limits stated |
 
@@ -82,8 +82,13 @@ the agent transacts on its own inside limits you set:
 scope(params) -> {
   calls: [{ to: "0x46A1…", label: "PancakeSwap position manager" }, …],
   spend: [{ token: "0x55d3…", symbol: "USDT", decimals: 18, suggested: "270.87" }],
+  nativeSpend: "0.05",   // wrapping a deposit moves native value
 }
 ```
+
+`nativeSpend` is not optional cosmetics. Native value is a separate permission
+from any token allowance, so a session granted without it reverts at
+validation with `NoSpendPermissions` the first time it tries to wrap BNB.
 
 Every agent derives that scope from the same params `plan()` uses, so the grant
 cannot drift from the calls the agent actually makes. The account contract
@@ -100,16 +105,18 @@ NEBU_ADMIN_KEY=0x... pnpm --filter @nebu/session demo
 
 That grants, reads the key back out of the on-chain KeyStore, has the session
 sign a transaction with no admin signature, revokes, and reads the KeyStore
-again.
+again. It has been run — the transactions, and the KeyStore going from two
+keys to three and back, are in
+[the advantage report](docs/agent-advantage-report.md#the-session-proven-on-chain).
 
 ## Layout
 
 ```
 apps/
-  app       marketplace — Next 16 + Tailwind, the thing judges open
-  landing   public marketing page, live counters
-  api       Hono service exposing the same agents over HTTP
-  agents    headless runner that ticks a watchlist on an interval
+  app       marketplace — Next 16 + Tailwind. Landing, registry, agent pages,
+            leaderboard, status, and the HTTP API. This is the deployment.
+  api       the same registry as a standalone Hono service, for self-hosting
+  agents    headless runner: give it a wallet, it works every agent against it
 packages/
   core      plugin contract, shared BSC client, param validation
   session   Altana session keys: grant, run, revoke
