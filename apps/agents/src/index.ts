@@ -29,11 +29,19 @@ function signer() {
   const stored = process.env.NEBU_SESSION;
   const key = process.env.NEBU_SESSION_KEY as `0x${string}` | undefined;
   if (!stored || !key) return null;
+  // The agents' calldata names BNB Smart Chain contracts, so that is where a
+  // session has to live. Testnet is available for plugins that name testnet
+  // addresses, and is not the default because the plugins here do not.
+  const network: SessionNetwork =
+    process.env.NEBU_SESSION_NETWORK === "testnet" ? "testnet" : "mainnet";
   return {
-    network: (process.env.NEBU_SESSION_NETWORK as SessionNetwork) ?? "testnet",
+    network,
     session: restoreSession(JSON.parse(stored) as SerializedSession, key),
   };
 }
+
+/** Chain ids by session network, to check an agent against the one signing. */
+const CHAIN_OF: Record<SessionNetwork, number> = { mainnet: 56, testnet: 97 };
 
 const signing = signer();
 
@@ -63,6 +71,16 @@ async function tick() {
         continue;
       }
 
+      // A call to an address with no code succeeds rather than reverting, so
+      // signing an agent's calldata on the wrong chain would report a hash for
+      // something that never happened.
+      if (plugin.chainId !== CHAIN_OF[signing.network]) {
+        console.log(
+          `  would run (${action.txs.length} tx), but this agent is for chain ${plugin.chainId} ` +
+            `and the session is on bnb ${signing.network}. Not signing.`,
+        );
+        continue;
+      }
       console.log(`  running (${action.txs.length} tx): ${action.reason}`);
       const result = await runWithSession(signing.network, signing.session, action.txs);
       console.log(`  ${result.status} ${result.transactionHash ?? ""}`);
