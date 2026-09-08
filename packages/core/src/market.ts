@@ -36,13 +36,20 @@ function cached<T>(key: string, load: () => Promise<T>, ttl = CACHE_MS): Promise
  */
 const GAP_MS = 2_100;
 /**
- * How long to wait after each 429 before trying again. The ladder is long
- * because the candle endpoint's allowance is small and a whole build's charts
- * queue behind each other: the last agent in line was reliably refused, and
- * its card said "no history" on a site whose entire claim is live data. Half a
- * minute of patience per call is cheaper than a blank chart.
+ * How long to wait after each 429 before trying again.
+ *
+ * A build should be patient: the candle endpoint's allowance is small, a whole
+ * site's charts queue behind each other, and the last one in line was reliably
+ * refused — a card reading "no history" on a site whose entire claim is live
+ * data is worth half a minute of waiting.
+ *
+ * Everything else should not be. Retries hold the single-flight queue, so a
+ * long ladder does not cost one slow call, it costs that ladder times every
+ * call behind it — which turned the headless runner into something that looked
+ * hung. Off the build, give up quickly and let the caller show what it has.
  */
-const BACKOFF_MS = [3_000, 8_000, 20_000];
+const BUILDING = process.env.NEXT_PHASE === "phase-production-build";
+const BACKOFF_MS = BUILDING ? [3_000, 8_000, 20_000] : [1_500];
 let queue: Promise<unknown> = Promise.resolve();
 
 function enqueue<T>(work: () => Promise<T>): Promise<T> {
