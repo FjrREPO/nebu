@@ -65,6 +65,37 @@ export async function agentCards(): Promise<AgentCard[]> {
   );
 }
 
+export type AgentHealth = AgentMeta & {
+  headline: string | null;
+  error: string | null;
+  /** How long the agent took to answer, which is the other half of "is it up". */
+  ms: number;
+};
+
+/**
+ * Whether each agent can still answer, and how fast. Only status() is called —
+ * a health check that also pulled every chart would be slower than the thing
+ * it is checking and would spend the market feed's budget to say so.
+ */
+export async function agentHealth(): Promise<AgentHealth[]> {
+  return Promise.all(
+    plugins.map(async (plugin) => {
+      const began = Date.now();
+      try {
+        const status = await plugin.status(plugin.example);
+        return { ...meta(plugin), headline: status.headline, error: null, ms: Date.now() - began };
+      } catch (err) {
+        return {
+          ...meta(plugin),
+          headline: null,
+          error: (err as Error).message.split("\n")[0],
+          ms: Date.now() - began,
+        };
+      }
+    }),
+  );
+}
+
 export async function agentDetail(id: string) {
   const plugin = plugins.find((entry) => entry.id === id);
   if (!plugin) return null;

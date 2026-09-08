@@ -1,8 +1,11 @@
 import { bscClient } from "@nebu/core";
 import { livePools } from "@nebu/plugin-pancakeswap";
 import { plugins } from "@nebu/plugins";
+import Link from "next/link";
 import { Chip, GridLines, Muted, TokenMarks } from "@/components/ui";
+import { agentHealth } from "@/lib/agents";
 import { brandLogos } from "@/lib/brands";
+import { categoryLabel } from "@/lib/categories";
 
 export const metadata = {
   title: "Status",
@@ -25,7 +28,7 @@ const CONTRACTS = [
 ] as const;
 
 export default async function StatusPage() {
-  const [head, pools] = await Promise.all([
+  const [head, pools, agents] = await Promise.all([
     bscClient
       .getBlockNumber()
       .then(String)
@@ -33,7 +36,9 @@ export default async function StatusPage() {
     livePools()
       .then((rows) => rows.length)
       .catch(() => null),
+    agentHealth().catch(() => []),
   ]);
+  const answering = agents.filter((agent) => agent.error === null).length;
 
   const feeds = [
     {
@@ -119,6 +124,48 @@ export default async function StatusPage() {
                 </div>
                 <span className="font-manrope text-[#AFDDFF] text-[13px] leading-[15.6px]">
                   {feed.detail}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="anim-fade-up" style={{ animationDelay: "560ms" }}>
+          <div className="flex items-end justify-between gap-4 mb-[12px]">
+            <h2 className="font-graphik text-white text-[22px] leading-[1.1]">The agents</h2>
+            <span className="font-manrope text-white/50 text-[11px] uppercase">
+              {answering} of {agents.length} answering
+            </span>
+          </div>
+          <ul className="border border-white/15 divide-y divide-white/5">
+            {agents.map((agent) => (
+              <li
+                key={agent.id}
+                className="flex flex-wrap items-center justify-between gap-[12px] px-[20px] py-[16px]"
+              >
+                <div className="flex items-start gap-[12px]">
+                  <span
+                    className={`mt-[6px] size-[6px] shrink-0 rounded-full ${agent.error ? "bg-[#ff9d9d]" : "bg-[#7ee2a8]"}`}
+                  />
+                  <span className="mt-[1px]">
+                    <TokenMarks srcs={brandLogos(agent.protocol)} />
+                  </span>
+                  <div>
+                    <Link
+                      href={`/agents/${agent.id}`}
+                      className="font-manrope text-white text-[13px] leading-[15.6px] hover:text-[#AFDDFF] transition-colors"
+                    >
+                      {agent.name}
+                    </Link>
+                    <Muted className="mt-[4px]">
+                      {categoryLabel(agent.category)} · {agent.protocol} · answered in {agent.ms}ms
+                    </Muted>
+                  </div>
+                </div>
+                <span
+                  className={`font-manrope text-[13px] leading-[15.6px] ${agent.error ? "text-[#ff9d9d]" : "text-[#AFDDFF]"}`}
+                >
+                  {agent.error ?? agent.headline}
                 </span>
               </li>
             ))}
