@@ -290,11 +290,17 @@ export const healthMonitor: AgentPlugin = {
       healthFactor === maxUint256
         ? Number.POSITIVE_INFINITY
         : Number(formatUnits(healthFactor, 18));
-    // A floor a comfortable step above where the loan sits today.
-    const floor = Math.max(1.5, Math.round((current + 0.2) * 10) / 10);
+
+    // The floor is a safety threshold, not a function of where the loan
+    // happens to sit. Deriving it from the current health factor would make a
+    // comfortable loan permanently "at risk" and repay it for no reason.
+    const floor = DEFAULT_MIN_HF;
     return {
       params: { wallet, minHealthFactor: String(floor) },
-      reason: `Loan is at ${current.toFixed(2)}; guarding it at ${floor}`,
+      reason:
+        current >= floor
+          ? `Loan is at ${current.toFixed(2)}, above the ${floor} floor. Watching.`
+          : `Loan is at ${current.toFixed(2)}, under the ${floor} floor.`,
     };
   },
 
