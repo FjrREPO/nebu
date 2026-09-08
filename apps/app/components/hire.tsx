@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { agentAuto, agentScope, buildPlan } from "@/lib/agent-api";
 import {
+  CONFIG,
   EXPLORER,
   formatBnb,
   NETWORK,
@@ -68,6 +69,13 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   const [note, setNote] = useState<string | null>(null);
 
   const busy = phase !== "idle";
+  /**
+   * An agent's calldata names contracts on one chain; a session is granted on
+   * another. Sending mainnet calldata to a testnet session does not fail
+   * loudly — a call to an address with no code succeeds — so the panel would
+   * report a transaction while nothing happened. Refuse instead.
+   */
+  const wrongChain = agent.chainId !== CONFIG.chainId;
   // Limits are worked out from what the agent holds, so hiring an empty wallet
   // grants a session capped at zero — it would sit there unable to act.
   const unfunded = wallet.address !== null && (wallet.balance ?? 0n) === 0n;
@@ -219,7 +227,12 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
             </a>
           )}
           <div className="flex gap-[8px]">
-            <button type="button" disabled={busy || expired} onClick={runNow} className={ghost}>
+            <button
+              type="button"
+              disabled={busy || expired || wrongChain}
+              onClick={runNow}
+              className={ghost}
+            >
               {phase === "running" ? "Running…" : "Run now"}
             </button>
             <button type="button" disabled={busy} onClick={revoke} className={ghost}>
@@ -311,12 +324,20 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
 
                 <button
                   type="button"
-                  disabled={busy || !scope || unfunded}
+                  disabled={busy || !scope || unfunded || wrongChain}
                   onClick={hire}
                   className={primary}
                 >
                   {phase === "granting" ? "Hiring…" : "Hire agent"}
                 </button>
+                {wrongChain && (
+                  <p className="font-manrope text-[#ff8a8a] text-[11px] leading-[15px]">
+                    This agent works on BNB Smart Chain, and hiring is currently set to BNB testnet.
+                    Its transactions name contracts that do not exist there, so it would report
+                    success and do nothing. Set NEXT_PUBLIC_SESSION_NETWORK=mainnet to hire it for
+                    real.
+                  </p>
+                )}
                 {unfunded && (
                   <p className="font-manrope text-[#ff8a8a] text-[11px] leading-[15px]">
                     Send it some BNB first. Its limits are worked out from what it holds, so hiring
