@@ -1,6 +1,6 @@
 "use server";
 
-import type { AgentParams, AgentStatus, SessionScope } from "@nebu/core";
+import type { AgentParams, AgentStatus, AutoParams, SessionScope } from "@nebu/core";
 import { POSITION_MANAGER, positionsOf } from "@nebu/plugin-pancakeswap";
 import { findPlugin, plugins } from "@nebu/plugins";
 import type { WirePlan } from "@/lib/types";
@@ -115,6 +115,21 @@ export async function agentScope(
   if (!plugin) return { ok: false, error: "unknown agent" };
   try {
     return { ok: true, data: await plugin.scope(params) };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** What the agent picks for itself once it can see a funded wallet. */
+export async function agentAuto(
+  id: string,
+  wallet: string,
+): Promise<ActionResult<AutoParams | null>> {
+  const plugin = findPlugin(id);
+  if (!plugin) return { ok: false, error: "unknown agent" };
+  if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) return { ok: false, error: "not an address" };
+  try {
+    return { ok: true, data: await plugin.autoParams(wallet as `0x${string}`) };
   } catch (err) {
     return fail(err);
   }

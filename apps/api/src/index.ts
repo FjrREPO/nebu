@@ -46,6 +46,23 @@ app.get("/agents/:id/status", async (c) => {
   }
 });
 
+app.get("/agents/:id/auto", async (c) => {
+  const plugin = findPlugin(c.req.param("id"));
+  if (!plugin) return c.json({ error: "unknown agent" }, 404);
+
+  const wallet = c.req.query("wallet");
+  if (!wallet || !/^0x[0-9a-fA-F]{40}$/.test(wallet)) {
+    return c.json({ error: "wallet is required" }, 400);
+  }
+
+  try {
+    // Null is an answer, not a failure: the agent has nothing to work with.
+    return c.json(await plugin.autoParams(wallet as `0x${string}`));
+  } catch (err) {
+    return fail(c, err);
+  }
+});
+
 app.get("/agents/:id/insights", async (c) => {
   const plugin = findPlugin(c.req.param("id"));
   if (!plugin) return c.json({ error: "unknown agent" }, 404);

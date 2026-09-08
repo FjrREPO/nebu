@@ -38,12 +38,42 @@ volume, swap rate and pool age before an agent will touch a pool.
 See [`docs/agent-advantage-report.md`](docs/agent-advantage-report.md) for three
 tasks measured against doing them by hand.
 
-## Two ways to run an agent
+## Hiring an agent is a deposit
+
+You send BNB. That is the whole configuration.
+
+Every agent already runs a screen — the rebalancer ranks 60 PancakeSwap pools
+by fee momentum, the yield router compares 8 assets across two protocols — so
+`autoParams()` lets each one pick its own venue and say why:
+
+```
+rebalancer  Watching position #7365949, the newest of 12 this wallet holds
+grid        FLNCB/USDT 0.25% moved 5.0% in 48h, so the ladder spans that
+            either side of spot
+yield       FDUSD pays 8.46% on Aave V3, the best of 8 assets listed on both
+health      Loan is at 1.27; guarding it at 1.5
+```
+
+From a BNB balance and nothing else:
+
+| Agent | What it does with the deposit |
+|---|---|
+| Yield router | wrap, swap to the best-paying asset, approve, supply — 5 txs |
+| Rebalancer | buy both sides, mint a range around the live price — 7 txs |
+| Grid trader | split across both sides at the ratio the ladder wants |
+| Health guard | nothing. It defends a loan you already have; a deposit cannot create one, and it says so rather than pretending |
+
+Routing lives in `packages/core/src/router.ts`: it finds the deepest V3 pool
+for a pair across the fee tiers by how much that pool actually holds, quotes
+straight off `sqrtPriceX96` so token decimals never enter the arithmetic, and
+holds 0.003 BNB back for gas. Every step after a swap is sized off the swap's
+**floor**, not its quote — the floor is what is guaranteed to be there when the
+next call in the sequence runs.
 
 **Sign it yourself.** `plan()` returns the transactions, your wallet signs them.
 Nothing is delegated.
 
-**Hire it.** Grant a scoped [Altana](https://docs.altana.network) session and
+**Or hire it.** Grant a scoped [Altana](https://docs.altana.network) session and
 the agent transacts on its own inside limits you set:
 
 ```ts
@@ -98,8 +128,10 @@ interface AgentPlugin {
   category: "rebalancing" | "grid" | "yield" | "health";
   paramSchema: ParamSpec[];
   example: AgentParams;                        // live params for the card
+  autoParams(wallet): Promise<AutoParams>;     // what it picks for itself
   status(params): Promise<AgentStatus>;        // what is true right now
   insights(params): Promise<AgentInsights>;    // the data it decided from
+  series(params): Promise<AgentSeries | null>; // its own number over time
   scope(params): Promise<SessionScope>;        // narrowest session that works
   plan(params): Promise<AgentAction | null>;   // the txs, or null if idle
 }
@@ -116,8 +148,12 @@ pnpm install
 pnpm dev            # everything
 pnpm --filter @nebu/app dev     # just the marketplace, :3000
 pnpm --filter @nebu/api start   # just the HTTP API, :3001
-pnpm --filter @nebu/agents start # the headless runner
+NEBU_WALLET=0x... pnpm --filter @nebu/agents start   # the headless runner
 ```
+
+The runner takes one address. It asks every agent what it would do with what
+is in that wallet, and reports. Add `NEBU_SESSION` and `NEBU_SESSION_KEY` and
+it signs instead of reporting.
 
 `pnpm build`, `pnpm typecheck` and `pnpm test` run across the workspace through
 Turborepo. Formatting and linting is Biome, enforced on commit by husky.
@@ -130,6 +166,7 @@ is a fallback list of public dataseeds, batched through Multicall3.
 ```
 GET /health
 GET /agents                  # every agent and its param schema
+GET /agents/:id/auto?wallet= # what the agent picks for itself, or null
 GET /agents/:id/status?...   # live reading
 GET /agents/:id/plan?...     # the transactions, or null
 ```
