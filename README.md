@@ -144,6 +144,7 @@ GET /api/agents                       every agent and its param schema
 GET /api/agents/:id/auto?wallet=0x…   what it picks for itself, or null
 GET /api/agents/:id/status?…          live reading
 GET /api/agents/:id/insights?…        the data it decided from
+GET /api/agents/:id/scope?…           the narrowest session that would work
 GET /api/agents/:id/plan?…            the transactions, or null
 ```
 

@@ -23,7 +23,7 @@ import {
   parseEther,
 } from "viem";
 import { bsc, bscTestnet } from "viem/chains";
-import { agentAuto, agentScope, buildPlan } from "@/app/actions";
+import { agentAuto, agentScope, buildPlan } from "@/lib/agent-api";
 import type { AgentMeta } from "@/lib/agents";
 import { connectWallet, short as shortAddress, switchToChain, useWallet } from "@/lib/use-wallet";
 
