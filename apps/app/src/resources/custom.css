@@ -3,6 +3,18 @@
   position: relative;
 }
 
+/*
+ * Carries the two bottom marks. It must track the panel's border box exactly,
+ * so it is pinned with inset rather than sized — and taken out of flow before
+ * anything can hand it a grid cell.
+ */
+.framed > .framed-corners {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
 .framed::before,
 .framed::after,
 .framed > .framed-corners::before,

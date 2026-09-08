@@ -1,6 +1,15 @@
 "use client";
 
-import { Button, Column, Feedback, Input, Row, SmartLink, Text } from "@once-ui-system/core";
+import {
+  Button,
+  Column,
+  Feedback,
+  Input,
+  Row,
+  SmartLink,
+  StatusIndicator,
+  Text,
+} from "@once-ui-system/core";
 import { useState } from "react";
 import { buildPlan, readStatus } from "@/app/actions";
 import type { AgentMeta, AgentStatus, WirePlan } from "@/lib/types";
@@ -74,13 +83,9 @@ export function AgentRunner({
     <Column fillWidth gap="16">
       <Frame fillWidth radius="m" padding="20" gap="16">
         <Column gap="8">
-          <SpecLabel mark>hire</SpecLabel>
+          <SpecLabel mark>run</SpecLabel>
           <Text variant="heading-strong-xs">
             {account ? `Connected ${short(account)}` : "Connect to run this agent"}
-          </Text>
-          <Text variant="body-default-s" onBackground="neutral-weak">
-            Read the position and get the transactions back, then sign them yourself. Or grant the
-            agent a scoped session below and let it act on its own inside your limits.
           </Text>
         </Column>
 
@@ -133,20 +138,18 @@ export function AgentRunner({
               Plan
             </Button>
           </Row>
+          {status && (
+            <Row gap="8" vertical="center" fillWidth>
+              <StatusIndicator size="s" color={status.actionable ? "orange" : "green"} />
+              <Text variant="label-default-s" onBackground="neutral-medium">
+                {status.headline}
+              </Text>
+            </Row>
+          )}
         </Column>
       </Frame>
 
       <SessionPanel agent={agent} params={params} />
-
-      {status && (
-        <Frame fillWidth radius="m" padding="20" gap="8">
-          <SpecLabel mark>reading now</SpecLabel>
-          <Text variant="heading-strong-xs">{status.headline}</Text>
-          <Text variant="body-default-s" onBackground="neutral-weak">
-            {status.detail}
-          </Text>
-        </Frame>
-      )}
 
       {note && <Feedback variant="info" description={note} />}
       {error && <Feedback variant="danger" title="That did not work" description={error} />}

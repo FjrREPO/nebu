@@ -62,18 +62,33 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
         </Column>
       </Row>
 
-      <Row fillWidth gap="24" s={{ direction: "column" }} m={{ direction: "column" }}>
-        <Column maxWidth={22} minWidth={20} gap="16" m={{ maxWidth: undefined }}>
+      <Row
+        fillWidth
+        gap="24"
+        vertical="start"
+        s={{ direction: "column" }}
+        m={{ direction: "column" }}
+      >
+        <Column
+          maxWidth={22}
+          minWidth={20}
+          gap="16"
+          position="sticky"
+          top="80"
+          overflowY="auto"
+          scrollbar="minimal"
+          m={{ maxWidth: undefined, position: "relative" }}
+          // The rail follows you down a long page; on a short viewport it scrolls itself.
+          style={{ maxHeight: "calc(100dvh - 6rem)" }}
+        >
           <AgentRunner agent={agent} initialStatus={status} />
-          <Column gap="12" paddingX="4">
-            <SpecLabel mark>about</SpecLabel>
-            <Text variant="body-default-s" onBackground="neutral-weak">
-              {agent.summary}
-            </Text>
-          </Column>
         </Column>
 
         <Column fillWidth gap="32" minWidth={0}>
+          <Text variant="body-default-l" onBackground="neutral-weak">
+            {agent.summary}
+          </Text>
+
           {insights && <StatStrip stats={insights.stats} />}
           {insights?.table && <DataTable table={insights.table} />}
 
