@@ -1,7 +1,8 @@
 import { bscClient } from "@nebu/core";
 import { livePools } from "@nebu/plugin-pancakeswap";
 import { plugins } from "@nebu/plugins";
-import { Chip, GridLines, Muted } from "@/components/ui";
+import { Chip, GridLines, Muted, TokenMarks } from "@/components/ui";
+import { brandLogos } from "@/lib/brands";
 
 export const metadata = {
   title: "Status",
@@ -22,16 +23,6 @@ const CONTRACTS = [
   ["Altana KeyStore (mainnet)", "0x6572427ED530BadcF7375Cf9A4709D8d2b0E7E0a"],
   ["Altana KeyStore (testnet)", "0x6b8361C29d05D498b1a12B54A37310f94171E94A"],
 ] as const;
-
-const LIMITS = [
-  "Activity lists cover roughly the last few hours. Free blockchain endpoints refuse to search further back in one go, so that is the window rather than a choice.",
-  '"Fee APR" is an estimate: yesterday\'s trading fees, stretched over a year. A quiet day or a busy one moves it, and every page showing it says so.',
-  "Market data comes from a free plan with a per-minute allowance. It is queued and cached, but a busy moment can still be refused — a card with no chart says so rather than inventing one.",
-  "Nothing records how safe a loan was last week, and public endpoints will not serve old blockchain state, so that chart replays the price of the collateral against today's balances. The label names the coin driving it.",
-  "Hiring an agent is set to BNB's test network by default, because giving one permission writes to the blockchain and costs a small fee. Set NEXT_PUBLIC_SESSION_NETWORK=mainnet to use the real one.",
-  "The permission you give an agent lives in your browser. It is limited to that agent's contracts, capped per day and expires on its own — but it is still a permission, so cancel it when you are done.",
-  "Set BSC_RPC_URL to a private blockchain endpoint before pointing real traffic at this.",
-];
 
 export default async function StatusPage() {
   const [head, pools] = await Promise.all([
@@ -116,6 +107,9 @@ export default async function StatusPage() {
                   <span
                     className={`mt-[6px] size-[6px] shrink-0 rounded-full ${feed.ok ? "bg-[#7ee2a8]" : "bg-[#ff9d9d]"}`}
                   />
+                  <span className="mt-[1px]">
+                    <TokenMarks srcs={brandLogos(feed.name)} />
+                  </span>
                   <div>
                     <p className="font-manrope text-white text-[13px] leading-[15.6px]">
                       {feed.name}
@@ -141,7 +135,8 @@ export default async function StatusPage() {
                 key={address}
                 className="flex flex-wrap items-center justify-between gap-[12px] px-[20px] py-[12px]"
               >
-                <span className="font-manrope text-white/50 text-[11px] uppercase tracking-wide">
+                <span className="flex items-center gap-[8px] font-manrope text-white/50 text-[11px] uppercase tracking-wide">
+                  <TokenMarks srcs={brandLogos(label)} />
                   {label}
                 </span>
                 <a
@@ -150,22 +145,6 @@ export default async function StatusPage() {
                 >
                   {address}
                 </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section className="anim-fade-up" style={{ animationDelay: "750ms" }}>
-          <h2 className="font-graphik text-white text-[22px] leading-[1.1] mb-[12px]">
-            Known limits
-          </h2>
-          <ul className="border border-white/15 divide-y divide-white/5">
-            {LIMITS.map((limit) => (
-              <li key={limit} className="flex gap-[12px] px-[20px] py-[14px]">
-                <span className="font-manrope text-[#AFDDFF] text-[13px]">–</span>
-                <span className="font-manrope text-white/80 text-[13px] leading-[18px]">
-                  {limit}
-                </span>
               </li>
             ))}
           </ul>

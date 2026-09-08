@@ -25,7 +25,7 @@ export function AgentNode({ agent, index }: { agent: AgentCardData; index: numbe
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
-            <span className="font-manrope text-[#AFDDFF]/80 text-[11px] leading-[14px] tracking-wide">
+            <span className="min-w-0 truncate font-manrope text-[#AFDDFF]/80 text-[11px] leading-[14px] tracking-wide">
               {String(index + 1).padStart(2, "0")}. {categoryLabel(agent.category)}
             </span>
             <span className="font-manrope text-[11px] leading-[14px] text-white/50 whitespace-nowrap">

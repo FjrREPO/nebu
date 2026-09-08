@@ -3,6 +3,7 @@ import { DetailChart, RowSpark } from "@/components/charts";
 import { HirePanel } from "@/components/hire";
 import { Chip, GridLines, Muted, TokenMarks } from "@/components/ui";
 import { type AgentMeta, agentDetail, agentMeta, findAgentMeta } from "@/lib/agents";
+import { brandLogos } from "@/lib/brands";
 import { categoryLabel } from "@/lib/categories";
 import { SITE } from "@/lib/site";
 
@@ -88,7 +89,10 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
               </h1>
             </div>
             <div className="ml-auto hidden md:flex items-center gap-[10px] pb-[6px]">
-              <Chip>{meta.protocol}</Chip>
+              <span className="flex items-center gap-[8px]">
+                <TokenMarks srcs={brandLogos(meta.protocol)} />
+                <Chip>{meta.protocol}</Chip>
+              </span>
               <Chip>{status ? "LIVE" : "NO_FEED"}</Chip>
             </div>
           </div>
