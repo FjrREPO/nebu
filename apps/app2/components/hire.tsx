@@ -1,7 +1,7 @@
 "use client";
 
 import { BNB, BNB_TESTNET, createClient, type PasskeySigner } from "@altananetwork/sdk";
-import type { SessionScope } from "@nebu/core";
+import type { AutoParams, SessionScope } from "@nebu/core";
 import {
   expiresAt,
   grantAgentSession,
@@ -13,15 +13,27 @@ import {
   type SessionNetwork,
 } from "@nebu/session";
 import { useCallback, useEffect, useState } from "react";
-import { agentScope, buildPlan } from "@/app/actions";
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  type EIP1193Provider,
+  formatEther,
+  http,
+  parseEther,
+} from "viem";
+import { bsc, bscTestnet } from "viem/chains";
+import { agentAuto, agentScope, buildPlan } from "@/app/actions";
 import type { AgentMeta } from "@/lib/agents";
-import { ACCENT } from "./ui";
 
 /** Testnet by default: a grant registers a key on chain and costs a fee. */
 const NETWORK: SessionNetwork =
   (process.env.NEXT_PUBLIC_SESSION_NETWORK as SessionNetwork) ?? "testnet";
 const CONFIG = NETWORK === "mainnet" ? BNB : BNB_TESTNET;
+const CHAIN = NETWORK === "mainnet" ? bsc : bscTestnet;
 const EXPLORER = NETWORK === "mainnet" ? "https://bscscan.com" : "https://testnet.bscscan.com";
+
+const reader = createPublicClient({ chain: CHAIN, transport: http(CONFIG.publicRpcUrl) });
 
 type Grant = {
   network: SessionNetwork;
@@ -32,43 +44,41 @@ type Grant = {
 };
 
 const storageKey = (id: string) => `nebu2.grant.${id}`;
+const short = (address: string) => `${address.slice(0, 10)}…${address.slice(-8)}`;
 
 const field =
   "w-full bg-transparent border border-white/15 px-[12px] py-[9px] font-manrope text-white text-[13px] leading-[15.6px] outline-none focus:border-[#AFDDFF]/60 transition-colors";
 const legend = "font-manrope text-white/50 text-[11px] leading-[14px] uppercase tracking-wide";
+const primary =
+  "w-full bg-[#AFDDFF] px-[16px] py-[11px] font-manrope text-black text-[13px] uppercase tracking-wide hover:bg-[#c8e8ff] disabled:opacity-40 transition-colors";
+const ghost =
+  "flex-1 border border-white/30 px-[16px] py-[10px] font-manrope text-white text-[13px] uppercase tracking-wide hover:border-white disabled:opacity-40 transition-colors";
+
+/** The relay's message for an unfunded wallet says nothing useful on its own. */
+const explain = (message: string) =>
+  /executing calls|insufficient|funds/i.test(message)
+    ? `${message} — the agent wallet needs BNB for gas and the key registration.`
+    : message;
 
 export function HirePanel({ agent }: { agent: AgentMeta }) {
-  const [params, setParams] = useState<Record<string, string>>({ ...agent.example });
-  const [scope, setScope] = useState<SessionScope | null>(null);
-  const [limits, setLimits] = useState<Record<string, string>>({});
-  const [days, setDays] = useState("7");
-  const [grant, setGrant] = useState<Grant | null>(null);
   const [wallet, setWallet] = useState<{ address: `0x${string}`; signer: PasskeySigner } | null>(
     null,
   );
-  const [phase, setPhase] = useState<"idle" | "granting" | "running" | "revoking">("idle");
+  const [balance, setBalance] = useState<bigint | null>(null);
+  const [auto, setAuto] = useState<AutoParams | null>(null);
+  const [scope, setScope] = useState<SessionScope | null>(null);
+  const [limits, setLimits] = useState<Record<string, string>>({});
+  const [days, setDays] = useState("7");
+  const [deposit, setDeposit] = useState("0.05");
+  const [grant, setGrant] = useState<Grant | null>(null);
+  const [advanced, setAdvanced] = useState(false);
+  const [phase, setPhase] = useState<
+    "idle" | "opening" | "funding" | "granting" | "running" | "revoking"
+  >("idle");
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
   const busy = phase !== "idle";
-
-  const loadScope = useCallback(
-    async (next: Record<string, string>) => {
-      const result = await agentScope(agent.id, next);
-      if (!result.ok) return null;
-      setScope(result.data);
-      setLimits((current) =>
-        Object.fromEntries(
-          result.data.spend.map((entry) => [
-            entry.token.toLowerCase(),
-            current[entry.token.toLowerCase()] ?? entry.suggested,
-          ]),
-        ),
-      );
-      return result.data;
-    },
-    [agent.id],
-  );
 
   useEffect(() => {
     try {
@@ -77,10 +87,33 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     } catch {
       // Blocked storage just means the grant does not survive a reload.
     }
-    loadScope({ ...agent.example });
-  }, [agent.id, agent.example, loadScope]);
+  }, [agent.id]);
 
-  /** Cached so grant, run and revoke do not each fire their own passkey prompt. */
+  /** Everything the panel needs once it knows which wallet it is looking at. */
+  const inspect = useCallback(
+    async (address: `0x${string}`) => {
+      const [funds, chosen] = await Promise.all([
+        reader.getBalance({ address }).catch(() => null),
+        agentAuto(agent.id, address),
+      ]);
+      setBalance(funds);
+      if (!chosen.ok) return setError(chosen.error);
+      setAuto(chosen.data);
+      if (!chosen.data) return;
+
+      const derived = await agentScope(agent.id, chosen.data.params);
+      if (!derived.ok) return;
+      setScope(derived.data);
+      setLimits(
+        Object.fromEntries(
+          derived.data.spend.map((entry) => [entry.token.toLowerCase(), entry.suggested]),
+        ),
+      );
+    },
+    [agent.id],
+  );
+
+  /** Cached so hire, run and revoke do not each fire their own passkey prompt. */
   async function openWallet() {
     if (wallet) return wallet;
     const client = createClient({ chains: [CONFIG] });
@@ -89,27 +122,63 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
       .catch(() => client.createPasskeyWallet({ name: "nebu" }));
     const next = { address: opened.address, signer: opened.signer };
     setWallet(next);
+    await inspect(next.address);
     return next;
   }
 
-  const explain = (message: string) =>
-    /executing calls|insufficient|funds/i.test(message)
-      ? `${message} The agent wallet needs a little BNB — a grant registers a key on chain.`
-      : message;
+  async function connect() {
+    setPhase("opening");
+    setError(null);
+    try {
+      await openWallet();
+    } catch (err) {
+      setError(explain((err as Error).message.split("\n")[0]));
+    } finally {
+      setPhase("idle");
+    }
+  }
 
-  async function doGrant() {
-    setPhase("granting");
+  /** Top the agent wallet up from whatever extension wallet the user already has. */
+  async function fund() {
+    const target = wallet ?? (await openWallet().catch(() => null));
+    if (!target) return;
+    setPhase("funding");
     setError(null);
     setNote(null);
     try {
-      const current = (await loadScope(params)) ?? scope;
-      if (!current) throw new Error("Could not work out what this agent needs");
+      const injected = (globalThis as { ethereum?: EIP1193Provider }).ethereum;
+      if (!injected) throw new Error("No extension wallet found to send from.");
+      const sender = createWalletClient({ chain: CHAIN, transport: custom(injected) });
+      const [account] = await sender.requestAddresses();
+      if ((await sender.getChainId()) !== CHAIN.id) {
+        await sender.switchChain({ id: CHAIN.id }).catch(() => sender.addChain({ chain: CHAIN }));
+      }
+      const hash = await sender.sendTransaction({
+        account,
+        to: target.address,
+        value: parseEther(deposit || "0"),
+      });
+      setNote(`[ SENT ] ${hash}`);
+      await reader.waitForTransactionReceipt({ hash }).catch(() => null);
+      await inspect(target.address);
+    } catch (err) {
+      setError(explain((err as Error).message.split("\n")[0]));
+    } finally {
+      setPhase("idle");
+    }
+  }
+
+  async function hire() {
+    if (!auto || !scope) return;
+    setPhase("granting");
+    setError(null);
+    try {
       const opened = await openWallet();
       const result = await grantAgentSession({
         network: NETWORK,
         wallet: { address: opened.address },
         signer: opened.signer,
-        scope: current,
+        scope,
         limits,
         days: Math.max(1, Number(days) || 7),
       });
@@ -134,12 +203,12 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   }
 
   async function runNow() {
-    if (!grant) return;
+    if (!grant || !auto) return;
     setPhase("running");
     setError(null);
     setNote(null);
     try {
-      const planned = await buildPlan(agent.id, params);
+      const planned = await buildPlan(agent.id, auto.params);
       if (!planned.ok) throw new Error(planned.error);
       if (!planned.data) {
         setNote("[ NOTHING_TO_DO ]");
@@ -160,7 +229,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     }
   }
 
-  async function doRevoke() {
+  async function revoke() {
     if (!grant) return;
     setPhase("revoking");
     setError(null);
@@ -193,9 +262,12 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
         <div className="mt-[16px] space-y-[14px]">
           <p className="font-manrope text-white text-[13px] leading-[18px]">
             {expired
-              ? "Session expired. Grant a new one to keep it working."
+              ? "Session expired. Hire it again to keep it working."
               : `Working until ${expiresAt(session).toISOString().slice(0, 10)}, inside your caps.`}
           </p>
+          {auto && (
+            <p className="font-manrope text-white/50 text-[11px] leading-[15px]">{auto.reason}</p>
+          )}
           {grant.transactionHash && (
             <a
               href={`${EXPLORER}/tx/${grant.transactionHash}`}
@@ -205,85 +277,136 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
             </a>
           )}
           <div className="flex gap-[8px]">
-            <button
-              type="button"
-              disabled={busy || expired}
-              onClick={runNow}
-              className="flex-1 bg-[#AFDDFF] px-[16px] py-[10px] font-manrope text-black text-[13px] uppercase tracking-wide hover:bg-[#c8e8ff] disabled:opacity-40 transition-colors"
-            >
+            <button type="button" disabled={busy || expired} onClick={runNow} className={primary}>
               {phase === "running" ? "Running…" : "Run now"}
             </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={doRevoke}
-              className="flex-1 border border-white/30 px-[16px] py-[10px] font-manrope text-white text-[13px] uppercase tracking-wide hover:border-white disabled:opacity-40 transition-colors"
-            >
+            <button type="button" disabled={busy} onClick={revoke} className={ghost}>
               {phase === "revoking" ? "Revoking…" : "Revoke"}
             </button>
           </div>
         </div>
       ) : (
-        <div className="mt-[16px] space-y-[14px]">
-          <div className="space-y-[10px]">
-            {agent.paramSchema.map((spec) => (
-              <label key={spec.key} className="block">
-                <span className={legend}>{spec.label}</span>
-                <input
-                  className={`${field} mt-[5px]`}
-                  value={params[spec.key] ?? ""}
-                  placeholder={spec.placeholder}
-                  onChange={(event) => setParams({ ...params, [spec.key]: event.target.value })}
-                />
-              </label>
-            ))}
-          </div>
+        <div className="mt-[16px] space-y-[16px]">
+          {!wallet ? (
+            <>
+              <p className="font-manrope text-white text-[13px] leading-[18px]">
+                Your agent wallet is a passkey on this device. Create it, send it some BNB, and the
+                agent picks its own venue from there.
+              </p>
+              <button type="button" disabled={busy} onClick={connect} className={primary}>
+                {phase === "opening" ? "Opening…" : "Create agent wallet"}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="border border-white/10 p-[14px]">
+                <span className={legend}>Agent wallet</span>
+                <p className="font-manrope text-white text-[13px] leading-[18px] mt-[4px] break-all">
+                  {short(wallet.address)}
+                </p>
+                <p className="font-manrope text-[#AFDDFF] text-[13px] leading-[18px] mt-[6px]">
+                  {balance === null ? "—" : `${Number(formatEther(balance)).toFixed(4)} BNB`}
+                </p>
+              </div>
 
-          <div className="space-y-[10px] border-t border-white/10 pt-[14px]">
-            <span className={legend}>Daily cap</span>
-            {scope?.spend.map((entry) => (
-              <label key={entry.token} className="block">
-                <span className={legend}>{entry.symbol}</span>
-                <input
-                  className={`${field} mt-[5px]`}
-                  value={limits[entry.token.toLowerCase()] ?? ""}
-                  onChange={(event) =>
-                    setLimits({ ...limits, [entry.token.toLowerCase()]: event.target.value })
-                  }
-                />
-              </label>
-            ))}
-            <label className="block">
-              <span className={legend}>Expires in days</span>
-              <input
-                className={`${field} mt-[5px]`}
-                value={days}
-                onChange={(event) => setDays(event.target.value)}
-              />
-            </label>
-          </div>
+              <div className="flex gap-[8px] items-end">
+                <label className="flex-1">
+                  <span className={legend}>Deposit BNB</span>
+                  <input
+                    className={`${field} mt-[5px]`}
+                    value={deposit}
+                    onChange={(event) => setDeposit(event.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={fund}
+                  className="border border-[#AFDDFF]/60 px-[16px] py-[9px] font-manrope text-[#AFDDFF] text-[13px] uppercase tracking-wide hover:bg-[#AFDDFF] hover:text-black disabled:opacity-40 transition-colors"
+                >
+                  {phase === "funding" ? "Sending…" : "Send"}
+                </button>
+              </div>
 
-          <button
-            type="button"
-            disabled={busy}
-            onClick={doGrant}
-            className="w-full bg-[#AFDDFF] px-[16px] py-[11px] font-manrope text-black text-[13px] uppercase tracking-wide hover:bg-[#c8e8ff] disabled:opacity-40 transition-colors"
-          >
-            {phase === "granting" ? "Granting…" : "Grant session"}
-          </button>
+              {auto ? (
+                <>
+                  <div className="border-l border-[#AFDDFF]/50 pl-[12px]">
+                    <span className={legend}>The agent picked</span>
+                    <p className="font-manrope text-white text-[13px] leading-[18px] mt-[4px]">
+                      {auto.reason}
+                    </p>
+                  </div>
 
-          <p className="font-manrope text-white/50 text-[11px] leading-[14px]">
-            The agent may only call {scope?.calls.length ?? "…"} contracts, only up to these caps,
-            and only until it expires. Revoking takes one transaction.
-          </p>
+                  {scope && scope.spend.length > 0 && (
+                    <div className="space-y-[10px]">
+                      <span className={legend}>Daily cap</span>
+                      {scope.spend.map((entry) => (
+                        <label key={entry.token} className="block">
+                          <span className={legend}>{entry.symbol}</span>
+                          <input
+                            className={`${field} mt-[5px]`}
+                            value={limits[entry.token.toLowerCase()] ?? ""}
+                            onChange={(event) =>
+                              setLimits({
+                                ...limits,
+                                [entry.token.toLowerCase()]: event.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                      ))}
+                      <label className="block">
+                        <span className={legend}>Expires in days</span>
+                        <input
+                          className={`${field} mt-[5px]`}
+                          value={days}
+                          onChange={(event) => setDays(event.target.value)}
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={busy || !scope}
+                    onClick={hire}
+                    className={primary}
+                  >
+                    {phase === "granting" ? "Hiring…" : "Hire agent"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAdvanced(!advanced)}
+                    className="font-manrope text-white/40 text-[11px] uppercase tracking-wide hover:text-white/70"
+                  >
+                    {advanced ? "Hide" : "Show"} what it chose
+                  </button>
+                  {advanced && (
+                    <pre className="font-manrope text-white/50 text-[11px] leading-[16px] whitespace-pre-wrap break-all">
+                      {JSON.stringify(auto.params, null, 2)}
+                    </pre>
+                  )}
+
+                  <p className="font-manrope text-white/50 text-[11px] leading-[14px]">
+                    It may only call {scope?.calls.length ?? "…"} contracts, only up to these caps,
+                    and only until it expires. Revoking takes one transaction.
+                  </p>
+                </>
+              ) : (
+                <p className="font-manrope text-white/50 text-[11px] leading-[16px]">
+                  This agent guards a position you already hold rather than deploying a fresh
+                  deposit. Once this wallet has a loan on Aave V3, it will pick its own floor and
+                  defend it.
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
 
       {note && (
-        <p
-          className="mt-[14px] font-manrope text-[11px] leading-[14px] break-all"
-          style={{ color: ACCENT }}
-        >
+        <p className="mt-[14px] font-manrope text-[#AFDDFF] text-[11px] leading-[14px] break-all">
           {note}
         </p>
       )}

@@ -1,6 +1,6 @@
-import { AgentNode } from "@/components/agent-card";
+import Link from "next/link";
 import { Nav } from "@/components/nav";
-import { Chip, GridLines, Muted, Notch } from "@/components/ui";
+import { GridLines, Notch } from "@/components/ui";
 import { agentCards } from "@/lib/agents";
 
 /** Every card is a live read, so a minute of staleness is the most it keeps. */
@@ -36,8 +36,8 @@ export default async function Page() {
           <GridLines />
 
           <div className="absolute bottom-5 md:bottom-[35px] left-5 md:left-[35px] right-5 md:right-[35px] flex flex-col md:flex-row items-start md:items-end justify-between gap-5 md:gap-0">
-            <a
-              href="#agents"
+            <Link
+              href="/agents"
               className="bg-[#AFDDFF] px-[16px] md:px-[20px] py-[10px] md:py-[12px] flex items-center gap-[10px] hover:bg-[#c8e8ff] transition-colors anim-fade-up"
               style={{ animationDelay: "900ms" }}
             >
@@ -45,7 +45,7 @@ export default async function Page() {
               <span className="font-manrope text-black text-[12px] md:text-[13px] leading-[15.6px] uppercase tracking-wide">
                 Browse {agents.length} agents
               </span>
-            </a>
+            </Link>
 
             <div
               className="relative max-w-[280px] hidden sm:block anim-slide-right"
@@ -65,33 +65,6 @@ export default async function Page() {
               </Notch>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section id="agents" className="relative bg-black px-5 md:px-[35px] py-[80px] md:py-[120px]">
-        <div className="mx-auto max-w-[1280px]">
-          <div className="flex flex-wrap items-end justify-between gap-4 mb-[40px]">
-            <div>
-              <span className="font-manrope text-[#AFDDFF]/80 text-[13px] leading-[15.6px]">
-                [ REGISTRY ]
-              </span>
-              <h2 className="font-graphik text-white text-[32px] md:text-[44px] leading-[1.05] mt-[10px]">
-                Four agents, one chain
-              </h2>
-            </div>
-            <Chip>LIVE_MAINNET_READS</Chip>
-          </div>
-
-          <div className="grid gap-[16px] md:grid-cols-2 xl:grid-cols-4">
-            {agents.map((agent, index) => (
-              <AgentNode key={agent.id} agent={agent} index={index} />
-            ))}
-          </div>
-
-          <Muted className="mt-[24px]">
-            Fee APR is annualised from a day of volume. The pool feed is a free tier with a
-            per-minute budget, so a card with no history says so rather than inventing one.
-          </Muted>
         </div>
       </section>
     </>

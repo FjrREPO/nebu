@@ -5,6 +5,7 @@ import {
   type AgentSeries,
   type AgentStatus,
   type AgentTx,
+  type AutoParams,
   bscClient,
   InvalidParams,
   poolSeries,
@@ -18,6 +19,7 @@ import {
   formatPrice,
   inRange,
   poolAddress,
+  positionsOf,
   priceToTick,
   slot0,
   snapToSpacing,
@@ -178,6 +180,30 @@ export const pancakeRebalancer: AgentPlugin = {
       headline: live ? "In range, earning fees" : "Out of range, earning nothing",
       detail: describe(position),
       actionable: !live && position.liquidity > 0n,
+    };
+  },
+
+  async autoParams(wallet): Promise<AutoParams | null> {
+    const [held, pools] = await Promise.all([
+      positionsOf(POSITION_MANAGER, wallet).catch(() => []),
+      livePools().catch(() => []),
+    ]);
+
+    // Already an LP: watch the newest position, no questions asked.
+    if (held.length > 0) {
+      return {
+        params: { tokenId: held[0] },
+        reason: `Watching position #${held[0]}, the newest of ${held.length} this wallet holds`,
+      };
+    }
+
+    // Nothing to watch yet, but the screen still has an opinion about where to
+    // put liquidity, so say which pool and why.
+    const best = shortlist(pools)[0];
+    if (!best) return null;
+    return {
+      params: {},
+      reason: `No position yet. Best pool on the screen is ${best.pair} ${best.feePercent}% at ${(best.feeApr * 100).toFixed(0)}% fee APR`,
     };
   },
 

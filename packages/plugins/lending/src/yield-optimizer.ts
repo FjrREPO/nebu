@@ -5,6 +5,7 @@ import {
   type AgentSeries,
   type AgentStatus,
   type AgentTx,
+  type AutoParams,
   alignDaily,
   apyHistory,
   bscClient,
@@ -242,6 +243,19 @@ export const yieldOptimizer: AgentPlugin = {
           : "Nothing supplied yet",
       detail: `${market.symbol}: ${quotes}${funded.length ? ` · holding ${funded[0].supplied.toPrecision(6)} on ${funded[0].protocol}` : ""}`,
       actionable: move !== null,
+    };
+  },
+
+  async autoParams(wallet): Promise<AutoParams | null> {
+    const radar = await yieldRadar().catch(() => []);
+    const best = radar[0];
+    if (!best) return null;
+
+    // The radar is already ranked, so the agent's own screen picks the asset.
+    const venue = (best.aaveApy ?? 0) >= (best.venusApy ?? 0) ? "Aave V3" : "Venus";
+    return {
+      params: { asset: best.asset, wallet, minGainBps: "25" },
+      reason: `${best.symbol} pays ${pct(bestApy(best))} on ${venue}, the best of ${radar.length} assets listed on both`,
     };
   },
 

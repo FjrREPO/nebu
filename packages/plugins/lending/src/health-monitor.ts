@@ -5,6 +5,7 @@ import {
   type AgentSeries,
   type AgentStatus,
   type AgentTx,
+  type AutoParams,
   bscClient,
   InvalidParams,
   LOG_SPAN,
@@ -276,6 +277,24 @@ export const healthMonitor: AgentPlugin = {
         : `At risk: ${account.healthFactor.toFixed(2)}`,
       detail: `$${account.collateralBase.toFixed(2)} collateral against $${account.debtBase.toFixed(2)} debt, liquidates below 1.00, your floor is ${account.minHealthFactor}`,
       actionable: !safe,
+    };
+  },
+
+  async autoParams(wallet): Promise<AutoParams | null> {
+    const [, debt, , , , healthFactor] = await userAccountData(wallet);
+    // Nothing borrowed means nothing to defend. This agent guards a position
+    // the user already has; it cannot create one out of a deposit.
+    if (debt === 0n) return null;
+
+    const current =
+      healthFactor === maxUint256
+        ? Number.POSITIVE_INFINITY
+        : Number(formatUnits(healthFactor, 18));
+    // A floor a comfortable step above where the loan sits today.
+    const floor = Math.max(1.5, Math.round((current + 0.2) * 10) / 10);
+    return {
+      params: { wallet, minHealthFactor: String(floor) },
+      reason: `Loan is at ${current.toFixed(2)}; guarding it at ${floor}`,
     };
   },
 

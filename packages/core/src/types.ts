@@ -94,6 +94,13 @@ export type SeriesPoint = { t: number; v: number };
  * has drifted, the spread it is chasing. Not a token price: the thing the
  * agent is actually paid to watch.
  */
+/** What the agent chose for itself, and the reasoning to show the user. */
+export type AutoParams = {
+  params: AgentParams;
+  /** One line explaining the choice, e.g. "picked CAKE/WBNB, 76% fee APR". */
+  reason: string;
+};
+
 export type AgentSeries = {
   label: string;
   points: SeriesPoint[];
@@ -131,6 +138,15 @@ export interface AgentPlugin {
   scope(params: AgentParams): Promise<SessionScope>;
   /** History of the number this agent watches, for the marketplace card. */
   series(params: AgentParams): Promise<AgentSeries | null>;
+  /**
+   * Params the agent picks for itself, given nothing but a funded wallet.
+   *
+   * This is what lets a user deposit BNB and stop there: the agent already
+   * screens the pools and compares the rates, so it can choose its own venue.
+   * It returns null when it has nothing to work with — either the wallet is
+   * empty, or the agent watches a position the user must already hold.
+   */
+  autoParams(wallet: `0x${string}`): Promise<AutoParams | null>;
   /** The tx to run, or null when there is nothing to do. */
   plan(params: AgentParams): Promise<AgentAction | null>;
 }

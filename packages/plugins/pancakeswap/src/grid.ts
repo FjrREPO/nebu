@@ -4,6 +4,7 @@ import {
   type AgentPlugin,
   type AgentSeries,
   type AgentStatus,
+  type AutoParams,
   bscClient,
   InvalidParams,
   plainNumber,
@@ -17,6 +18,7 @@ import {
 import { encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { erc20Abi, poolAbi, SMART_ROUTER, smartRouterAbi } from "./abi.ts";
 import { formatPrice, slot0, tickToPrice, tokenMeta } from "./pool.ts";
+import { livePools, shortlist } from "./pools.ts";
 
 const SLIPPAGE = 0.01;
 
@@ -223,6 +225,31 @@ export const pancakeGrid: AgentPlugin = {
           : "Balanced",
       detail: `${market.meta0.symbol}/${market.meta1.symbol} at ${formatPrice(market.price)} · holding ${(market.held * 100).toFixed(1)}% ${market.meta1.symbol}, ladder wants ${(market.target * 100).toFixed(1)}%`,
       actionable: !outside && Math.abs(off) > tolerance(market) && market.total > 0,
+    };
+  },
+
+  async autoParams(wallet): Promise<AutoParams | null> {
+    const best = shortlist(await livePools().catch(() => []))[0];
+    if (!best) return null;
+
+    // Size the range from what the pair has actually done over two days, not
+    // from a number picked out of the air. A quiet pair gets a tight ladder.
+    const history = await poolSeries(best.address, 48);
+    const prices = history.map((point) => point.v).filter((value) => value > 0);
+    if (prices.length < 2) return null;
+
+    const spot = prices[prices.length - 1];
+    const swing = Math.max(0.05, Math.min(0.5, (Math.max(...prices) - Math.min(...prices)) / spot));
+
+    return {
+      params: {
+        pool: best.address,
+        wallet,
+        lowerPrice: plainNumber(spot * (1 - swing), 12),
+        upperPrice: plainNumber(spot * (1 + swing), 12),
+        grids: "10",
+      },
+      reason: `${best.pair} ${best.feePercent}% moved ${(swing * 100).toFixed(1)}% in 48h, so the ladder spans that either side of spot`,
     };
   },
 

@@ -1,6 +1,6 @@
 "use server";
 
-import type { AgentParams, SessionScope } from "@nebu/core";
+import type { AgentParams, AutoParams, SessionScope } from "@nebu/core";
 import { findPlugin } from "@nebu/plugins";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -39,6 +39,21 @@ export async function buildPlan(
         txs: action.txs.map((tx) => ({ ...tx, value: (tx.value ?? 0n).toString() })),
       },
     };
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+/** What the agent picks for itself once it can see a funded wallet. */
+export async function agentAuto(
+  id: string,
+  wallet: string,
+): Promise<ActionResult<AutoParams | null>> {
+  const plugin = findPlugin(id);
+  if (!plugin) return { ok: false, error: "unknown agent" };
+  if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) return { ok: false, error: "not an address" };
+  try {
+    return { ok: true, data: await plugin.autoParams(wallet as `0x${string}`) };
   } catch (err) {
     return fail(err);
   }
