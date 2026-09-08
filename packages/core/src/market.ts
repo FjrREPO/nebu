@@ -3,6 +3,7 @@
  * feed the pool screen uses; here it answers "what has the number the agent
  * watches been doing" rather than "which pools are worth entering".
  */
+import { getAddress } from "viem";
 import type { SeriesPoint } from "./types.ts";
 
 const BASE = "https://api.geckoterminal.com/api/v2/networks/bsc";
@@ -117,6 +118,21 @@ export async function tokenSeries(token: string, hours = 48): Promise<SeriesPoin
  */
 const logos = new Map<string, string | null>();
 
+/**
+ * PancakeSwap hosts an icon for everything it lists, which is most of what
+ * trades here and much of what the market feed has no image for. It is keyed
+ * by the checksummed address — the lowercase form returns 404 — and a token it
+ * has never heard of simply does not load, which at 18px is no worse than the
+ * gap it replaces.
+ */
+export function fallbackLogo(address: string): string | undefined {
+  try {
+    return `https://tokens.pancakeswap.finance/images/${getAddress(address)}.png`;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function tokenLogos(addresses: string[]): Promise<Map<string, string>> {
   const wanted = [...new Set(addresses.map((address) => address.toLowerCase()))];
   const missing = wanted.filter((address) => !logos.has(address));
@@ -141,7 +157,7 @@ export async function tokenLogos(addresses: string[]): Promise<Map<string, strin
 
   const found = new Map<string, string>();
   for (const address of wanted) {
-    const url = logos.get(address);
+    const url = logos.get(address) ?? fallbackLogo(address);
     if (url) found.set(address, url);
   }
   return found;

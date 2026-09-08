@@ -3,6 +3,8 @@
  * of the two numbers no contract exposes — 24h volume and swap counts — which
  * is what a fee APR is actually made of.
  */
+import { fallbackLogo } from "@nebu/core";
+
 const ENDPOINT = "https://api.geckoterminal.com/api/v2/networks/bsc/dexes";
 const CACHE_MS = 60_000;
 const PAGES = 3;
@@ -36,7 +38,10 @@ export const POOL_FILTER = {
   maxFeeApr: 5,
 };
 
-type GeckoToken = { id: string; attributes: { symbol?: string; image_url?: string } };
+type GeckoToken = {
+  id: string;
+  attributes: { address?: string; symbol?: string; image_url?: string };
+};
 type GeckoPool = {
   attributes: {
     address: string;
@@ -79,20 +84,31 @@ async function fetchPage(
   dex: string,
   page: number,
 ): Promise<{ pools: GeckoPool[]; tokens: GeckoToken[] }> {
-  const response = await fetch(
-    `${ENDPOINT}/${dex}/pools?page=${page}&include=base_token,quote_token`,
-    { headers: { accept: "application/json" }, signal: AbortSignal.timeout(12_000) },
-  );
-  // A throttled third page should cost the board three rows, not all of them.
-  if (!response.ok) return { pools: [], tokens: [] };
-  const body = (await response.json()) as { data: GeckoPool[]; included?: GeckoToken[] };
-  return { pools: body.data ?? [], tokens: body.included ?? [] };
+  // A throttled or timed-out page should cost the board its rows, not all of
+  // them — and a fetch that throws has to be caught here, or one slow page
+  // rejects the whole board and every agent reports nothing to pick from.
+  try {
+    const response = await fetch(
+      `${ENDPOINT}/${dex}/pools?page=${page}&include=base_token,quote_token`,
+      { headers: { accept: "application/json" }, signal: AbortSignal.timeout(12_000) },
+    );
+    if (!response.ok) return { pools: [], tokens: [] };
+    const body = (await response.json()) as { data: GeckoPool[]; included?: GeckoToken[] };
+    return { pools: body.data ?? [], tokens: body.included ?? [] };
+  } catch {
+    return { pools: [], tokens: [] };
+  }
 }
 
 let cache: { at: number; rows: PoolRow[] } | undefined;
+/** How long to sit on an empty board before asking the feed again. */
+const RETRY_MS = 10_000;
 
 export async function livePools(dex = "pancakeswap-v3-bsc"): Promise<PoolRow[]> {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache.rows;
+  // An empty board is a failure rather than an answer, so it is worth coming
+  // back to much sooner than a good one needs refreshing.
+  const ttl = cache?.rows.length ? CACHE_MS : RETRY_MS;
+  if (cache && Date.now() - cache.at < ttl) return cache.rows;
 
   const pages = await Promise.all(
     Array.from({ length: PAGES }, (_, index) => fetchPage(dex, index + 1)),
@@ -100,9 +116,10 @@ export async function livePools(dex = "pancakeswap-v3-bsc"): Promise<PoolRow[]> 
   const logos = new Map<string, TokenBrief>();
   for (const { tokens } of pages) {
     for (const token of tokens) {
+      const address = token.attributes.address;
       logos.set(token.id, {
         symbol: token.attributes.symbol ?? "?",
-        logo: token.attributes.image_url ?? null,
+        logo: token.attributes.image_url ?? (address ? (fallbackLogo(address) ?? null) : null),
       });
     }
   }
