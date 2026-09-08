@@ -60,9 +60,9 @@ export function PriceChart({ series, height = 260 }: { series: AgentSeries; heig
     return {
       ...scaled,
       ticks: niceTicks(scaled.min, max, 5),
-      format: formatter(values),
+      format: (value: number) => `${formatter(values)(value)}${series.unit ?? ""}`,
     };
-  }, [series.points, plotWidth, plotHeight]);
+  }, [series.points, series.unit, plotWidth, plotHeight]);
 
   if (series.points.length < 2) return null;
 
@@ -110,6 +110,16 @@ export function PriceChart({ series, height = 260 }: { series: AgentSeries; heig
                 <stop offset="100%" stopColor="var(--spark)" stopOpacity="0" />
               </linearGradient>
             </defs>
+
+            {series.band && (
+              <rect
+                x={MARGIN.left}
+                width={plotWidth}
+                y={Math.min(yFor(series.band.to), yFor(series.band.from))}
+                height={Math.abs(yFor(series.band.from) - yFor(series.band.to))}
+                fill="var(--neutral-alpha-weak)"
+              />
+            )}
 
             {chart.ticks.map((tick) => (
               <g key={tick}>

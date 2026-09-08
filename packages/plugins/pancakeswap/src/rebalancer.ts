@@ -18,6 +18,7 @@ import {
   formatPrice,
   inRange,
   poolAddress,
+  priceToTick,
   slot0,
   snapToSpacing,
   tickToPrice,
@@ -182,10 +183,23 @@ export const pancakeRebalancer: AgentPlugin = {
 
   async series(params): Promise<AgentSeries | null> {
     const position = await loadPosition(tokenId(params));
-    const points = await poolSeries(position.pool);
-    return points.length
-      ? { label: `${position.meta0.symbol}/${position.meta1.symbol} · 48h`, points }
-      : null;
+    const prices = await poolSeries(position.pool, 48, position.token0);
+    if (prices.length < 2) return null;
+
+    // 0% sits on the lower tick, 100% on the upper: leaving that band is the
+    // moment the position stopped earning. That is the agent's whole job.
+    const width = position.tickUpper - position.tickLower;
+    if (width <= 0) return null;
+    const points = prices.map((point) => ({
+      t: point.t,
+      v:
+        ((priceToTick(point.v, position.meta0.decimals, position.meta1.decimals) -
+          position.tickLower) /
+          width) *
+        100,
+    }));
+
+    return { label: "Position in its range", unit: "%", points, band: { from: 0, to: 100 } };
   },
 
   async scope(params): Promise<SessionScope> {

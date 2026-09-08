@@ -55,21 +55,27 @@ export function AgentCard({ agent }: { agent: AgentCardData }) {
           gap="4"
           overflow="hidden"
         >
+          {agent.series && <SpecLabel>{agent.series.label}</SpecLabel>}
           <Text variant="display-strong-xs">
-            {agent.error ? "—" : trend ? formatValue(trend.last) : (agent.status?.headline ?? "—")}
+            {agent.error
+              ? "—"
+              : trend
+                ? `${formatValue(trend.last, agent.series?.unit)}${agent.series?.unit ?? ""}`
+                : (agent.status?.headline ?? "—")}
           </Text>
 
           {trend ? (
             <Text variant="code-default-s" className={`tone tone-${tone}`}>
               {tone === "up" ? "▲" : tone === "down" ? "▼" : "■"}{" "}
-              {Math.abs(trend.change).toFixed(2)}% 48H
+              {formatValue(Math.abs(trend.delta), agent.series?.unit)}
+              {agent.series?.unit ?? ""} over the window
             </Text>
           ) : (
-            <SpecLabel>{agent.error ? "feed unavailable" : "no price feed"}</SpecLabel>
+            <SpecLabel>{agent.error ? "feed unavailable" : "no history yet"}</SpecLabel>
           )}
 
           {agent.series && (
-            <Column fillWidth marginTop="16" style={{ marginInline: "-1rem" }}>
+            <Column fillWidth marginTop="8" style={{ marginInline: "-1rem" }}>
               <Sparkline series={agent.series} />
             </Column>
           )}

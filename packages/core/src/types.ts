@@ -89,8 +89,19 @@ export type SessionScope = {
 /** One reading in an agent's history: unix seconds, and the value. */
 export type SeriesPoint = { t: number; v: number };
 
-/** A short history of whatever number drives this agent's decision. */
-export type AgentSeries = { label: string; points: SeriesPoint[] };
+/**
+ * The agent's own number over time — its health factor, how far its position
+ * has drifted, the spread it is chasing. Not a token price: the thing the
+ * agent is actually paid to watch.
+ */
+export type AgentSeries = {
+  label: string;
+  points: SeriesPoint[];
+  /** Suffix for the value, e.g. "%" or " bps". */
+  unit?: string;
+  /** Drawn as a shaded band, for a metric with a healthy range. */
+  band?: { from: number; to: number };
+};
 
 /** Everything the agent detail page shows beyond a headline. */
 export type AgentInsights = {

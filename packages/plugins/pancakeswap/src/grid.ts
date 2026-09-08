@@ -227,10 +227,21 @@ export const pancakeGrid: AgentPlugin = {
 
   async series(params): Promise<AgentSeries | null> {
     const pool = requireAddress(params, "pool");
-    const [points, market] = await Promise.all([poolSeries(pool), loadMarket(params)]);
-    return points.length
-      ? { label: `${market.meta0.symbol}/${market.meta1.symbol} · 48h`, points }
-      : null;
+    const { lower, upper, grids } = readGrid(params);
+    const market = await loadMarket(params);
+    const prices = await poolSeries(pool, 48, market.meta0.address);
+    if (prices.length < 2) return null;
+
+    // The ladder's own rule, run over the last two days: how much quote it
+    // wanted to be holding at each hour.
+    return {
+      label: `Ladder target · ${market.meta1.symbol} share`,
+      unit: "%",
+      points: prices.map((point) => ({
+        t: point.t,
+        v: targetQuoteShare(point.v, lower, upper, grids) * 100,
+      })),
+    };
   },
 
   async scope(params): Promise<SessionScope> {

@@ -55,24 +55,27 @@ export function Sparkline({ series }: { series: AgentSeries }) {
   );
 }
 
-/** Percentage move across the whole series, and which way it went. */
+/** How far the agent's number moved across the window, in its own unit. */
 export function trendOf(series: AgentSeries | null) {
   if (!series || series.points.length < 2) return null;
   const first = series.points[0].v;
   const last = series.points[series.points.length - 1].v;
-  if (!first) return null;
-  const change = ((last - first) / first) * 100;
+  const delta = last - first;
   return {
     last,
-    change,
-    direction: Math.abs(change) < 0.01 ? "flat" : change > 0 ? "up" : "down",
+    delta,
+    direction: Math.abs(delta) < 1e-9 ? "flat" : delta > 0 ? "up" : "down",
   } as const;
 }
 
-/** Enough digits to tell two nearby readings apart, and no more. */
-export function formatValue(value: number) {
-  if (value === 0) return "0";
+/**
+ * A health factor, a percentage and a basis-point spread all want different
+ * precision, and the unit is the only clue about which one this is.
+ */
+export function formatValue(value: number, unit?: string) {
+  if (unit?.trim() === "bps") return Math.round(value).toString();
+  if (unit === "%") return value.toFixed(1);
   const magnitude = Math.abs(value);
-  const digits = magnitude >= 1000 ? 2 : magnitude >= 1 ? 4 : 8;
-  return value.toFixed(digits);
+  if (magnitude === 0) return "0";
+  return value.toFixed(magnitude >= 1000 ? 2 : magnitude >= 1 ? 2 : 6);
 }

@@ -279,10 +279,29 @@ export const healthMonitor: AgentPlugin = {
   },
 
   async series(params): Promise<AgentSeries | null> {
-    const collateral = await largestCollateral(requireAddress(params, "wallet"));
+    const account = await loadAccount(params);
+    if (account.debtBase === 0) return null;
+
+    const collateral = await largestCollateral(account.wallet);
     if (!collateral) return null;
-    const points = await tokenSeries(collateral.asset);
-    return points.length ? { label: `${collateral.symbol} collateral · 48h`, points } : null;
+    const prices = await tokenSeries(collateral.asset);
+    if (prices.length < 2) return null;
+
+    // No contract keeps a health-factor history, and public endpoints will not
+    // serve archive state. Holding the balances fixed and replaying the
+    // collateral price gives the shape of the last two days honestly — the
+    // label says which asset is driving it.
+    const now = prices[prices.length - 1].v;
+    if (!now) return null;
+
+    return {
+      label: `Health factor · tracking ${collateral.symbol}`,
+      points: prices.map((point) => ({
+        t: point.t,
+        v: account.healthFactor * (point.v / now),
+      })),
+      band: { from: account.minHealthFactor, to: account.healthFactor * 2 },
+    };
   },
 
   async scope(params): Promise<SessionScope> {

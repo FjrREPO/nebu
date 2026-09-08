@@ -36,6 +36,12 @@ export default async function StatusPage() {
       ok: head !== null,
     },
     {
+      name: "DefiLlama yields",
+      detail: "supply APY history for Aave V3 and Venus",
+      note: "no key, daily resolution, cached 30 minutes",
+      ok: true,
+    },
+    {
       name: "GeckoTerminal pool feed",
       detail: pools === null ? "unreachable" : `${pools} pools in the last pull`,
       note: "24h volume and swap counts, cached 60s",
@@ -115,6 +121,7 @@ export default async function StatusPage() {
           {[
             "Public BSC endpoints reject getLogs over roughly 20,000 blocks, so activity feeds cover the last 9,000.",
             "Fee APR is annualised from one day of volume against current liquidity — it is an estimate, and the page says so.",
+            "The pool feed is a free tier with a per-minute budget. Requests are queued and cached, but a burst can still be turned away; a chart with no history says so rather than inventing one.",
             "Set BSC_RPC_URL to a private endpoint before pointing real traffic at this.",
             "Sessions default to BNB testnet: a grant registers a key on chain and costs a fee. Set NEXT_PUBLIC_SESSION_NETWORK=mainnet to grant against the live protocols.",
             "A session key is held in your browser. It is scoped to the agent's contracts, capped per day and expiring — but it is still a key, so revoke when you are done.",

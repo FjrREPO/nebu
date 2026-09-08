@@ -5,13 +5,15 @@ import {
   type AgentSeries,
   type AgentStatus,
   type AgentTx,
+  alignDaily,
+  apyHistory,
   bscClient,
   InvalidParams,
+  marketId,
   recentActivity,
   requireAddress,
   requireInt,
   type SessionScope,
-  tokenSeries,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { AAVE_POOL, erc20Abi, liquidityRateToApy, poolAbi, reserveData } from "./aave.ts";
@@ -244,12 +246,29 @@ export const yieldOptimizer: AgentPlugin = {
 
   async series(params): Promise<AgentSeries | null> {
     const asset = requireAddress(params, "asset");
-    const [points, symbol] = await Promise.all([
-      tokenSeries(asset),
-      bscClient.readContract({ address: asset, abi: erc20Abi, functionName: "symbol" }),
+    const symbol = await bscClient.readContract({
+      address: asset,
+      abi: erc20Abi,
+      functionName: "symbol",
+    });
+
+    const [aave, venus] = await Promise.all([
+      marketId("aave-v3", symbol),
+      marketId("venus-core-pool", symbol),
     ]);
-    // A stablecoin's flat line is the point: only the rate is moving.
-    return points.length ? { label: `${symbol} · 48h`, points } : null;
+    if (!aave || !venus) return null;
+
+    const [aaveHistory, venusHistory] = await Promise.all([apyHistory(aave), apyHistory(venus)]);
+    const paired = alignDaily(aaveHistory, venusHistory);
+    if (paired.length < 2) return null;
+
+    // The gap is the whole reason to move, so the gap is what gets charted.
+    // Above zero means Aave pays more; below zero means Venus does.
+    return {
+      label: `${symbol} · Aave minus Venus`,
+      unit: " bps",
+      points: paired.map((day) => ({ t: day.t, v: Math.round((day.a - day.b) * 100) })),
+    };
   },
 
   async scope(params): Promise<SessionScope> {
