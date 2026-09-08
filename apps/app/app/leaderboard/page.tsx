@@ -85,6 +85,11 @@ export default async function LeaderboardPage() {
             traded a day, a swap every three minutes, and open for a week or more. "Fee APR" is last
             year's worth of that, estimated from yesterday.
           </Muted>
+          <Muted className="mb-[12px] max-w-[760px]">
+            A high fee APR is not free money. The busiest of these turn over many times their own
+            size in a day, and that much movement costs a supplier more in price drift than the fees
+            pay back. The number is what the fees came to, not what you would keep.
+          </Muted>
           <div className="border border-white/15 overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>

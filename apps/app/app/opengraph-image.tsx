@@ -31,7 +31,7 @@ export default function Image() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
         {/* Satori has no line breaks — a stack of spans is how a headline wraps. */}
-        {["Deposit BNB.", "The agent takes it from there."].map((line) => (
+        {["Hire an agent.", "It minds your BNB positions 24/7."].map((line) => (
           <span
             key={line}
             style={{ color: "#fff", fontSize: 68, lineHeight: 1, letterSpacing: -1.5 }}
@@ -45,7 +45,7 @@ export default function Image() {
       </div>
 
       <div style={{ display: "flex", gap: 12 }}>
-        {["SESSION KEYS YOU CAP", "REVOKE ON CHAIN", "LIVE MAINNET DATA"].map((chip) => (
+        {["SET ITS LIMITS", "FIRE IT ANYTIME", "YOUR KEYS STAY YOURS"].map((chip) => (
           <span
             key={chip}
             style={{

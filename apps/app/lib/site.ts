@@ -2,4 +2,4 @@
 export const SITE = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://nebu.ifajar.dev");
 
 export const TAGLINE =
-  "Deposit BNB and an agent takes it from there — rebalancing, grid trading, yield routing and health-factor defence on BNB Smart Chain, under a session key you cap and revoke.";
+  "Hire an agent. Pay it, set its limits, and fire it whenever you want. It just happens to manage your BNB positions 24/7 — rebalancing, trading, finding better interest and protecting your loans.";

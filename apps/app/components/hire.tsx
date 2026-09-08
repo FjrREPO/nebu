@@ -128,6 +128,9 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   const connected = useWallet();
 
   const busy = phase !== "idle";
+  // Limits are worked out from what the agent holds, so hiring an empty wallet
+  // grants a session capped at zero — it would sit there unable to act.
+  const unfunded = wallet !== null && (balance ?? 0n) === 0n;
 
   useEffect(() => {
     try {
@@ -473,11 +476,21 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                     <p className="font-manrope text-white text-[13px] leading-[18px] mt-[4px]">
                       {auto.reason}
                     </p>
+                    {/* You deposit BNB and it holds something else. Say so. */}
+                    {scope && scope.spend.length > 0 && (
+                      <p className="font-manrope text-white/50 text-[11px] leading-[15px] mt-[6px]">
+                        You only ever send BNB. It converts and holds{" "}
+                        {scope.spend.map((entry) => entry.symbol).join(" and ")} for you.
+                      </p>
+                    )}
                   </div>
 
                   {scope && scope.spend.length > 0 && (
                     <div className="space-y-[10px]">
                       <span className={legend}>Daily cap</span>
+                      <p className="font-manrope text-white/40 text-[11px] leading-[15px]">
+                        The most it may move in a day, worked out from what it holds.
+                      </p>
                       {scope.spend.map((entry) => (
                         <label key={entry.token} className="block">
                           <span className={legend}>{entry.symbol}</span>
@@ -506,12 +519,18 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
 
                   <button
                     type="button"
-                    disabled={busy || !scope}
+                    disabled={busy || !scope || unfunded}
                     onClick={hire}
                     className={primary}
                   >
                     {phase === "granting" ? "Hiring…" : "Hire agent"}
                   </button>
+                  {unfunded && (
+                    <p className="font-manrope text-[#ff8a8a] text-[11px] leading-[15px]">
+                      Send it some BNB first. Its limits are worked out from what it holds, so
+                      hiring an empty wallet would cap it at nothing.
+                    </p>
+                  )}
 
                   <button
                     type="button"

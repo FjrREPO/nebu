@@ -270,7 +270,7 @@ export const pancakeRebalancer: AgentPlugin = {
         title: "LP pools",
         sparkLabel: "24h",
         caption:
-          "PancakeSwap V3 pools clearing the agent's floor: $250k liquidity, $100k daily volume, 20 swaps an hour, at least a week old.",
+          "Pools clearing the agent's floor: $250k deposited, $100k traded a day, a swap every three minutes, open at least a week. A high fee APR is not free money — the busiest pools move enough that a supplier loses more to price drift than the fees pay back.",
         columns: [
           { key: "pair", label: "Pool" },
           { key: "apr", label: "Fee APR", align: "end" },
