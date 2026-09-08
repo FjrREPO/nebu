@@ -3,162 +3,185 @@
 Three real tasks on BNB Smart Chain, done with a nebu agent and done by hand.
 Task 2 is the trading/security one the brief asks for.
 
-Agent timings are measured — `performance.now()` around the actual plugin call,
-public BSC dataseeds, no private RPC, cold cache. They were taken on 8 September
-2026 and the numbers they returned are printed below so anyone can re-run them
-and see comparable output.
+Agent timings are measured — `performance.now()` around the actual plugin
+calls, public BSC dataseeds, no private RPC, cold cache. They were taken on
+8 September 2026 against wallet `0x1e01000ba272c96013c913a6a6bC61722E24E9EB`,
+and the output each call returned is printed below so anyone can re-run them.
 
-Manual timings are **estimates**, and are presented as the step list they came
-from rather than as a stopwatch claim. Every step is a real lookup or
-calculation the task genuinely requires; count them and judge the estimate.
+Manual timings are **estimates**, presented as the step list they came from
+rather than as a stopwatch claim. Every step is a real lookup or calculation
+the task genuinely requires; count them and judge the estimate.
+
+## What changed since the first draft
+
+The first version of this report measured an agent that did the arithmetic
+while the user still made the decisions — you told it which pool, which asset,
+which position id. It no longer works that way. Each agent is handed one thing,
+a wallet address, and picks its own venue from the screen it already runs.
+
+That moves the comparison. The question is no longer "how fast can you compute
+a fee APR", it is "how many pools did you look at before you chose".
 
 ---
 
-## Task 1 — Pick a PancakeSwap V3 pool worth providing liquidity to
+## Task 1 — Put idle BNB to work as liquidity
 
 **By hand**
 
 1. Open the PancakeSwap info page and list V3 pools on BNB Chain.
 2. For each candidate, read TVL and 24h volume.
-3. Compute fee APR yourself: `volume × feeTier × 365 ÷ TVL`. The site shows the
-   fee tier in the pool title, so this is per-pool arithmetic.
-4. Check swap count to tell real flow from one whale round-tripping.
-5. Check pool age, because a three-day-old pool with a 400% APR is usually a
-   trap, not an opportunity.
-6. Repeat across enough pools to be confident you saw the best one.
+3. Compute fee APR yourself: `volume × feeTier × 365 ÷ TVL`, per pool.
+4. Check swap count, to tell real flow from one whale round-tripping.
+5. Check pool age — a three-day-old pool at 400% APR is usually a trap.
+6. Pick a range. Too wide earns little, too tight falls out by morning; sizing
+   it properly means looking at what the pair actually did recently.
+7. Swap BNB into both sides at roughly the right ratio.
+8. Mint, or place the ladder.
 
-Six steps per pool, three of them arithmetic. Twenty pools is an evening.
-Estimate: **20–30 minutes** for a shortlist you half-trust.
+Eight steps, three of them arithmetic, one of them a judgement call with no
+number attached to it. Estimate: **30–45 minutes**, and the range is a guess.
 
-**With the agent** — `livePools()` then `shortlist()`
+**With the agent**
 
 ```
-task1  pool shortlist (60 scanned)               762 ms
-       -> 33 cleared, best 475.8% (DOGE/WBNB)
+autoParams (picks its own venue)               1310 ms
+  -> Broccoli/WBNB 1% moved 14.1% in 48h, so the ladder spans that
+     either side of spot
+status                                          396 ms
+  -> Ready to deploy 0.0063 BNB
+plan (with calldata)                            879 ms
+  -> 4 tx · Split 0.0063 BNB into 55.0% WBNB and 45.0% Broccoli,
+     where the ladder starts
 ```
 
-Sixty pools scanned, thirty-three past the floor ($250k liquidity, $100k daily
-volume, 20 swaps/hour, at least a week old), ranked by fee APR. Second call
-inside a minute: **0 ms**, the feed is cached.
+Sixty pools screened, filtered on liquidity, volume, swap rate and age, ranked
+on fee APR. The range is not a default: it is the pair's own 48-hour movement,
+so a quiet pair gets a tight ladder and a violent one gets a wide one.
 
 | | Time | Cost | Output |
 |---|---|---|---|
-| Manual | ~20–30 min | free | a handful of pools, arithmetic done by hand |
-| Agent | 0.76 s | free (no API key) | 60 scanned, 33 ranked, screening rules stated and unit-tested |
-
-The difference is not really speed. It is that the manual version never scans
-sixty pools, so the answer is drawn from whatever fitted on the first screen.
+| Manual | ~30–45 min | free | one pool you had time to check, a guessed range |
+| Agent | 2.6 s | free (no API key) | 60 screened, range sized from measured movement, 4 txs ready |
 
 ---
 
-## Task 2 — Decide whether a lending position is about to be liquidated, and size the fix
+## Task 2 — Decide whether a loan is about to be liquidated, and size the fix
 *(the trading / security task)*
-
-Position: `0x1e01000ba272c96013c913a6a6bC61722E24E9EB` on Aave V3, BNB Chain.
 
 **By hand**
 
-1. Open Aave, connect or search the address, read the health factor.
-2. Decide whether 1.29 is close enough to 1.00 to act on. There is no answer on
-   the screen; you have to pick a floor.
-3. To restore a target health factor you need the repayment, which means
+1. Open Aave, search the address, read the health factor.
+2. Decide whether 1.27 is close enough to 1.00 to act on. Nothing on screen
+   answers that; you pick a floor.
+3. To restore a target health factor you need
    `debt − collateral × liquidationThreshold ÷ targetHF`. The weighted
-   liquidation threshold is not on the dashboard — it is per-asset, and you have
-   to weight it yourself.
-4. Work out which debt to repay. A wallet with three borrows has three answers,
-   and only the largest one moves the number meaningfully.
-5. Convert the USD repayment into token units at the oracle price — the oracle
-   price, not the market price, because that is what the health factor uses.
+   liquidation threshold is not on the dashboard — it is per-asset, and you
+   weight it yourself.
+4. Work out which debt to repay. Three borrows, three answers, and only the
+   largest moves the number meaningfully.
+5. Convert the USD repayment into token units at the **oracle** price, not the
+   market price, because that is what the health factor uses.
 6. Approve, then repay, with the right rate mode.
 
 Estimate: **15–25 minutes**, and steps 3 and 5 are where people get it wrong.
-Repaying too little and thinking you are safe is the expensive failure here.
+Repaying too little and believing you are safe is the expensive failure.
 
-**With the agent** — `healthMonitor.status()` then `.plan()`
+**With the agent**
 
 ```
-task2  health read                               680 ms
-task2  repayment plan with calldata             1421 ms
-       -> At risk: 1.29
-       -> Repay 270.870 USDT (about $270.83) to lift the health factor
-          from 1.29 back to 1.5.
+autoParams                                      132 ms
+  -> Loan is at 1.27; guarding it at 1.5
+status                                          130 ms
+  -> At risk: 1.27
+plan (with calldata)                           1014 ms
+  -> 1 tx · Repay 297.615 USDT (about $297.51) to lift the health
+     factor from 1.27 back to 1.5
 ```
 
-The agent reads collateral, debt, the weighted liquidation threshold and the
-health factor in one batched call, sizes the repayment against your floor, picks
-the largest debt by oracle value, caps the repayment at what is actually owed,
-and returns approve + repay calldata. It approves the exact amount, never an
-unlimited allowance.
+It reads collateral, debt, the weighted threshold and the health factor in one
+batched call, picks a floor a step above where the loan sits, sizes the
+repayment against that threshold, aims at the largest debt by oracle value,
+caps at what is actually owed, and approves the exact amount — never unlimited.
 
 | | Time | Cost | Output |
 |---|---|---|---|
 | Manual | ~15–25 min | gas for approve + repay | a repayment you estimated |
-| Agent | 2.1 s | same gas, exact allowance | a repayment derived from the threshold, aimed at the largest debt |
+| Agent | 1.3 s | same gas, exact allowance | a repayment derived from the threshold |
 
-Same gas, same two transactions. What changes is whether the amount is right.
-An under-sized repayment leaves the position liquidatable and costs the 5%+
+Same gas, same transactions. What changes is whether the amount is right. An
+undersized repayment leaves the position liquidatable and costs the 5%+
 liquidation penalty on the whole position — that is the real cost line.
 
 ---
 
-## Task 3 — Find where a stablecoin earns most, Aave V3 or Venus
+## Task 3 — Find where a stablecoin earns most, and move it there
 
 **By hand**
 
 1. Open Aave, read the supply APY for the asset.
 2. Open Venus, read its number.
-3. Notice they are not the same kind of number. Aave publishes a per-second rate
-   in ray; Venus publishes a per-block rate. Comparing them means compounding
-   both to an annual figure.
+3. Notice they are not the same kind of number. Aave publishes a per-second
+   rate in ray; Venus publishes a per-block rate. Comparing them means
+   compounding both.
 4. For Venus that needs blocks per year — and BSC has changed its block time
-   three times (3s, then 1.5s, then 0.75s). A stale constant is off by 2–6×.
+   three times (3s, 1.5s, 0.75s). A stale constant is off by 2–6×.
 5. Repeat for every asset you might rotate into.
+6. Swap in, approve, supply.
 
-Estimate: **10–15 minutes** for one asset, and the block-time trap means most
+Estimate: **10–15 minutes per asset**, and the block-time trap means most
 by-hand comparisons are quietly wrong.
 
-**With the agent** — `yieldOptimizer.insights()`
+**With the agent**
 
 ```
-task3  aave vs venus radar (8 assets)           3956 ms
-       -> best 8.95% FDUSD, spread 604 bps
+autoParams                                      749 ms
+  -> FDUSD pays 8.47% on Aave V3, the best of 8 assets listed on both
+status                                          502 ms
+  -> Ready to deploy 0.0063 BNB
+plan (with calldata)                           1070 ms
+  -> 5 tx · Turn 0.0063 BNB into FDUSD and supply it to Aave V3 at 8.47%
 ```
 
-Eight assets, both venues, each rate compounded from its own unit. The block
-time behind the Venus figure is measured from chain — a 1,000-block sample — not
+Sixteen rates, each compounded from its own protocol's unit. The block time
+behind the Venus figures is measured from chain — a 1,000-block sample — not
 hardcoded.
 
 | | Time | Cost | Output |
 |---|---|---|---|
 | Manual | ~10–15 min per asset | free | two numbers, often not comparable |
-| Agent | 4.0 s for 8 assets | free | 16 rates, correctly annualised, spread in bps |
+| Agent | 2.3 s for 8 assets | free | 16 rates, correctly annualised, plus the route in |
 
 ---
 
 ## What this actually shows
 
-The honest summary is not "agents are faster". A person who knows what they are
-doing gets to the same answer.
+The honest summary is not "agents are faster". Someone who knows what they are
+doing reaches the same answers.
 
 What changes:
 
-- **Coverage.** The agent looks at sixty pools and eight assets because it costs
+- **Coverage.** The agent screens sixty pools and eight assets because it costs
   nothing to. A person looks at what fits on one screen.
-- **The arithmetic that is easy to get wrong.** Annualising a per-block rate, or
-  sizing a repayment against a weighted liquidation threshold, is where manual
-  work quietly fails. Those are the two places nebu unit-tests its maths.
-- **Nothing is delegated.** Every task above ends with transactions in your
-  wallet, unsigned. The agent does the reading and the arithmetic; the decision
-  and the signature stay yours.
+- **The arithmetic that quietly fails.** Annualising a per-block rate, or
+  sizing a repayment against a weighted liquidation threshold. Those are the
+  two places nebu unit-tests its maths.
+- **The judgement calls get a number behind them.** A grid range picked by feel
+  becomes a range measured from the pair's own volatility.
+- **Nothing is delegated by default.** Every task above ends with transactions
+  in your wallet, unsigned. Hire the agent with a scoped, capped, expiring
+  session and it signs them itself — inside limits the account contract
+  enforces, revocable in one transaction.
 
 ## Reproducing this
 
 ```bash
 pnpm install
-pnpm --filter @nebu/agents start   # ticks all four agents against a watchlist
+NEBU_WALLET=0x... pnpm --filter @nebu/agents start
 ```
 
-The timings came from a script that wraps `livePools`, `healthMonitor.status`,
-`healthMonitor.plan` and `yieldOptimizer.insights` in `performance.now()`.
-Live figures move — health factors change, pool APRs move — so re-running will
-give different values with the same shape.
+The runner takes one address and asks every agent what it would do with what
+is in that wallet. The timings above came from wrapping `autoParams`, `status`
+and `plan` in `performance.now()` around the same calls it makes.
+
+Live figures move — health factors change, pool APRs move, the best asset
+rotates — so re-running gives different values with the same shape.
