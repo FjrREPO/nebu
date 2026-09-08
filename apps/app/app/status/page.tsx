@@ -1,7 +1,6 @@
 import { bscClient } from "@nebu/core";
 import { livePools } from "@nebu/plugin-pancakeswap";
 import { plugins } from "@nebu/plugins";
-import { Nav } from "@/components/nav";
 import { Chip, GridLines, Muted } from "@/components/ui";
 
 export const metadata = { title: "STATUS // NEBU" };
@@ -71,7 +70,6 @@ export default async function StatusPage() {
     <div className="relative min-h-screen bg-black">
       <div className="relative h-[240px] md:h-[280px] overflow-hidden border-b border-white/10">
         <GridLines delay={200} />
-        <Nav />
         <div className="absolute bottom-[32px] inset-x-0 mx-auto max-w-[1280px] px-5 md:px-[35px]">
           <span
             className="font-manrope text-[#AFDDFF]/80 text-[13px] leading-[15.6px] anim-fade-up"

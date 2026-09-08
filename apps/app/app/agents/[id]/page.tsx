@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { DetailChart } from "@/components/charts";
 import { HirePanel } from "@/components/hire";
-import { Nav } from "@/components/nav";
-import { Chip, GridLines, Muted } from "@/components/ui";
+import { Chip, GridLines, Muted, TokenMark } from "@/components/ui";
 import { agentDetail, agentMeta, findAgentMeta } from "@/lib/agents";
 import { categoryLabel } from "@/lib/categories";
 
@@ -25,14 +24,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: agent ? `${agent.name} // NEBU` : "NEBU // AGENTS" };
 }
 
-/** An 18px CDN token mark. next/image would add a proxy hop for nothing. */
-function TokenMark({ src, overlap }: { src?: string; overlap?: boolean }) {
-  if (!src) return null;
-  const style = `size-[18px] rounded-full ${overlap ? "-ml-[6px]" : ""}`;
-  // biome-ignore lint/performance/noImgElement: too small to be worth optimising
-  return <img src={src} alt="" className={style} />;
-}
-
 const ago = (seconds: number) => {
   const delta = Math.max(0, Math.floor(Date.now() / 1000 - seconds));
   if (delta < 60) return `${delta}s`;
@@ -49,7 +40,6 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
     <div className="relative min-h-screen bg-black">
       <div className="relative h-[220px] md:h-[260px] overflow-hidden border-b border-white/10">
         <GridLines delay={200} />
-        <Nav />
         <div className="absolute bottom-[28px] inset-x-0">
           <div className="mx-auto max-w-[1280px] px-5 md:px-[35px] flex items-end gap-[18px]">
             <div

@@ -26,6 +26,26 @@ export function Muted({ children, className = "" }: { children: ReactNode; class
   );
 }
 
+/** An 18px CDN token icon. next/image would add a proxy hop for nothing. */
+export function TokenMark({ src, overlap }: { src?: string; overlap?: boolean }) {
+  if (!src) return null;
+  const style = `size-[18px] rounded-full bg-black ${overlap ? "-ml-[6px]" : ""}`;
+  // biome-ignore lint/performance/noImgElement: too small to be worth optimising
+  return <img src={src} alt="" className={style} />;
+}
+
+/** A pair of icons, overlapped, for whatever a row or a card is about. */
+export function TokenMarks({ srcs }: { srcs?: string[] }) {
+  if (!srcs?.length) return null;
+  return (
+    <span className="inline-flex align-middle">
+      {srcs.map((src, index) => (
+        <TokenMark key={src} src={src} overlap={index > 0} />
+      ))}
+    </span>
+  );
+}
+
 const verticalPositions = ["12.6%", "37.5%", "61.9%", "86.2%"];
 const horizontalPositions = ["32.7%", "71.4%"];
 

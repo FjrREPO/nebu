@@ -116,6 +116,8 @@ export type AgentSeries = {
   unit?: string;
   /** Drawn as a shaded band, for a metric with a healthy range. */
   band?: { from: number; to: number };
+  /** Icons for whatever the label names, so a card is not all text. */
+  logos?: string[];
 };
 
 /** Everything the agent detail page shows beyond a headline. */

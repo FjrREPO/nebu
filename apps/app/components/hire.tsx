@@ -25,6 +25,7 @@ import {
 import { bsc, bscTestnet } from "viem/chains";
 import { agentAuto, agentScope, buildPlan } from "@/app/actions";
 import type { AgentMeta } from "@/lib/agents";
+import { connectWallet, short as shortAddress, switchToChain, useWallet } from "@/lib/use-wallet";
 
 /** Testnet by default: a grant registers a key on chain and costs a fee. */
 const NETWORK: SessionNetwork =
@@ -77,6 +78,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   >("idle");
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const connected = useWallet();
 
   const busy = phase !== "idle";
 
@@ -146,13 +148,13 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     setError(null);
     setNote(null);
     try {
+      // The nav already owns the extension connection; reuse it rather than
+      // prompting a second time.
+      const account = connected.address ?? (await connectWallet());
       const injected = (globalThis as { ethereum?: EIP1193Provider }).ethereum;
       if (!injected) throw new Error("No extension wallet found to send from.");
       const sender = createWalletClient({ chain: CHAIN, transport: custom(injected) });
-      const [account] = await sender.requestAddresses();
-      if ((await sender.getChainId()) !== CHAIN.id) {
-        await sender.switchChain({ id: CHAIN.id }).catch(() => sender.addChain({ chain: CHAIN }));
-      }
+      if ((await sender.getChainId()) !== CHAIN.id) await switchToChain();
       const hash = await sender.sendTransaction({
         account,
         to: target.address,
@@ -300,7 +302,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
           ) : (
             <>
               <div className="border border-white/10 p-[14px]">
-                <span className={legend}>Agent wallet</span>
+                <span className={legend}>Agent wallet · passkey on this device</span>
                 <p className="font-manrope text-white text-[13px] leading-[18px] mt-[4px] break-all">
                   {short(wallet.address)}
                 </p>
@@ -311,7 +313,9 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
 
               <div className="flex gap-[8px] items-end">
                 <label className="flex-1">
-                  <span className={legend}>Deposit BNB</span>
+                  <span className={legend}>
+                    Deposit BNB{connected.address ? ` from ${shortAddress(connected.address)}` : ""}
+                  </span>
                   <input
                     className={`${field} mt-[5px]`}
                     value={deposit}

@@ -3,6 +3,15 @@
 import { Menu, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import {
+  CHAIN,
+  connectWallet,
+  disconnectWallet,
+  formatBnb,
+  short,
+  switchToChain,
+  useWallet,
+} from "@/lib/use-wallet";
 import { chipClass } from "./ui";
 
 const PAGES = [
@@ -38,6 +47,23 @@ function NavItem({
 
 export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const wallet = useWallet();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const wrongChain = wallet.address !== null && wallet.chainId !== CHAIN.id;
+
+  async function connect() {
+    setBusy(true);
+    setError(null);
+    try {
+      await connectWallet();
+    } catch (err) {
+      setError((err as Error).message.split("\n")[0]);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <>
@@ -63,13 +89,44 @@ export function Nav() {
             style={{ animationDelay: "600ms" }}
           >
             <Wallet className="w-[15px] h-[15px] text-white" strokeWidth={1.5} />
-            <span className="font-manrope text-white text-[13px] leading-[15.6px]">
-              NOT_CONNECTED
-            </span>
-            <span className="font-manrope text-white text-[13px] leading-[15.6px] ml-[20px]">
+
+            {wallet.address ? (
+              <>
+                <span className="font-manrope text-white text-[13px] leading-[15.6px]">
+                  {short(wallet.address)}
+                </span>
+                <span className="font-manrope text-white/50 text-[13px] leading-[15.6px]">
+                  {formatBnb(wallet.balance)}
+                </span>
+                <button
+                  type="button"
+                  onClick={disconnectWallet}
+                  className="font-manrope text-white/40 text-[11px] uppercase tracking-wide hover:text-white transition-colors"
+                >
+                  disconnect
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={connect}
+                className="font-manrope text-white text-[13px] leading-[15.6px] hover:text-[#AFDDFF] disabled:opacity-50 transition-colors"
+              >
+                {busy ? "CONNECTING…" : "CONNECT_WALLET"}
+              </button>
+            )}
+
+            <span className="font-manrope text-white text-[13px] leading-[15.6px] ml-[8px]">
               CHAIN:
             </span>
-            <span className={chipClass}>BNB_56</span>
+            {wrongChain ? (
+              <button type="button" onClick={switchToChain} className={chipClass}>
+                SWITCH_TO_{CHAIN.id}
+              </button>
+            ) : (
+              <span className={chipClass}>BNB_{CHAIN.id}</span>
+            )}
           </div>
 
           <button
@@ -92,6 +149,12 @@ export function Nav() {
           </button>
         </div>
       </nav>
+
+      {error && (
+        <p className="absolute top-[64px] right-[35px] z-20 font-manrope text-[#ff9d9d] text-[11px]">
+          {error}
+        </p>
+      )}
 
       <div
         className={`fixed inset-0 z-50 lg:hidden transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "visible" : "invisible"}`}

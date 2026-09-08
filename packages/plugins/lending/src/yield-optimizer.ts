@@ -19,6 +19,7 @@ import {
   type SessionScope,
   SMART_ROUTER,
   spendableBnb,
+  tokenLogos,
   WBNB,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
@@ -173,6 +174,11 @@ export const yieldOptimizer: AgentPlugin = {
 
   async insights(params): Promise<AgentInsights> {
     const [market, radar] = await Promise.all([loadMarket(params), yieldRadar().catch(() => [])]);
+    const icons = await tokenLogos(radar.map((quote) => quote.asset)).catch(() => new Map());
+    const radarIcons = radar.map((quote) => ({
+      ...quote,
+      logo: icons.get(quote.asset.toLowerCase()),
+    }));
     const move = bestMove(market.venues, market.minGainBps);
     const here = radar.find((quote) => quote.symbol === market.symbol);
     const funded = market.venues.filter((venue) => venue.supplied > 0);
@@ -202,9 +208,10 @@ export const yieldOptimizer: AgentPlugin = {
           { key: "venus", label: "Venus", align: "end" },
           { key: "spread", label: "Spread", align: "end" },
         ],
-        rows: radar.map((quote) => ({
+        rows: radarIcons.map((quote) => ({
           id: quote.asset,
           asset: quote.symbol,
+          logo: quote.logo ?? "",
           aave: pct(quote.aaveApy),
           venus: pct(quote.venusApy),
           spread: spreadBps(quote) === null ? "—" : `${spreadBps(quote)} bps`,
@@ -292,10 +299,12 @@ export const yieldOptimizer: AgentPlugin = {
 
     // The gap is the whole reason to move, so the gap is what gets charted.
     // Above zero means Aave pays more; below zero means Venus does.
+    const icons = await tokenLogos([asset]);
     return {
       label: `${symbol} · Aave minus Venus`,
       unit: " bps",
       points: paired.map((day) => ({ t: day.t, v: Math.round((day.a - day.b) * 100) })),
+      logos: [icons.get(asset.toLowerCase())].filter((url) => url !== undefined),
     };
   },
 

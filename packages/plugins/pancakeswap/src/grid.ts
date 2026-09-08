@@ -16,6 +16,7 @@ import {
   requireNumber,
   type SessionScope,
   spendableBnb,
+  tokenLogos,
   WBNB,
 } from "@nebu/core";
 import { encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
@@ -299,13 +300,17 @@ export const pancakeGrid: AgentPlugin = {
 
     // The ladder's own rule, run over the last two days: how much quote it
     // wanted to be holding at each hour.
+    const icons = await tokenLogos([market.meta0.address, market.meta1.address]);
     return {
-      label: `Ladder target · ${market.meta1.symbol} share`,
+      label: `${market.meta0.symbol}/${market.meta1.symbol} · ladder target`,
       unit: "%",
       points: prices.map((point) => ({
         t: point.t,
         v: targetQuoteShare(point.v, lower, upper, grids) * 100,
       })),
+      logos: [market.meta0.address, market.meta1.address]
+        .map((token) => icons.get(token.toLowerCase()))
+        .filter((url) => url !== undefined),
     };
   },
 

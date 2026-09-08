@@ -104,3 +104,40 @@ export async function tokenSeries(token: string, hours = 48): Promise<SeriesPoin
   const pool = await tokenTopPool(token);
   return pool ? poolSeries(pool, hours) : [];
 }
+
+/**
+ * Token icons, many per request. A logo does not change, so this is cached for
+ * the life of the process — and asking for eight of them one at a time is the
+ * fastest way to meet the feed's per-minute limit.
+ */
+const logos = new Map<string, string | null>();
+
+export async function tokenLogos(addresses: string[]): Promise<Map<string, string>> {
+  const wanted = [...new Set(addresses.map((address) => address.toLowerCase()))];
+  const missing = wanted.filter((address) => !logos.has(address));
+
+  // The feed takes up to 30 addresses at a time.
+  for (let index = 0; index < missing.length; index += 30) {
+    const batch = missing.slice(index, index + 30);
+    try {
+      const body = (await get(`/tokens/multi/${batch.join(",")}`)) as {
+        data?: { attributes?: { address?: string; image_url?: string } }[];
+      };
+      for (const entry of body.data ?? []) {
+        const address = entry.attributes?.address?.toLowerCase();
+        if (address) logos.set(address, entry.attributes?.image_url ?? null);
+      }
+    } catch {
+      // A throttled logo feed costs an icon, not a page.
+    }
+    // Remember the misses too, so a token without an icon is not re-fetched.
+    for (const address of batch) if (!logos.has(address)) logos.set(address, null);
+  }
+
+  const found = new Map<string, string>();
+  for (const address of wanted) {
+    const url = logos.get(address);
+    if (url) found.set(address, url);
+  }
+  return found;
+}

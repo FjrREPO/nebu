@@ -1,7 +1,6 @@
 import { bestApy, pct, spreadBps, yieldRadar } from "@nebu/plugin-lending";
 import { compactUsd, livePools, shortlist } from "@nebu/plugin-pancakeswap";
-import { Nav } from "@/components/nav";
-import { Chip, GridLines, Muted } from "@/components/ui";
+import { Chip, GridLines, Muted, TokenMark } from "@/components/ui";
 
 export const metadata = { title: "LEADERBOARD // NEBU" };
 /** Both boards are live reads; a minute of staleness is plenty. */
@@ -24,7 +23,6 @@ export default async function LeaderboardPage() {
     <div className="relative min-h-screen bg-black">
       <div className="relative h-[240px] md:h-[280px] overflow-hidden border-b border-white/10">
         <GridLines delay={200} />
-        <Nav />
         <div className="absolute bottom-[32px] inset-x-0 mx-auto max-w-[1280px] px-5 md:px-[35px]">
           <span
             className="font-manrope text-[#AFDDFF]/80 text-[13px] leading-[15.6px] anim-fade-up"
@@ -75,6 +73,10 @@ export default async function LeaderboardPage() {
                 {pools.slice(0, 20).map((pool) => (
                   <tr key={pool.address} className="hover:bg-white/[0.03]">
                     <td className={`${cell} text-white`}>
+                      <span className="mr-[10px] inline-flex align-middle">
+                        <TokenMark src={pool.base.logo ?? undefined} />
+                        <TokenMark src={pool.quote.logo ?? undefined} overlap />
+                      </span>
                       {pool.pair} {pool.feePercent}%
                     </td>
                     <td className={`${cell} text-right text-[#AFDDFF]`}>

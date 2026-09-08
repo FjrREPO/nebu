@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Nav } from "@/components/nav";
 import { GridLines, Notch } from "@/components/ui";
 import { agentCards } from "@/lib/agents";
 
@@ -24,8 +23,6 @@ export default async function Page() {
         />
 
         <div className="relative z-10 w-full h-full">
-          <Nav />
-
           <h1
             className="font-graphik text-white font-normal leading-[1em] absolute anim-fade-up text-[32px] sm:text-[48px] md:text-[68px] top-[140px] sm:top-[160px] md:top-[178px] left-5 md:left-[35px] max-w-[300px] sm:max-w-[420px] md:max-w-[554px]"
             style={{ animationDelay: "400ms" }}

@@ -14,6 +14,7 @@ import {
   requireAddress,
   requireNumber,
   type SessionScope,
+  tokenLogos,
   tokenSeries,
 } from "@nebu/core";
 import {
@@ -320,7 +321,9 @@ export const healthMonitor: AgentPlugin = {
     const now = prices[prices.length - 1].v;
     if (!now) return null;
 
+    const icons = await tokenLogos([collateral.asset]).catch(() => new Map());
     return {
+      logos: [icons.get(collateral.asset.toLowerCase())].filter((url) => url !== undefined),
       label: `Health factor · tracking ${collateral.symbol}`,
       points: prices.map((point) => ({
         t: point.t,

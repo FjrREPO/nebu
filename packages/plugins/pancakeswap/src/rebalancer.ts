@@ -18,6 +18,7 @@ import {
   type SessionScope,
   SMART_ROUTER,
   spendableBnb,
+  tokenLogos,
   WBNB,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, maxUint128, parseAbiItem } from "viem";
@@ -372,7 +373,16 @@ export const pancakeRebalancer: AgentPlugin = {
         100,
     }));
 
-    return { label: "Position in its range", unit: "%", points, band: { from: 0, to: 100 } };
+    const icons = await tokenLogos([position.token0, position.token1]).catch(() => new Map());
+    return {
+      label: `${position.meta0.symbol}/${position.meta1.symbol} · position in its range`,
+      unit: "%",
+      points,
+      band: { from: 0, to: 100 },
+      logos: [position.token0, position.token1]
+        .map((token) => icons.get(token.toLowerCase()))
+        .filter((url) => url !== undefined),
+    };
   },
 
   async scope(params): Promise<SessionScope> {

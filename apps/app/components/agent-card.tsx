@@ -3,7 +3,7 @@ import type { AgentCard as AgentCardData } from "@/lib/agents";
 import { categoryLabel } from "@/lib/categories";
 import { fmt, trendOf } from "@/lib/series";
 import { Sparkline } from "./charts";
-import { Muted } from "./ui";
+import { Muted, TokenMarks } from "./ui";
 
 /**
  * An agent as a node in the diagram: a bordered square carrying its glyph,
@@ -49,7 +49,8 @@ export function AgentNode({ agent, index }: { agent: AgentCardData; index: numbe
       {agent.series && trend ? (
         <div className="mt-auto">
           <div className="flex items-baseline justify-between gap-3 px-[20px] pb-[6px]">
-            <span className="font-manrope text-white/50 text-[11px] leading-[14px] uppercase">
+            <span className="flex items-center gap-[8px] font-manrope text-white/50 text-[11px] leading-[14px] uppercase">
+              <TokenMarks srcs={agent.series.logos} />
               {agent.series.label}
             </span>
             <span className="font-manrope text-[#AFDDFF] text-[13px] leading-[15.6px]">

@@ -1,5 +1,4 @@
 import { AgentNode } from "@/components/agent-card";
-import { Nav } from "@/components/nav";
 import { Chip, GridLines, Muted } from "@/components/ui";
 import { agentCards } from "@/lib/agents";
 
@@ -16,7 +15,6 @@ export default async function AgentsPage() {
     <div className="relative min-h-screen bg-black">
       <div className="relative h-[240px] md:h-[280px] overflow-hidden border-b border-white/10">
         <GridLines delay={200} />
-        <Nav />
         <div className="absolute bottom-[32px] inset-x-0 mx-auto max-w-[1280px] px-5 md:px-[35px]">
           <span
             className="font-manrope text-[#AFDDFF]/80 text-[13px] leading-[15.6px] anim-fade-up"
