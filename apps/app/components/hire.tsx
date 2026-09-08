@@ -1,6 +1,13 @@
 "use client";
 
-import { BNB, BNB_TESTNET, createClient, type PasskeySigner } from "@altananetwork/sdk";
+import {
+  BNB,
+  BNB_TESTNET,
+  createClient,
+  type PasskeyCredential,
+  type PasskeySigner,
+  signerFromPasskey,
+} from "@altananetwork/sdk";
 import type { AutoParams, SessionScope } from "@nebu/core";
 import {
   expiresAt,
@@ -47,12 +54,40 @@ type Grant = {
 const storageKey = (id: string) => `nebu2.grant.${id}`;
 /**
  * One passkey serves every agent, so the wallet it opens is remembered once,
- * not per agent. Remembering it at all is the point: without it there is no
- * way to tell "recovery failed" from "there is nothing to recover", and the
- * panel used to answer both by minting a fresh wallet — which quietly strands
- * whatever the previous one was holding.
+ * not per agent — and what is remembered is the credential, not just the
+ * address.
+ *
+ * recoverFromPasskey finds a wallet by reading the keys it has registered in
+ * the on-chain KeyStore, and a wallet that has been created but never used has
+ * registered none. So the only path back to a funded-but-not-yet-hired wallet
+ * is the credential the browser already handed us at creation: id, public key
+ * and rpId, all strings, all that signerFromPasskey needs to rebuild the
+ * signer without asking the chain anything.
  */
 const WALLET_KEY = "nebu2.wallet";
+
+type SavedWallet = { address: `0x${string}`; credential?: PasskeyCredential };
+
+function loadSaved(): SavedWallet | null {
+  try {
+    const raw = localStorage.getItem(WALLET_KEY);
+    if (!raw) return null;
+    // The first version of this stored the bare address.
+    if (raw.startsWith("0x")) return { address: raw as `0x${string}` };
+    const saved = JSON.parse(raw) as SavedWallet;
+    return saved.address?.startsWith("0x") ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+function remember(address: `0x${string}`, signer: PasskeySigner) {
+  try {
+    localStorage.setItem(WALLET_KEY, JSON.stringify({ address, credential: signer.credential }));
+  } catch {
+    // Blocked storage costs the memory, not the wallet.
+  }
+}
 const short = (address: string) => `${address.slice(0, 10)}…${address.slice(-8)}`;
 
 const field =
@@ -98,8 +133,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     try {
       const raw = localStorage.getItem(storageKey(agent.id));
       if (raw) setGrant(JSON.parse(raw) as Grant);
-      const known = localStorage.getItem(WALLET_KEY);
-      if (known?.startsWith("0x")) setKnownAddress(known as `0x${string}`);
+      const known = loadSaved();
+      if (known) setKnownAddress(known.address);
     } catch {
       // Blocked storage just means none of this survives a reload.
     }
@@ -132,12 +167,25 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   /** Cached so hire, run and revoke do not each fire their own passkey prompt. */
   async function openWallet() {
     if (wallet) return wallet;
+    const saved = loadSaved();
+
+    // The credential we kept is the direct route back, and the only one that
+    // works before the wallet has ever touched the chain. No KeyStore read, no
+    // picker — the biometric prompt comes later, when something is signed.
+    if (saved?.credential) {
+      const next = { address: saved.address, signer: signerFromPasskey(saved.credential) };
+      setWallet(next);
+      setKnownAddress(next.address);
+      await inspect(next.address);
+      return next;
+    }
+
     const client = createClient({ chains: [CONFIG] });
 
-    // Once a wallet exists, recovery is the only correct answer. Falling back
-    // to creating one turns a cancelled passkey prompt into a brand new
-    // address, and the BNB in the old one becomes unreachable from here.
-    const opened = knownAddress
+    // Otherwise ask the OS which passkey, and read the wallet off the chain.
+    // Falling back to creating one would turn a cancelled prompt into a brand
+    // new address, and the BNB in the old one becomes unreachable from here.
+    const opened = saved
       ? await client.recoverFromPasskey({ chainId: CONFIG.chainId })
       : await client
           .recoverFromPasskey({ chainId: CONFIG.chainId })
@@ -146,11 +194,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     const next = { address: opened.address, signer: opened.signer };
     setWallet(next);
     setKnownAddress(next.address);
-    try {
-      localStorage.setItem(WALLET_KEY, next.address);
-    } catch {
-      // Blocked storage costs the memory, not the wallet.
-    }
+    remember(next.address, next.signer);
     await inspect(next.address);
     return next;
   }
@@ -183,11 +227,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
       setWallet(next);
       setKnownAddress(next.address);
       setRecoveryFailed(false);
-      try {
-        localStorage.setItem(WALLET_KEY, next.address);
-      } catch {
-        // Blocked storage costs the memory, not the wallet.
-      }
+      remember(next.address, next.signer);
       await inspect(next.address);
     } catch (err) {
       setError(explain((err as Error).message.split("\n")[0]));
