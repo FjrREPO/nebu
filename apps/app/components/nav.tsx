@@ -3,13 +3,28 @@
 import { Menu, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { CATEGORIES } from "@/lib/categories";
 import { chipClass } from "./ui";
 
-function NavItem({ number, label, delay }: { number: string; label: string; delay: number }) {
+const PAGES = [
+  { number: "01", label: "AGENTS", href: "/agents" },
+  { number: "02", label: "LEADERBOARD", href: "/leaderboard" },
+  { number: "03", label: "STATUS", href: "/status" },
+] as const;
+
+function NavItem({
+  number,
+  label,
+  href,
+  delay,
+}: {
+  number: string;
+  label: string;
+  href: string;
+  delay: number;
+}) {
   return (
     <Link
-      href={`/?class=${label.toLowerCase()}`}
+      href={href}
       className="flex items-center gap-[3px] anim-fade-up"
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -37,13 +52,8 @@ export function Nav() {
               {"NEBU // AGENTS"}
             </Link>
             <div className="hidden lg:flex items-center gap-[40px]">
-              {CATEGORIES.map((item, index) => (
-                <NavItem
-                  key={item.key}
-                  number={item.number}
-                  label={item.label}
-                  delay={350 + index * 100}
-                />
+              {PAGES.map((item, index) => (
+                <NavItem key={item.href} {...item} delay={350 + index * 100} />
               ))}
             </div>
           </div>
@@ -97,9 +107,9 @@ export function Nav() {
           className={`relative h-full flex flex-col px-5 pt-24 pb-10 transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}`}
         >
           <div className="flex flex-col gap-8">
-            {CATEGORIES.map((item, index) => (
+            {PAGES.map((item, index) => (
               <div
-                key={item.key}
+                key={item.href}
                 className={`transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}`}
                 style={{ transitionDelay: menuOpen ? `${150 + index * 75}ms` : "0ms" }}
               >
