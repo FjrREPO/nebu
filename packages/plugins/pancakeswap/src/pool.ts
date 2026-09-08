@@ -53,10 +53,15 @@ export function snapToSpacing(tick: number, spacing: number) {
   return Math.round(tick / spacing) * spacing;
 }
 
+/**
+ * Fixed decimal places made one sentence disagree with itself: a price just
+ * under 1 got eight of them and one just over got four, so "at 0.99850120,
+ * range 0.99890066-1.0038" was three numbers in two formats. Significant
+ * figures read the same on both sides of that boundary.
+ */
 export function formatPrice(price: number) {
-  if (price === 0) return "0";
-  const digits = price >= 1000 ? 2 : price >= 1 ? 4 : 8;
-  return price.toFixed(digits);
+  if (!Number.isFinite(price) || price === 0) return "0";
+  return price.toLocaleString("en-US", { maximumSignificantDigits: 5, useGrouping: false });
 }
 
 const enumerableAbi = [

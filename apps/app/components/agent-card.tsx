@@ -35,7 +35,10 @@ export function AgentNode({ agent, index }: { agent: AgentCardData; index: numbe
           <p className="font-graphik text-white text-[20px] leading-[1.15] mt-[6px]">
             {agent.name}
           </p>
-          <Muted className="mt-[6px]">{agent.protocol}</Muted>
+          {/* "PancakeSwap V3 Rebalancer" does not need "PancakeSwap V3" under it. */}
+          {!agent.name.includes(agent.protocol) && (
+            <Muted className="mt-[6px]">{agent.protocol}</Muted>
+          )}
         </div>
       </div>
 

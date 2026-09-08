@@ -20,7 +20,10 @@ assert.equal(snapToSpacing(-66058, 10), -66060);
 assert.equal(snapToSpacing(7, 10), 10);
 assert.equal(snapToSpacing(-7, 10), -10);
 
-assert.equal(formatPrice(1350.123456), "1350.12");
+assert.equal(formatPrice(1350.123456), "1350.1");
 assert.equal(formatPrice(1.23456789), "1.2346");
-assert.equal(formatPrice(0.000012345678), "0.00001235");
+assert.equal(formatPrice(0.000012345678), "0.000012346");
+// Either side of 1 the same number of figures, which is the point.
+assert.equal(formatPrice(0.9985012), "0.9985");
+assert.equal(formatPrice(1.0038), "1.0038");
 console.log("ok");
