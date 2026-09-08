@@ -135,6 +135,14 @@ export async function livePools(dex = "pancakeswap-v3-bsc"): Promise<PoolRow[]> 
       };
     });
 
+  // A refused refresh must not replace a good board with an empty one — the
+  // pools have not gone anywhere, the feed just declined to say so. Keeping the
+  // old rows under a fresh timestamp also stops every render retrying at once.
+  if (!rows.length && cache?.rows.length) {
+    cache = { at: Date.now(), rows: cache.rows };
+    return cache.rows;
+  }
+
   cache = { at: Date.now(), rows };
   return rows;
 }
