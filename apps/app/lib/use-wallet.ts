@@ -29,7 +29,13 @@ export type WalletState = {
  * trees, and a module-level store keeps them in step without wrapping the
  * whole app in a provider for one address.
  */
-let state: WalletState = { address: null, chainId: null, balance: null };
+/**
+ * One frozen value for "no wallet". useSyncExternalStore compares snapshots by
+ * identity, so a fresh object literal here is an infinite render loop.
+ */
+const DISCONNECTED: WalletState = Object.freeze({ address: null, chainId: null, balance: null });
+
+let state: WalletState = DISCONNECTED;
 const listeners = new Set<() => void>();
 
 const emit = (next: WalletState) => {
@@ -40,7 +46,7 @@ const emit = (next: WalletState) => {
 const provider = () => (globalThis as { ethereum?: EIP1193Provider }).ethereum;
 
 async function refresh(address: `0x${string}` | null) {
-  if (!address) return emit({ address: null, chainId: null, balance: null });
+  if (!address) return emit(DISCONNECTED);
   const injected = provider();
   const wallet = injected
     ? createWalletClient({ chain: CHAIN, transport: custom(injected) })
@@ -64,7 +70,7 @@ export async function connectWallet() {
 }
 
 export function disconnectWallet() {
-  emit({ address: null, chainId: null, balance: null });
+  emit(DISCONNECTED);
 }
 
 /** Agents only ever build BSC calldata, so a wallet elsewhere has to move. */
@@ -107,7 +113,7 @@ export function useWallet() {
       return () => listeners.delete(listener);
     },
     () => state,
-    () => ({ address: null, chainId: null, balance: null }) as WalletState,
+    () => DISCONNECTED,
   );
 }
 
