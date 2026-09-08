@@ -2,9 +2,14 @@ import { apyHistory, marketId, poolLink, sparkOf, tokenLink, tokenLogos } from "
 import { bestApy, pct, spreadBps, yieldRadar } from "@nebu/plugin-lending";
 import { compactUsd, livePools, shortlist } from "@nebu/plugin-pancakeswap";
 import { RowSpark } from "@/components/charts";
-import { Chip, GridLines, Muted, TokenMark } from "@/components/ui";
+import { Chip, GridLines, Muted, TokenMarks } from "@/components/ui";
 
-export const metadata = { title: "LEADERBOARD // NEBU" };
+export const metadata = {
+  title: "Leaderboard",
+  description:
+    "What the agents are picking from: PancakeSwap V3 pools ranked by fee momentum, and Aave V3 against Venus supply rates on every asset both list.",
+  alternates: { canonical: "/leaderboard" },
+};
 /** Both boards are live reads; a minute of staleness is plenty. */
 export const revalidate = 60;
 
@@ -94,8 +99,7 @@ export default async function LeaderboardPage() {
                   <tr key={pool.address} className="hover:bg-white/[0.03]">
                     <td className={`${cell} text-white`}>
                       <span className="mr-[10px] inline-flex align-middle">
-                        <TokenMark src={pool.base.logo ?? undefined} />
-                        <TokenMark src={pool.quote.logo ?? undefined} overlap />
+                        <TokenMarks srcs={[pool.base.logo, pool.quote.logo]} />
                       </span>
                       <a
                         href={poolLink(pool.address)}
@@ -162,7 +166,7 @@ export default async function LeaderboardPage() {
                   <tr key={quote.asset} className="hover:bg-white/[0.03]">
                     <td className={`${cell} text-white`}>
                       <span className="mr-[10px] inline-flex align-middle">
-                        <TokenMark src={icons.get(quote.asset.toLowerCase())} />
+                        <TokenMarks srcs={[icons.get(quote.asset.toLowerCase())]} />
                       </span>
                       <a
                         href={tokenLink(quote.asset)}

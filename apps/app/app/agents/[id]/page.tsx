@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { DetailChart, RowSpark } from "@/components/charts";
 import { HirePanel } from "@/components/hire";
-import { Chip, GridLines, Muted, TokenMark } from "@/components/ui";
-import { agentDetail, agentMeta, findAgentMeta } from "@/lib/agents";
+import { Chip, GridLines, Muted, TokenMarks } from "@/components/ui";
+import { type AgentMeta, agentDetail, agentMeta, findAgentMeta } from "@/lib/agents";
 import { categoryLabel } from "@/lib/categories";
+import { SITE } from "@/lib/site";
 
 /** The whole page is live reads, so let it go stale for a minute at most. */
 export const revalidate = 60;
@@ -20,9 +21,31 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const agent = findAgentMeta((await params).id);
-  return { title: agent ? `${agent.name} // NEBU` : "NEBU // AGENTS" };
+  const { id } = await params;
+  const agent = findAgentMeta(id);
+  if (!agent) return { title: "Agent not found" };
+  const description = `${agent.summary} Runs on ${agent.protocol}, BNB Smart Chain, under a session key you cap and can revoke.`;
+  return {
+    title: agent.name,
+    description,
+    alternates: { canonical: `/agents/${agent.id}` },
+    openGraph: { type: "article", url: `/agents/${agent.id}`, title: agent.name, description },
+    twitter: { card: "summary_large_image" as const, title: agent.name, description },
+  };
 }
+
+/** The agent as a thing a search engine can list, not just a page it can read. */
+const listing = (agent: AgentMeta) => ({
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: agent.name,
+  description: agent.summary,
+  applicationCategory: "FinanceApplication",
+  operatingSystem: "Web",
+  url: new URL(`/agents/${agent.id}`, SITE).href,
+  featureList: agent.grants,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+});
 
 const ago = (seconds: number) => {
   const delta = Math.max(0, Math.floor(Date.now() / 1000 - seconds));
@@ -39,6 +62,11 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="relative min-h-screen bg-black">
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD has no other way in
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(listing(meta)) }}
+      />
       <div className="relative h-[220px] md:h-[260px] overflow-hidden border-b border-white/10">
         <GridLines delay={200} />
         <div className="absolute bottom-[28px] inset-x-0">
@@ -146,8 +174,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                             >
                               {index === 0 && (row.logo || row.logoAlt) && (
                                 <span className="mr-[10px] inline-flex align-middle">
-                                  <TokenMark src={row.logo} />
-                                  <TokenMark src={row.logoAlt} overlap />
+                                  <TokenMarks srcs={[row.logo, row.logoAlt]} />
                                 </span>
                               )}
                               {index === 0 && row.href ? (

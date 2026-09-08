@@ -34,13 +34,19 @@ export function TokenMark({ src, overlap }: { src?: string; overlap?: boolean })
   return <img src={src} alt="" className={style} />;
 }
 
-/** A pair of icons, overlapped, for whatever a row or a card is about. */
-export function TokenMarks({ srcs }: { srcs?: string[] }) {
-  if (!srcs?.length) return null;
+/**
+ * A row or card's icons, overlapped. Missing ones are dropped first: a token
+ * with no logo used to leave the one beside it wearing the overlap offset and
+ * hanging off the edge of its cell.
+ */
+export function TokenMarks({ srcs }: { srcs?: (string | null | undefined)[] }) {
+  const present = srcs?.filter((src): src is string => Boolean(src)) ?? [];
+  if (!present.length) return null;
   return (
     <span className="inline-flex align-middle">
-      {srcs.map((src, index) => (
-        <TokenMark key={src} src={src} overlap={index > 0} />
+      {present.map((src, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: a fixed pair that never reorders, and the same token can appear twice
+        <TokenMark key={`${index}-${src}`} src={src} overlap={index > 0} />
       ))}
     </span>
   );
