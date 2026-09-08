@@ -86,21 +86,28 @@ export function WalletMark({ address, size = 18 }: { address: string; size?: num
 const verticalPositions = ["12.6%", "37.5%", "61.9%", "86.2%"];
 const horizontalPositions = ["32.7%", "71.4%"];
 
-/** Plotting grid with a crosshair tick at every intersection. */
+/**
+ * Plotting grid with a crosshair tick at every intersection.
+ *
+ * The lines carry the texture and the ticks only mark where they cross, so the
+ * lines are the ones worth seeing: at 4% they were invisible, while the ticks
+ * at 70% were bright enough to read as content and sat arguing with the wallet
+ * chip. Reversed — lines up, ticks down to background weight.
+ */
 export function GridLines({ delay = 600 }: { delay?: number }) {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
       {verticalPositions.map((left, i) => (
         <div
           key={left}
-          className="absolute top-0 h-full w-px bg-white/[0.04] anim-grid-v"
+          className="absolute top-0 h-full w-px bg-white/[0.10] anim-grid-v"
           style={{ left, animationDelay: `${delay + i * 100}ms` }}
         />
       ))}
       {horizontalPositions.map((top, i) => (
         <div
           key={top}
-          className="absolute left-0 w-full h-px bg-white/[0.04] anim-grid-h"
+          className="absolute left-0 w-full h-px bg-white/[0.10] anim-grid-h"
           style={{ top, animationDelay: `${delay + 200 + i * 150}ms` }}
         />
       ))}
@@ -111,8 +118,8 @@ export function GridLines({ delay = 600 }: { delay?: number }) {
             className="absolute anim-scale-in"
             style={{ top, left, animationDelay: `${delay + 400 + (hi * 4 + vi) * 80}ms` }}
           >
-            <div className="absolute w-[10px] h-px bg-white/70 -translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute w-px h-[10px] bg-white/70 -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute w-[9px] h-px bg-white/30 -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute w-px h-[9px] bg-white/30 -translate-x-1/2 -translate-y-1/2" />
           </div>
         )),
       )}
