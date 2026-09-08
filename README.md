@@ -1,5 +1,7 @@
 # nebu
 
+**Live: https://nebu.ifajar.dev**
+
 An agent marketplace for BNB Smart Chain. Four agents, one per category the
 brief asks for, all reading mainnet live and all able to hand you the exact
 transactions that fix the position they are watching.
