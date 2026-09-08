@@ -18,6 +18,7 @@ import {
   requireInt,
   type SessionScope,
   SMART_ROUTER,
+  sparkOf,
   spendableBnb,
   tokenLink,
   tokenLogos,
@@ -180,6 +181,15 @@ export const yieldOptimizer: AgentPlugin = {
       ...quote,
       logo: icons.get(quote.asset.toLowerCase()),
     }));
+    // The venue actually paying more is the one whose rate history matters.
+    const sparks = await Promise.all(
+      radarIcons.map(async (quote) => {
+        const better =
+          (quote.aaveApy ?? 0) >= (quote.venusApy ?? 0) ? "aave-v3" : "venus-core-pool";
+        const id = await marketId(better, quote.symbol);
+        return id ? sparkOf(await apyHistory(id)) : "";
+      }),
+    );
     const move = bestMove(market.venues, market.minGainBps);
     const here = radar.find((quote) => quote.symbol === market.symbol);
     const funded = market.venues.filter((venue) => venue.supplied > 0);
@@ -201,6 +211,7 @@ export const yieldOptimizer: AgentPlugin = {
       ],
       table: {
         title: "Yield radar",
+        sparkLabel: "30d",
         caption:
           "Live supply APY on both venues for every asset Aave V3 lists on BNB Chain. Rates are compounded from each protocol's own rate unit, not copied from a dashboard.",
         columns: [
@@ -209,7 +220,7 @@ export const yieldOptimizer: AgentPlugin = {
           { key: "venus", label: "Venus", align: "end" },
           { key: "spread", label: "Spread", align: "end" },
         ],
-        rows: radarIcons.map((quote) => ({
+        rows: radarIcons.map((quote, index) => ({
           id: quote.asset,
           href: tokenLink(quote.asset),
           asset: quote.symbol,
@@ -217,6 +228,7 @@ export const yieldOptimizer: AgentPlugin = {
           aave: pct(quote.aaveApy),
           venus: pct(quote.venusApy),
           spread: spreadBps(quote) === null ? "—" : `${spreadBps(quote)} bps`,
+          spark: sparks[index],
         })),
       },
       activity: await recentActivity([

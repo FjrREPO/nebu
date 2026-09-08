@@ -65,6 +65,40 @@ export function Sparkline({ series }: { series: AgentSeries }) {
   );
 }
 
+const ROW_W = 92;
+const ROW_H = 28;
+/** Direction is the only thing a row-height line can say, so it says it in colour. */
+const UP = "#5ee0a0";
+const DOWN = "#ff8a8a";
+
+/** The trend cell at the end of a table row: no axis, no dates, just the shape. */
+export function RowSpark({ values }: { values?: string }) {
+  const nums = (values ?? "")
+    .split(",")
+    .map(Number)
+    .filter((value) => Number.isFinite(value));
+  if (nums.length < 2) return <span className="text-white/25">—</span>;
+
+  const pts = scale(nums, ROW_W, ROW_H, 3);
+  return (
+    <svg
+      viewBox={`0 0 ${ROW_W} ${ROW_H}`}
+      className="inline-block h-[28px] w-[92px] align-middle"
+      aria-hidden
+    >
+      <path
+        d={linePath(pts)}
+        fill="none"
+        stroke={(nums.at(-1) as number) >= nums[0] ? UP : DOWN}
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
 const MARGIN = { top: 16, right: 60, bottom: 26, left: 0 };
 
 function niceTicks(min: number, max: number, count = 4) {

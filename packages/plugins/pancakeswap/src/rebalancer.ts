@@ -267,6 +267,7 @@ export const pancakeRebalancer: AgentPlugin = {
       ],
       table: {
         title: "LP pools",
+        sparkLabel: "24h",
         caption:
           "PancakeSwap V3 pools clearing the agent's floor: $250k liquidity, $100k daily volume, 20 swaps an hour, at least a week old.",
         columns: [
@@ -284,6 +285,7 @@ export const pancakeRebalancer: AgentPlugin = {
           apr: `${(pool.feeApr * 100).toFixed(1)}%`,
           volume: `$${compactUsd(pool.volume24hUsd)}`,
           swaps: pool.swapsPerHour.toLocaleString("en-US"),
+          spark: pool.spark,
         })),
       },
       activity: await recentActivity([

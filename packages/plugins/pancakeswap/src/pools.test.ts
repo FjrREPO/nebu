@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { compactUsd, POOL_FILTER, type PoolRow, shortlist } from "./pools.ts";
+import { compactUsd, POOL_FILTER, type PoolRow, shortlist, trend } from "./pools.ts";
 
 const pool = (over: Partial<PoolRow>): PoolRow => ({
   address: "0x1",
@@ -12,6 +12,7 @@ const pool = (over: Partial<PoolRow>): PoolRow => ({
   swapsPerHour: 100,
   feeApr: 0.9,
   ageDays: 30,
+  spark: "",
   ...over,
 });
 
@@ -39,3 +40,16 @@ assert.equal(compactUsd(1_234), "1.2K");
 assert.equal(compactUsd(52_000_000), "52.0M");
 assert.equal(compactUsd(940), "940");
 console.log("ok");
+
+// A change of +25% over the window means the price then was the price now / 1.25.
+{
+  const points = trend(125, { h24: "25", h6: "0", h1: "0", m30: "0", m15: "0", m5: "0" })
+    .split(",")
+    .map(Number);
+  assert.equal(points.length, 7);
+  assert.equal(points[0], 100);
+  assert.equal(points.at(-1), 125);
+}
+// A missing window, or no price at all, is a row with no line rather than a wrong one.
+assert.equal(trend(125, { h24: "25" }), "");
+assert.equal(trend(0, { h24: "25", h6: "0", h1: "0", m30: "0", m15: "0", m5: "0" }), "");

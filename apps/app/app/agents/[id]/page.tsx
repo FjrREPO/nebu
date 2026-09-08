@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { DetailChart } from "@/components/charts";
+import { DetailChart, RowSpark } from "@/components/charts";
 import { HirePanel } from "@/components/hire";
 import { Chip, GridLines, Muted, TokenMark } from "@/components/ui";
 import { agentDetail, agentMeta, findAgentMeta } from "@/lib/agents";
@@ -35,6 +35,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   const detail = await agentDetail((await params).id);
   if (!detail) notFound();
   const { meta, status, insights, series } = detail;
+  const sparks = insights?.table?.rows.some((row) => row.spark) ?? false;
 
   return (
     <div className="relative min-h-screen bg-black">
@@ -128,6 +129,11 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                             {column.label}
                           </th>
                         ))}
+                        {sparks && (
+                          <th className="font-manrope text-white/50 text-[11px] uppercase tracking-wide font-normal px-[16px] py-[12px] border-b border-white/10 text-right">
+                            Trend {insights?.table?.sparkLabel}
+                          </th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -151,13 +157,18 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                                   rel="noreferrer"
                                   className="hover:text-[#AFDDFF] transition-colors"
                                 >
-                                  {row[column.key]} ↗
+                                  {row[column.key]}
                                 </a>
                               ) : (
                                 row[column.key]
                               )}
                             </td>
                           ))}
+                          {sparks && (
+                            <td className="px-[16px] py-[8px] border-b border-white/5 text-right">
+                              <RowSpark values={row.spark} />
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>

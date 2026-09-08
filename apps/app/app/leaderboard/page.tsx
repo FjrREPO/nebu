@@ -1,6 +1,7 @@
-import { poolLink, tokenLink } from "@nebu/core";
+import { apyHistory, marketId, poolLink, sparkOf, tokenLink, tokenLogos } from "@nebu/core";
 import { bestApy, pct, spreadBps, yieldRadar } from "@nebu/plugin-lending";
 import { compactUsd, livePools, shortlist } from "@nebu/plugin-pancakeswap";
+import { RowSpark } from "@/components/charts";
 import { Chip, GridLines, Muted, TokenMark } from "@/components/ui";
 
 export const metadata = { title: "LEADERBOARD // NEBU" };
@@ -18,6 +19,23 @@ export default async function LeaderboardPage() {
       .then(shortlist)
       .catch(() => []),
     yieldRadar().catch(() => []),
+  ]);
+
+  const board = pools.slice(0, 20);
+  const ranked = [...radar].sort((a, b) => (spreadBps(b) ?? -1) - (spreadBps(a) ?? -1));
+
+  // The pools feed already carries a day of price movement per row, so only
+  // the lending trend costs a request: DefiLlama's rate history per market.
+  const [assetSparks, icons] = await Promise.all([
+    Promise.all(
+      ranked.map(async (quote) => {
+        const better =
+          (quote.aaveApy ?? 0) >= (quote.venusApy ?? 0) ? "aave-v3" : "venus-core-pool";
+        const id = await marketId(better, quote.symbol);
+        return id ? sparkOf(await apyHistory(id)) : "";
+      }),
+    ),
+    tokenLogos(radar.map((quote) => quote.asset)).catch(() => new Map<string, string>()),
   ]);
 
   return (
@@ -68,10 +86,11 @@ export default async function LeaderboardPage() {
                   <th className={`${head} text-right`}>Liquidity</th>
                   <th className={`${head} text-right`}>Vol 24h</th>
                   <th className={`${head} text-right`}>Swaps/h</th>
+                  <th className={`${head} text-right`}>Trend 24h</th>
                 </tr>
               </thead>
               <tbody>
-                {pools.slice(0, 20).map((pool) => (
+                {board.map((pool) => (
                   <tr key={pool.address} className="hover:bg-white/[0.03]">
                     <td className={`${cell} text-white`}>
                       <span className="mr-[10px] inline-flex align-middle">
@@ -84,7 +103,7 @@ export default async function LeaderboardPage() {
                         rel="noreferrer"
                         className="hover:text-[#AFDDFF] transition-colors"
                       >
-                        {pool.pair} {pool.feePercent}% ↗
+                        {pool.pair} {pool.feePercent}%
                       </a>
                     </td>
                     <td className={`${cell} text-right text-[#AFDDFF]`}>
@@ -98,6 +117,9 @@ export default async function LeaderboardPage() {
                     </td>
                     <td className={`${cell} text-right text-white/70`}>
                       {pool.swapsPerHour.toLocaleString("en-US")}
+                    </td>
+                    <td className="px-[16px] py-[8px] border-b border-white/5 text-right">
+                      <RowSpark values={pool.spark} />
                     </td>
                   </tr>
                 ))}
@@ -132,31 +154,36 @@ export default async function LeaderboardPage() {
                   <th className={`${head} text-right`}>Aave V3</th>
                   <th className={`${head} text-right`}>Venus</th>
                   <th className={`${head} text-right`}>Spread</th>
+                  <th className={`${head} text-right`}>Trend 30d</th>
                 </tr>
               </thead>
               <tbody>
-                {[...radar]
-                  .sort((a, b) => (spreadBps(b) ?? -1) - (spreadBps(a) ?? -1))
-                  .map((quote) => (
-                    <tr key={quote.asset} className="hover:bg-white/[0.03]">
-                      <td className={`${cell} text-white`}>
-                        <a
-                          href={tokenLink(quote.asset)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="hover:text-[#AFDDFF] transition-colors"
-                        >
-                          {quote.symbol} ↗
-                        </a>
-                      </td>
-                      <td className={`${cell} text-right text-[#AFDDFF]`}>{pct(bestApy(quote))}</td>
-                      <td className={`${cell} text-right text-white/70`}>{pct(quote.aaveApy)}</td>
-                      <td className={`${cell} text-right text-white/70`}>{pct(quote.venusApy)}</td>
-                      <td className={`${cell} text-right text-white/70`}>
-                        {spreadBps(quote) === null ? "—" : `${spreadBps(quote)} bps`}
-                      </td>
-                    </tr>
-                  ))}
+                {ranked.map((quote, index) => (
+                  <tr key={quote.asset} className="hover:bg-white/[0.03]">
+                    <td className={`${cell} text-white`}>
+                      <span className="mr-[10px] inline-flex align-middle">
+                        <TokenMark src={icons.get(quote.asset.toLowerCase())} />
+                      </span>
+                      <a
+                        href={tokenLink(quote.asset)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-[#AFDDFF] transition-colors"
+                      >
+                        {quote.symbol}
+                      </a>
+                    </td>
+                    <td className={`${cell} text-right text-[#AFDDFF]`}>{pct(bestApy(quote))}</td>
+                    <td className={`${cell} text-right text-white/70`}>{pct(quote.aaveApy)}</td>
+                    <td className={`${cell} text-right text-white/70`}>{pct(quote.venusApy)}</td>
+                    <td className={`${cell} text-right text-white/70`}>
+                      {spreadBps(quote) === null ? "—" : `${spreadBps(quote)} bps`}
+                    </td>
+                    <td className="px-[16px] py-[8px] border-b border-white/5 text-right">
+                      <RowSpark values={assetSparks[index]} />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

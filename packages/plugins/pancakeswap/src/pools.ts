@@ -22,6 +22,8 @@ export type PoolRow = {
   /** Fees the pool paid out over 24h, annualised against its TVL. */
   feeApr: number;
   ageDays: number;
+  /** The last day of price, comma-joined oldest first, for the row's trend line. */
+  spark: string;
 };
 
 /** The bar a pool has to clear before an agent will put liquidity in it. */
@@ -39,13 +41,32 @@ type GeckoPool = {
   attributes: {
     address: string;
     name: string;
+    base_token_price_usd: string | null;
     reserve_in_usd: string | null;
     pool_created_at: string | null;
     volume_usd: Record<string, string | null>;
+    price_change_percentage: Record<string, string | null>;
     transactions: Record<string, { buys: number; sells: number }>;
   };
   relationships: { base_token: { data: { id: string } }; quote_token: { data: { id: string } } };
 };
+
+/**
+ * The feed publishes how far the price has moved over six windows, which is
+ * the same thing as six past prices once you know the current one. Candles
+ * would be smoother, but the OHLCV endpoint is rate-limited far harder than
+ * this one and a row that is sometimes blank is worse than one that is coarse.
+ */
+const WINDOWS = ["h24", "h6", "h1", "m30", "m15", "m5"] as const;
+
+export function trend(priceUsd: number, changes: Record<string, string | null>) {
+  if (!(priceUsd > 0)) return "";
+  const past = WINDOWS.map((window) => {
+    const move = Number(changes[window] ?? Number.NaN);
+    return Number.isFinite(move) ? priceUsd / (1 + move / 100) : Number.NaN;
+  });
+  return [...past, priceUsd].every(Number.isFinite) ? [...past, priceUsd].join(",") : "";
+}
 
 /** The fee tier only shows up in the pool's display name: "USDT / WBNB 0.05%". */
 function parsePair(name: string) {
@@ -62,7 +83,8 @@ async function fetchPage(
     `${ENDPOINT}/${dex}/pools?page=${page}&include=base_token,quote_token`,
     { headers: { accept: "application/json" }, signal: AbortSignal.timeout(12_000) },
   );
-  if (!response.ok) throw new Error(`pool feed returned ${response.status}`);
+  // A throttled third page should cost the board three rows, not all of them.
+  if (!response.ok) return { pools: [], tokens: [] };
   const body = (await response.json()) as { data: GeckoPool[]; included?: GeckoToken[] };
   return { pools: body.data ?? [], tokens: body.included ?? [] };
 }
@@ -106,6 +128,10 @@ export async function livePools(dex = "pancakeswap-v3-bsc"): Promise<PoolRow[]> 
         swapsPerHour: hourly ? hourly.buys + hourly.sells : 0,
         feeApr: tvlUsd > 0 ? ((volume24hUsd * feePercent) / 100 / tvlUsd) * 365 : 0,
         ageDays: created ? (now - Date.parse(created)) / 86_400_000 : 0,
+        spark: trend(
+          Number(pool.attributes.base_token_price_usd ?? 0),
+          pool.attributes.price_change_percentage ?? {},
+        ),
       };
     });
 

@@ -45,8 +45,9 @@ export type StatTile = { label: string; value: string; hint?: string };
 
 export type TableColumn = { key: string; label: string; align?: "start" | "end" };
 /**
- * A row's `href` makes its first cell a link, and `logo`/`logoAlt` put icons
- * in front of it. Everything else is matched to a column by key.
+ * A row's `href` makes its first cell a link, `logo`/`logoAlt` put icons in
+ * front of it, and `spark` (comma-joined values, oldest first) draws the
+ * trend line at the far right. Everything else is matched to a column by key.
  */
 export type TableRow = { id: string } & Record<string, string>;
 
@@ -54,6 +55,8 @@ export type TableRow = { id: string } & Record<string, string>;
 export type AgentTable = {
   title: string;
   caption?: string;
+  /** What window the rows' `spark` covers, e.g. "24h". Shown as the column head. */
+  sparkLabel?: string;
   columns: TableColumn[];
   rows: TableRow[];
 };

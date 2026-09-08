@@ -27,11 +27,15 @@ function cached<T>(key: string, load: () => Promise<T>, ttl = CACHE_MS): Promise
 }
 
 /**
- * The free tier allows about 30 calls a minute, and a page render wants eight
- * at once. One request in flight, spaced out, with a single retry when the
- * limiter says no — slower than parallel, and it actually returns data.
+ * The free tier allows about 30 calls a minute, and the candle endpoint is
+ * stricter still — measured, it starts refusing after two requests inside a
+ * few seconds. Only the detail charts come through here, a handful per render,
+ * so: one request in flight, two seconds apart, retried when the limiter still
+ * says no. Slower than parallel, and it actually returns data.
  */
-const GAP_MS = 260;
+const GAP_MS = 2_100;
+/** How long to wait after each 429 before trying that request again. */
+const BACKOFF_MS = [2_000, 5_000];
 let queue: Promise<unknown> = Promise.resolve();
 
 function enqueue<T>(work: () => Promise<T>): Promise<T> {
@@ -46,17 +50,18 @@ function enqueue<T>(work: () => Promise<T>): Promise<T> {
 
 async function get(path: string) {
   return enqueue(async () => {
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; ; attempt++) {
       const response = await fetch(`${BASE}${path}`, {
         headers: { accept: "application/json" },
         signal: AbortSignal.timeout(12_000),
       });
       if (response.ok) return response.json();
-      if (response.status !== 429 || attempt === 1) {
+      const wait = response.status === 429 ? BACKOFF_MS[attempt] : undefined;
+      if (wait === undefined) {
         // Not worth failing a page over; the chart just does not render.
         throw new Error(`market feed returned ${response.status}`);
       }
-      await new Promise((resolve) => setTimeout(resolve, 1_500));
+      await new Promise((resolve) => setTimeout(resolve, wait));
     }
   });
 }
@@ -152,3 +157,10 @@ export const tokenLink = (token: string) =>
 
 /** An address on the explorer, for anything PancakeSwap does not host. */
 export const explorerLink = (address: string) => `https://bscscan.com/address/${address}`;
+
+/**
+ * A row sparkline carries no axis and no dates, so the values alone are the
+ * whole payload — joined into one string because a table row is flat strings.
+ */
+export const sparkOf = (points: SeriesPoint[]) =>
+  points.length > 1 ? points.map((point) => point.v).join(",") : "";

@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   // Standalone traces only the files the server actually needs, which for a
   // workspace means tracing from the repo root, not this package.
   output: "standalone",
+  experimental: {
+    // Every page reads the same live feeds behind a one-minute cache that lives
+    // in module state, so it only holds inside one process. Ten build workers
+    // meant ten copies asking at once and the feed refusing most of them.
+    cpus: 1,
+  },
   outputFileTracingRoot: join(import.meta.dirname, "../.."),
   // The workspace packages ship TypeScript source, not a build.
   transpilePackages: [
