@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Wallet, X } from "lucide-react";
+import { ChevronDown, Copy, LogOut, Menu, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -12,7 +12,7 @@ import {
   switchToChain,
   useWallet,
 } from "@/lib/use-wallet";
-import { chipClass } from "./ui";
+import { ChainMark, WalletMark } from "./ui";
 
 const PAGES = [
   { number: "01", label: "AGENTS", href: "/agents" },
@@ -42,6 +42,83 @@ function NavItem({
         {label}
       </span>
     </Link>
+  );
+}
+
+const menuItem =
+  "flex w-full items-center gap-[10px] px-[14px] py-[11px] font-manrope text-white/80 text-[13px] leading-[15.6px] hover:bg-white/[0.06] hover:text-white transition-colors";
+
+/** The connected chip and what it opens: identity, then the two things you do with it. */
+function WalletMenu({ address, balance }: { address: `0x${string}`; balance: bigint | null }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-[8px] border border-white/20 px-[10px] py-[5px] hover:border-white/50 transition-colors"
+      >
+        <WalletMark address={address} />
+        <span className="font-manrope text-white text-[13px] leading-[15.6px]">
+          {short(address)}
+        </span>
+        <ChevronDown
+          className={`w-[13px] h-[13px] text-white/50 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          strokeWidth={1.5}
+        />
+      </button>
+
+      {open && (
+        <>
+          {/* Anywhere else on the page closes it, the way every wallet menu does. */}
+          <button
+            type="button"
+            aria-label="Close wallet menu"
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-30 cursor-default"
+          />
+          <div className="absolute right-0 top-[calc(100%+8px)] z-40 w-[236px] border border-white/20 bg-black anim-fade-up">
+            <div className="flex items-center gap-[10px] border-b border-white/10 px-[14px] py-[12px]">
+              <WalletMark address={address} size={26} />
+              <div>
+                <p className="font-manrope text-white text-[13px] leading-[15.6px]">
+                  {short(address)}
+                </p>
+                <p className="font-manrope text-white/50 text-[11px] leading-[14px]">
+                  {formatBnb(balance)}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className={menuItem}
+              onClick={() => {
+                navigator.clipboard?.writeText(address).catch(() => undefined);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1_400);
+              }}
+            >
+              <Copy className="w-[14px] h-[14px]" strokeWidth={1.5} />
+              {copied ? "Copied" : "Copy address"}
+            </button>
+            <button
+              type="button"
+              className={menuItem}
+              onClick={() => {
+                disconnectWallet();
+                setOpen(false);
+              }}
+            >
+              <LogOut className="w-[14px] h-[14px]" strokeWidth={1.5} />
+              Disconnect wallet
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -88,44 +165,34 @@ export function Nav() {
             className="hidden lg:flex items-center gap-[12px] ml-auto anim-slide-right"
             style={{ animationDelay: "600ms" }}
           >
-            <Wallet className="w-[15px] h-[15px] text-white" strokeWidth={1.5} />
-
             {wallet.address ? (
-              <>
-                <span className="font-manrope text-white text-[13px] leading-[15.6px]">
-                  {short(wallet.address)}
-                </span>
-                <span className="font-manrope text-white/50 text-[13px] leading-[15.6px]">
-                  {formatBnb(wallet.balance)}
-                </span>
-                <button
-                  type="button"
-                  onClick={disconnectWallet}
-                  className="font-manrope text-white/40 text-[11px] uppercase tracking-wide hover:text-white transition-colors"
-                >
-                  disconnect
-                </button>
-              </>
+              <WalletMenu address={wallet.address} balance={wallet.balance} />
             ) : (
               <button
                 type="button"
                 disabled={busy}
                 onClick={connect}
-                className="font-manrope text-white text-[13px] leading-[15.6px] hover:text-[#AFDDFF] disabled:opacity-50 transition-colors"
+                className="flex items-center gap-[8px] font-manrope text-white text-[13px] leading-[15.6px] hover:text-[#AFDDFF] disabled:opacity-50 transition-colors"
               >
+                <Wallet className="w-[15px] h-[15px]" strokeWidth={1.5} />
                 {busy ? "CONNECTING…" : "CONNECT_WALLET"}
               </button>
             )}
 
-            <span className="font-manrope text-white text-[13px] leading-[15.6px] ml-[8px]">
-              CHAIN:
-            </span>
+            {/* The chain is a logo, not a word — and a wrong one is a button. */}
             {wrongChain ? (
-              <button type="button" onClick={switchToChain} className={chipClass}>
-                SWITCH_TO_{CHAIN.id}
+              <button
+                type="button"
+                onClick={switchToChain}
+                title={`Wrong network — switch to ${CHAIN.name}`}
+                className="grid size-[26px] place-items-center rounded-full ring-1 ring-[#ff8a8a] hover:ring-white transition-colors"
+              >
+                <ChainMark className="size-[18px] opacity-60" />
               </button>
             ) : (
-              <span className={chipClass}>BNB_{CHAIN.id}</span>
+              <span title={CHAIN.name} className="grid size-[26px] place-items-center">
+                <ChainMark className="size-[18px]" />
+              </span>
             )}
           </div>
 

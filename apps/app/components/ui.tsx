@@ -46,6 +46,37 @@ export function TokenMarks({ srcs }: { srcs?: string[] }) {
   );
 }
 
+/**
+ * The chain's own mark. Inlined because a nav icon that waits on a CDN is a
+ * nav icon that pops in after the page has settled.
+ */
+export function ChainMark({ className = "size-[18px]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden>
+      <circle cx="16" cy="16" r="16" fill="#F3BA2F" />
+      <path
+        fill="#fff"
+        d="M12.116 14.404 16 10.52l3.886 3.886 2.26-2.26L16 6l-6.144 6.144 2.26 2.26ZM6 16l2.26-2.26L10.52 16l-2.26 2.26L6 16Zm6.116 1.596L16 21.48l3.886-3.886 2.26 2.259L16 26l-6.144-6.144-.003-.003 2.263-2.257ZM21.48 16l2.26-2.26L26 16l-2.26 2.26L21.48 16Zm-3.188-.002h.002V16L16 18.294l-2.291-2.29-.004-.004.004-.003.401-.402.195-.195L16 13.706l2.293 2.293Z"
+      />
+    </svg>
+  );
+}
+
+/** A wallet needs a face to be recognisable at a glance; its own bytes are one. */
+export function WalletMark({ address, size = 18 }: { address: string; size?: number }) {
+  const hue = Number.parseInt(address.slice(2, 6), 16) % 360;
+  return (
+    <span
+      className="shrink-0 rounded-full"
+      style={{
+        width: size,
+        height: size,
+        background: `linear-gradient(140deg, hsl(${hue} 82% 66%), hsl(${(hue + 64) % 360} 78% 46%))`,
+      }}
+    />
+  );
+}
+
 const verticalPositions = ["12.6%", "37.5%", "61.9%", "86.2%"];
 const horizontalPositions = ["32.7%", "71.4%"];
 
