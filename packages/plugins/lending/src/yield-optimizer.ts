@@ -2,6 +2,7 @@ import {
   type AgentAction,
   type AgentInsights,
   type AgentPlugin,
+  type AgentSeries,
   type AgentStatus,
   type AgentTx,
   bscClient,
@@ -10,6 +11,7 @@ import {
   requireAddress,
   requireInt,
   type SessionScope,
+  tokenSeries,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { AAVE_POOL, erc20Abi, liquidityRateToApy, poolAbi, reserveData } from "./aave.ts";
@@ -158,6 +160,7 @@ export const yieldOptimizer: AgentPlugin = {
     "Withdraws only the asset you named, only to your own wallet",
     "Approves the destination for the exact amount being moved",
     "Cannot borrow, and cannot touch collateral backing a loan",
+    "You sign each move, or a session key you capped and can revoke does",
   ],
 
   async insights(params): Promise<AgentInsights> {
@@ -237,6 +240,16 @@ export const yieldOptimizer: AgentPlugin = {
       detail: `${market.symbol}: ${quotes}${funded.length ? ` · holding ${funded[0].supplied.toPrecision(6)} on ${funded[0].protocol}` : ""}`,
       actionable: move !== null,
     };
+  },
+
+  async series(params): Promise<AgentSeries | null> {
+    const asset = requireAddress(params, "asset");
+    const [points, symbol] = await Promise.all([
+      tokenSeries(asset),
+      bscClient.readContract({ address: asset, abi: erc20Abi, functionName: "symbol" }),
+    ]);
+    // A stablecoin's flat line is the point: only the rate is moving.
+    return points.length ? { label: `${symbol} · 48h`, points } : null;
   },
 
   async scope(params): Promise<SessionScope> {

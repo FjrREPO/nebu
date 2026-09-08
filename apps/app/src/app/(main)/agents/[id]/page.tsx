@@ -1,7 +1,15 @@
 import { Column, Grid, Row, StatusIndicator, Text } from "@once-ui-system/core";
 import { notFound } from "next/navigation";
-import { ActivityFeed, AgentRunner, DataTable, Frame, SpecLabel, StatStrip } from "@/components";
-import { agentInsights, agentMeta, exampleStatus, findAgentMeta } from "@/lib/agents";
+import {
+  ActivityFeed,
+  DataTable,
+  Frame,
+  HirePanel,
+  PriceChart,
+  SpecLabel,
+  StatStrip,
+} from "@/components";
+import { agentInsights, agentMeta, agentSeries, exampleStatus, findAgentMeta } from "@/lib/agents";
 import { CATEGORIES } from "@/lib/types";
 
 /** The whole page is live reads, so let it go stale for a minute at most. */
@@ -28,7 +36,11 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   if (!agent) notFound();
 
   const category = CATEGORIES.find((entry) => entry.key === agent.category);
-  const [status, insights] = await Promise.all([exampleStatus(agent.id), agentInsights(agent.id)]);
+  const [status, insights, series] = await Promise.all([
+    exampleStatus(agent.id),
+    agentInsights(agent.id),
+    agentSeries(agent.id),
+  ]);
 
   return (
     <Column fillWidth maxWidth="xl" paddingX="l" paddingY="40" gap="32">
@@ -81,7 +93,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
           // The rail follows you down a long page; on a short viewport it scrolls itself.
           style={{ maxHeight: "calc(100dvh - 6rem)" }}
         >
-          <AgentRunner agent={agent} initialStatus={status} />
+          <HirePanel agent={agent} />
         </Column>
 
         <Column fillWidth gap="32" minWidth={0}>
@@ -90,6 +102,12 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
           </Text>
 
           {insights && <StatStrip stats={insights.stats} />}
+
+          {series && (
+            <Frame fillWidth radius="m" padding="20">
+              <PriceChart series={series} />
+            </Frame>
+          )}
           {insights?.table && <DataTable table={insights.table} />}
 
           <Column fillWidth gap="12">

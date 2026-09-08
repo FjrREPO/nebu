@@ -86,6 +86,12 @@ export type SessionScope = {
   spend: ScopedSpend[];
 };
 
+/** One reading in an agent's history: unix seconds, and the value. */
+export type SeriesPoint = { t: number; v: number };
+
+/** A short history of whatever number drives this agent's decision. */
+export type AgentSeries = { label: string; points: SeriesPoint[] };
+
 /** Everything the agent detail page shows beyond a headline. */
 export type AgentInsights = {
   stats: StatTile[];
@@ -112,6 +118,8 @@ export interface AgentPlugin {
   insights(params: AgentParams): Promise<AgentInsights>;
   /** The narrowest session permissions under which plan() can still run. */
   scope(params: AgentParams): Promise<SessionScope>;
+  /** History of the number this agent watches, for the marketplace card. */
+  series(params: AgentParams): Promise<AgentSeries | null>;
   /** The tx to run, or null when there is nothing to do. */
   plan(params: AgentParams): Promise<AgentAction | null>;
 }

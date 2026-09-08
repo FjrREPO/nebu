@@ -134,3 +134,39 @@
 .pair-logos img + img {
   margin-left: -7px;
 }
+
+/* Chart tones. A price series is the one place up/down colour means something. */
+.tint {
+  --spark: var(--neutral-on-background-medium);
+  background: var(--neutral-alpha-weak);
+}
+.tint-up {
+  --spark: #2ea36b;
+  background: color-mix(in oklab, #2ea36b 8%, transparent);
+}
+.tint-down {
+  --spark: #d2564a;
+  background: color-mix(in oklab, #d2564a 8%, transparent);
+}
+.tone-up {
+  color: #2ea36b;
+}
+.tone-down {
+  color: #d2564a;
+}
+
+.spark {
+  display: block;
+  width: 100%;
+  height: 110px;
+}
+
+.chart-tick {
+  font-family: var(--font-code), monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.chart-surface {
+  --spark: var(--brand-on-background-medium);
+}

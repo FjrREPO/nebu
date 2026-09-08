@@ -2,10 +2,12 @@ import {
   type AgentAction,
   type AgentInsights,
   type AgentPlugin,
+  type AgentSeries,
   type AgentStatus,
   type AgentTx,
   bscClient,
   InvalidParams,
+  poolSeries,
   recentActivity,
   requireInt,
   type SessionScope,
@@ -99,7 +101,7 @@ export const pancakeRebalancer: AgentPlugin = {
   grants: [
     "Reads your position NFT and the pool it sits in",
     "Builds exit, collect and remint calldata for that one position",
-    "You sign every transaction from your own wallet — nothing is delegated",
+    "You sign each transaction, or a session key you capped and can revoke does",
     "No transfer path exists: liquidity can only move back into a position you own",
   ],
 
@@ -176,6 +178,14 @@ export const pancakeRebalancer: AgentPlugin = {
       detail: describe(position),
       actionable: !live && position.liquidity > 0n,
     };
+  },
+
+  async series(params): Promise<AgentSeries | null> {
+    const position = await loadPosition(tokenId(params));
+    const points = await poolSeries(position.pool);
+    return points.length
+      ? { label: `${position.meta0.symbol}/${position.meta1.symbol} · 48h`, points }
+      : null;
   },
 
   async scope(params): Promise<SessionScope> {

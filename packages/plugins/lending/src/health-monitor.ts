@@ -2,6 +2,7 @@ import {
   type AgentAction,
   type AgentInsights,
   type AgentPlugin,
+  type AgentSeries,
   type AgentStatus,
   type AgentTx,
   bscClient,
@@ -11,6 +12,7 @@ import {
   requireAddress,
   requireNumber,
   type SessionScope,
+  tokenSeries,
 } from "@nebu/core";
 import {
   type Address,
@@ -134,6 +136,38 @@ async function atRiskAccounts(you: Address) {
   return rows.filter((row) => row.debtBase >= 1).sort((a, b) => a.healthFactor - b.healthFactor);
 }
 
+/**
+ * The collateral the wallet holds most of. Its price is what actually drags a
+ * health factor down, so that is the line worth charting.
+ */
+async function largestCollateral(wallet: Address) {
+  const assets = await reservesList();
+  const held = await Promise.all(
+    assets.map(async (asset) => {
+      const reserve = await reserveData(asset);
+      const [balance, decimals, symbol, price] = await Promise.all([
+        bscClient.readContract({
+          address: reserve.aTokenAddress,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [wallet],
+        }),
+        bscClient.readContract({ address: asset, abi: erc20Abi, functionName: "decimals" }),
+        bscClient.readContract({ address: asset, abi: erc20Abi, functionName: "symbol" }),
+        assetPrice(asset),
+      ]);
+      return {
+        asset,
+        symbol,
+        valueBase:
+          Number(formatUnits(balance, decimals)) * Number(formatUnits(price, BASE_DECIMALS)),
+      };
+    }),
+  );
+  const funded = held.filter((entry) => entry.valueBase > 0);
+  return funded.length ? funded.reduce((a, b) => (b.valueBase > a.valueBase ? b : a)) : null;
+}
+
 export const healthMonitor: AgentPlugin = {
   id: "aave-health-monitor",
   name: "Aave Health Guard",
@@ -152,6 +186,7 @@ export const healthMonitor: AgentPlugin = {
     "Repays your largest debt, on your behalf, from your own balance",
     "Approves the pool for exactly the repayment amount",
     "Cannot borrow, withdraw collateral, or move funds anywhere but into your own loan",
+    "You sign each repayment, or a session key you capped and can revoke does",
   ],
 
   async insights(params): Promise<AgentInsights> {
@@ -241,6 +276,13 @@ export const healthMonitor: AgentPlugin = {
       detail: `$${account.collateralBase.toFixed(2)} collateral against $${account.debtBase.toFixed(2)} debt, liquidates below 1.00, your floor is ${account.minHealthFactor}`,
       actionable: !safe,
     };
+  },
+
+  async series(params): Promise<AgentSeries | null> {
+    const collateral = await largestCollateral(requireAddress(params, "wallet"));
+    if (!collateral) return null;
+    const points = await tokenSeries(collateral.asset);
+    return points.length ? { label: `${collateral.symbol} collateral · 48h`, points } : null;
   },
 
   async scope(params): Promise<SessionScope> {

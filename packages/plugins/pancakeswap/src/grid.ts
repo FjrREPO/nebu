@@ -2,9 +2,11 @@ import {
   type AgentAction,
   type AgentInsights,
   type AgentPlugin,
+  type AgentSeries,
   type AgentStatus,
   bscClient,
   InvalidParams,
+  poolSeries,
   recentActivity,
   requireAddress,
   requireInt,
@@ -135,6 +137,7 @@ export const pancakeGrid: AgentPlugin = {
     "Reads the pool price and your balance of the two pool tokens",
     "Swaps only between those two tokens, on the pool you named",
     "Approves the router for the exact swap amount, never an unlimited allowance",
+    "You sign each swap, or a session key you capped and can revoke does",
     "Every swap carries a 1% floor on the amount received",
   ],
 
@@ -220,6 +223,14 @@ export const pancakeGrid: AgentPlugin = {
       detail: `${market.meta0.symbol}/${market.meta1.symbol} at ${formatPrice(market.price)} · holding ${(market.held * 100).toFixed(1)}% ${market.meta1.symbol}, ladder wants ${(market.target * 100).toFixed(1)}%`,
       actionable: !outside && Math.abs(off) > tolerance(market) && market.total > 0,
     };
+  },
+
+  async series(params): Promise<AgentSeries | null> {
+    const pool = requireAddress(params, "pool");
+    const [points, market] = await Promise.all([poolSeries(pool), loadMarket(params)]);
+    return points.length
+      ? { label: `${market.meta0.symbol}/${market.meta1.symbol} · 48h`, points }
+      : null;
   },
 
   async scope(params): Promise<SessionScope> {

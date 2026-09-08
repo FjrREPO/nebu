@@ -1,6 +1,6 @@
-import type { AgentCategory, AgentParams, AgentStatus, ParamSpec } from "@nebu/core";
+import type { AgentCategory, AgentParams, AgentSeries, AgentStatus, ParamSpec } from "@nebu/core";
 
-export type { AgentCategory, AgentParams, AgentStatus, ParamSpec };
+export type { AgentCategory, AgentParams, AgentSeries, AgentStatus, ParamSpec };
 
 /** A plugin flattened for the client — everything but the functions. */
 export type AgentMeta = {
@@ -17,6 +17,7 @@ export type AgentMeta = {
 
 export type AgentCardData = AgentMeta & {
   status: AgentStatus | null;
+  series: AgentSeries | null;
   error: string | null;
 };
 

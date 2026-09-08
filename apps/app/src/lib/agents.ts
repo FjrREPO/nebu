@@ -30,10 +30,11 @@ export async function agentCards(): Promise<AgentCardData[]> {
   return Promise.all(
     plugins.map(async (plugin) => {
       const meta = agentMeta().find((agent) => agent.id === plugin.id) as AgentMeta;
+      const series = await plugin.series(plugin.example).catch(() => null);
       try {
-        return { ...meta, status: await plugin.status(plugin.example), error: null };
+        return { ...meta, status: await plugin.status(plugin.example), series, error: null };
       } catch (err) {
-        return { ...meta, status: null, error: (err as Error).message.split("\n")[0] };
+        return { ...meta, status: null, series, error: (err as Error).message.split("\n")[0] };
       }
     }),
   );
@@ -51,4 +52,11 @@ export async function agentInsights(id: string) {
   const plugin = plugins.find((entry) => entry.id === id);
   if (!plugin) return null;
   return plugin.insights(plugin.example).catch(() => null);
+}
+
+/** The history behind the agent's headline number, for its detail chart. */
+export async function agentSeries(id: string) {
+  const plugin = plugins.find((entry) => entry.id === id);
+  if (!plugin) return null;
+  return plugin.series(plugin.example).catch(() => null);
 }
