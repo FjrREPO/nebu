@@ -19,6 +19,10 @@ ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
 
 COPY --from=build /repo/apps/app/.next/standalone ./
 COPY --from=build /repo/apps/app/.next/static ./apps/app/.next/static
+# Standalone traces code, not assets. Without this, anything in public/ is a
+# 404 in production and nowhere else — which is how the manifest icons shipped
+# broken while every local build served them fine.
+COPY --from=build /repo/apps/app/public ./apps/app/public
 
 EXPOSE 3000
 CMD ["node", "apps/app/server.js"]
