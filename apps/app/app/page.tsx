@@ -12,9 +12,16 @@ export default async function Page() {
 
   return (
     <section className="relative w-full h-screen overflow-hidden bg-black">
+      {/*
+        Self-hosted and re-encoded: the original was 7.4MB of 1080p at 6Mbps,
+        served from someone else's asset bucket, for a muted loop that sits
+        blurred behind text at 70% opacity. 720p at CRF 30 is 230KB and looks
+        the same through that, and the poster means the hero is never blank.
+      */}
       <video
         className="absolute inset-0 w-full h-full object-cover anim-fade-in opacity-70"
-        src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260813_115057_94c3699b-0fd1-4124-bcf3-3626bb8c1f77.mp4"
+        src="/hero.mp4"
+        poster="/hero-poster.jpg"
         autoPlay
         muted
         loop
