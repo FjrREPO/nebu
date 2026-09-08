@@ -32,3 +32,15 @@ export function plainNumber(value: number, digits = 6) {
   if (!Number.isFinite(value)) return "0";
   return value.toLocaleString("en-US", { maximumFractionDigits: digits, useGrouping: false });
 }
+
+/**
+ * An amount as it should read in a sentence rather than a form field.
+ *
+ * toPrecision turns a large balance into "9.36847e+7", and formatUnits spells
+ * a BNB budget to all eighteen places — both true, neither something a person
+ * can act on. Grouped, and never more precision than the amount deserves.
+ */
+export function plainAmount(value: number) {
+  if (!Number.isFinite(value)) return "0";
+  return value.toLocaleString("en-US", { maximumFractionDigits: value >= 1 ? 4 : 8 });
+}

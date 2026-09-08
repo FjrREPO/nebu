@@ -12,6 +12,7 @@ import {
   bscClient,
   InvalidParams,
   marketId,
+  plainAmount,
   plainNumber,
   recentActivity,
   requireAddress,
@@ -275,7 +276,7 @@ export const yieldOptimizer: AgentPlugin = {
             : "Waiting for a deposit",
       detail: deployable
         ? `${market.symbol} pays ${(best.apy * 100).toFixed(2)}% on ${best.protocol} — ${quotes}`
-        : `${market.symbol}: ${quotes}${funded.length ? ` · holding ${funded[0].supplied.toPrecision(6)} on ${funded[0].protocol}` : ""}`,
+        : `${market.symbol}: ${quotes}${funded.length ? ` · holding ${plainAmount(funded[0].supplied)} on ${funded[0].protocol}` : ""}`,
       actionable: move !== null || deployable,
     };
   },
@@ -382,7 +383,7 @@ export const yieldOptimizer: AgentPlugin = {
       // Size the deposit off the swap's floor, not its quote: the floor is the
       // amount that is guaranteed to be there when the next call runs.
       return {
-        reason: `Turn ${formatUnits(budget, 18)} BNB into ${market.symbol} and supply it to ${best.protocol} at ${(best.apy * 100).toFixed(2)}%.`,
+        reason: `Turn ${plainAmount(Number(formatUnits(budget, 18)))} BNB into ${market.symbol} and supply it to ${best.protocol} at ${(best.apy * 100).toFixed(2)}%.`,
         txs: [...bootstrap.txs, ...depositTxs(market, best.protocol, bootstrap.minOut)],
       };
     }
@@ -394,7 +395,7 @@ export const yieldOptimizer: AgentPlugin = {
     if (amount === 0n) return null;
 
     return {
-      reason: `Move ${move.from.supplied.toPrecision(6)} ${market.symbol} from ${move.from.protocol} (${(move.from.apy * 100).toFixed(2)}%) to ${move.to.protocol} (${(move.to.apy * 100).toFixed(2)}%), worth ${(move.gainBps / 100).toFixed(2)}% a year.`,
+      reason: `Move ${plainAmount(move.from.supplied)} ${market.symbol} from ${move.from.protocol} (${(move.from.apy * 100).toFixed(2)}%) to ${move.to.protocol} (${(move.to.apy * 100).toFixed(2)}%), worth ${(move.gainBps / 100).toFixed(2)}% a year.`,
       txs: [
         withdrawTx(market, move.from.protocol, amount),
         ...depositTxs(market, move.to.protocol, amount),

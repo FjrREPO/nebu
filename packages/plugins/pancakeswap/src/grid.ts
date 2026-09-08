@@ -8,6 +8,7 @@ import {
   bnbInto,
   bscClient,
   InvalidParams,
+  plainAmount,
   plainNumber,
   poolSeries,
   recentActivity,
@@ -208,7 +209,7 @@ export const pancakeGrid: AgentPlugin = {
             const size = Number(
               formatUnits(amount0 < 0n ? -amount0 : amount0, market.meta0.decimals),
             );
-            return `${bought ? "Bought" : "Sold"} ${size.toPrecision(5)} ${market.meta0.symbol} at tick ${args.tick}`;
+            return `${bought ? "Bought" : "Sold"} ${plainAmount(size)} ${market.meta0.symbol} at tick ${args.tick}`;
           },
         },
       ]).catch(() => []),
@@ -364,7 +365,7 @@ export const pancakeGrid: AgentPlugin = {
       if (txs.length === 0) return null;
 
       return {
-        reason: `Split ${formatUnits(budget, 18)} BNB into ${(market.target * 100).toFixed(1)}% ${market.meta1.symbol} and ${((1 - market.target) * 100).toFixed(1)}% ${market.meta0.symbol}, where the ladder starts.`,
+        reason: `Split ${plainAmount(Number(formatUnits(budget, 18)))} BNB into ${(market.target * 100).toFixed(1)}% ${market.meta1.symbol} and ${((1 - market.target) * 100).toFixed(1)}% ${market.meta0.symbol}, where the ladder starts.`,
         txs,
       };
     }
@@ -427,7 +428,7 @@ export const pancakeGrid: AgentPlugin = {
     });
 
     return {
-      reason: `${sellingBase ? "Sell" : "Buy"} ${amountInFloat.toPrecision(6)} ${tokenIn.symbol} to bring the wallet back to the ladder's ${(market.target * 100).toFixed(1)}% ${market.meta1.symbol} target.`,
+      reason: `${sellingBase ? "Sell" : "Buy"} ${plainAmount(amountInFloat)} ${tokenIn.symbol} to bring the wallet back to the ladder's ${(market.target * 100).toFixed(1)}% ${market.meta1.symbol} target.`,
       txs,
     };
   },

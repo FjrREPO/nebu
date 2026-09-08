@@ -10,6 +10,7 @@ import {
   bnbInto,
   bscClient,
   InvalidParams,
+  plainAmount,
   plainNumber,
   poolLink,
   poolSeries,
@@ -193,7 +194,7 @@ async function openPosition(params: Record<string, string>): Promise<AgentAction
 
   const price = (value: number) => formatPrice(tickToPrice(value, meta0.decimals, meta1.decimals));
   return {
-    reason: `Open a ${meta0.symbol}/${meta1.symbol} position from ${formatUnits(budget, 18)} BNB, ranged ${price(tickLower)}-${price(tickUpper)} around the live price.`,
+    reason: `Open a ${meta0.symbol}/${meta1.symbol} position from ${plainAmount(Number(formatUnits(budget, 18)))} BNB, ranged ${price(tickLower)}-${price(tickUpper)} around the live price.`,
     txs: [
       ...leg0.txs,
       ...leg1.txs,

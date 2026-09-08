@@ -10,6 +10,7 @@ import {
   explorerLink,
   InvalidParams,
   LOG_SPAN,
+  plainAmount,
   plainNumber,
   recentActivity,
   requireAddress,
@@ -414,7 +415,7 @@ export const healthMonitor: AgentPlugin = {
     });
 
     return {
-      reason: `Repay ${repayTokens.toPrecision(6)} ${debt.symbol} (about $${repayBase.toFixed(2)}) to lift the health factor from ${account.healthFactor.toFixed(2)} back to ${account.minHealthFactor}.`,
+      reason: `Repay ${plainAmount(repayTokens)} ${debt.symbol} (about $${repayBase.toFixed(2)}) to lift the health factor from ${account.healthFactor.toFixed(2)} back to ${account.minHealthFactor}.`,
       txs,
     };
   },
