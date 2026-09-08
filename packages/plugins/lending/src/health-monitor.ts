@@ -180,18 +180,18 @@ export const healthMonitor: AgentPlugin = {
   protocol: "Aave V3",
   chainId: 56,
   summary:
-    "Tracks the live health factor of a lending position and, when it slips under your floor, sizes the exact repayment that lifts it back.",
+    "If you have borrowed against your crypto, a falling market can trigger a forced sale of it. This watches how close you are to that line and pays back just enough to step away from it.",
   paramSchema: [
     { key: "wallet", label: "Wallet", placeholder: "0x..." },
     { key: "minHealthFactor", label: "Minimum health factor", placeholder: "1.5" },
   ],
   example: { wallet: "0x1e01000ba272c96013c913a6a6bC61722E24E9EB", minHealthFactor: "1.5" },
   grants: [
-    "Reads your Aave account: collateral, debt, liquidation threshold, health factor",
-    "Repays your largest debt, on your behalf, from your own balance",
-    "Approves the pool for exactly the repayment amount",
-    "Cannot borrow, withdraw collateral, or move funds anywhere but into your own loan",
-    "You sign each repayment, or a session key you capped and can revoke does",
+    "Looks at what you have put up, what you owe, and how close that is to a forced sale",
+    "Pays down your biggest loan for you, out of your own balance",
+    "Gives permission for exactly the repayment, nothing more",
+    "Cannot borrow, cannot take out what you put up, and cannot send money anywhere but into your own loan",
+    "Nothing is repaid until you approve it — or until a temporary key you set limits on and can cancel approves it for you",
   ],
 
   async insights(params): Promise<AgentInsights> {

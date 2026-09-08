@@ -232,14 +232,14 @@ export const pancakeRebalancer: AgentPlugin = {
   protocol: "PancakeSwap V3",
   chainId: 56,
   summary:
-    "Watches a concentrated liquidity position and recentres its range on the live pool price when it drifts out and stops earning fees.",
+    "When you provide two tokens to a trading pool you pick a price range, and you only earn fees while the price stays inside it. This watches that range and moves it back around today's price when the market walks out of it.",
   paramSchema: [{ key: "tokenId", label: "Position NFT id", placeholder: "7366225" }],
   example: { tokenId: "7368737" },
   grants: [
-    "Reads your position NFT and the pool it sits in",
-    "Builds exit, collect and remint calldata for that one position",
-    "You sign each transaction, or a session key you capped and can revoke does",
-    "No transfer path exists: liquidity can only move back into a position you own",
+    "Looks at your pool deposit and the market it sits in",
+    "Prepares the moves that pull your money out, collect the fees it earned, and put it back around today's price",
+    "Nothing moves until you approve it — or until a temporary key you set limits on and can cancel approves it for you",
+    "There is no route out to anyone else: your money can only go back into a deposit you own",
   ],
 
   async insights(params): Promise<AgentInsights> {

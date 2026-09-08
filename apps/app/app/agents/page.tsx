@@ -25,7 +25,7 @@ export default async function AgentsPage() {
             className="font-manrope text-[#AFDDFF]/80 text-[13px] leading-[15.6px] anim-fade-up"
             style={{ animationDelay: "300ms" }}
           >
-            [ REGISTRY ]
+            [ THE AGENTS ]
           </span>
           <div className="flex flex-wrap items-end justify-between gap-4 mt-[10px]">
             <h1
@@ -39,9 +39,9 @@ export default async function AgentsPage() {
               style={{ animationDelay: "600ms" }}
             >
               <Chip>
-                {live}/{agents.length} FEEDS_LIVE
+                {live} of {agents.length} online
               </Chip>
-              <Chip>{acting} NEED_ACTION</Chip>
+              <Chip>{acting} want to act</Chip>
             </div>
           </div>
         </div>
@@ -55,9 +55,10 @@ export default async function AgentsPage() {
         </div>
 
         <Muted className="mt-[24px] max-w-[720px]">
-          Each agent picks its own venue from the screen it already runs, so hiring one is a deposit
-          and a spend cap. Fee APR is annualised from a day of volume; the pool feed is a free tier
-          with a per-minute budget, so a card with no history says so rather than inventing one.
+          Each agent already watches the whole market, so hiring one is just a deposit and a
+          spending limit — it chooses where to put your money and tells you why. Every number above
+          was read live; where a chart is missing, the data source was busy and the card says so
+          rather than making one up.
         </Muted>
       </div>
     </div>

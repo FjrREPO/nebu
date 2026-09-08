@@ -156,7 +156,7 @@ export const yieldOptimizer: AgentPlugin = {
   protocol: "Aave V3 + Venus",
   chainId: 56,
   summary:
-    "Compares the live supply APY for one asset across Aave V3 and Venus and routes the deposit to whichever pays more, once the spread covers the round trip.",
+    "Two lending apps pay interest on the same coin, and the better rate changes. This checks both and moves your deposit to whichever pays more, once the gain is worth the fees.",
   paramSchema: [
     { key: "asset", label: "Asset", placeholder: "0x55d398326f99059fF775485246999027B3197955" },
     { key: "wallet", label: "Wallet", placeholder: "0x..." },
@@ -168,11 +168,11 @@ export const yieldOptimizer: AgentPlugin = {
     minGainBps: "25",
   },
   grants: [
-    "Reads both protocols' supply rates and where your deposit currently sits",
-    "Withdraws only the asset you named, only to your own wallet",
-    "Approves the destination for the exact amount being moved",
-    "Cannot borrow, and cannot touch collateral backing a loan",
-    "You sign each move, or a session key you capped and can revoke does",
+    "Checks what both lenders are paying and where your deposit is now",
+    "Can only take out the coin you named, and only to your own wallet",
+    "Gives permission for exactly the amount being moved, nothing more",
+    "Cannot borrow, and cannot touch anything backing a loan",
+    "Nothing moves until you approve it — or until a temporary key you set limits on and can cancel approves it for you",
   ],
 
   async insights(params): Promise<AgentInsights> {

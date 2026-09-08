@@ -26,7 +26,7 @@ export default async function Page() {
           className="font-graphik text-white font-normal leading-[1em] absolute anim-fade-up text-[32px] sm:text-[48px] md:text-[68px] top-[140px] sm:top-[160px] md:top-[178px] left-5 md:left-[35px] max-w-[300px] sm:max-w-[420px] md:max-w-[554px]"
           style={{ animationDelay: "400ms" }}
         >
-          Idle Positions. Autonomous Repair.
+          Hire an agent to mind your crypto.
         </h1>
 
         <GridLines />
@@ -39,7 +39,7 @@ export default async function Page() {
           >
             <span className="text-black text-[16px] leading-none">&#10022;</span>
             <span className="font-manrope text-black text-[12px] md:text-[13px] leading-[15.6px] uppercase tracking-wide">
-              Browse {agents.length} agents
+              Meet the {agents.length} agents
             </span>
           </Link>
 
@@ -48,15 +48,15 @@ export default async function Page() {
             style={{ animationDelay: "1100ms" }}
           >
             <span className="font-manrope text-black text-[13px] leading-[15.6px] bg-[#AFDDFF] px-[6px] py-[2px] inline-block mb-[10px]">
-              NOT A VAULT — AN AGENT DESK
+              YOUR KEYS STAY YOURS
             </span>
             <Notch>
               <p className="font-manrope text-white text-[13px] leading-[18px] mb-[18px]">
-                Every reading on this page came off BNB Smart Chain when you loaded it. The agents
-                hand you transactions; the signature stays yours.
+                Every number here was read from the blockchain the moment you opened this page.
+                Agents work out what to do — nothing moves until you say yes.
               </p>
               <span className="font-manrope text-[#AFDDFF] text-[13px] leading-[15.6px]">
-                {live}/{agents.length} FEEDS_LIVE · {acting} NEED_ACTION
+                {live} of {agents.length} agents online · {acting} want to act
               </span>
             </Notch>
           </div>

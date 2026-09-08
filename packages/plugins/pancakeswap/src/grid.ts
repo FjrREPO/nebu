@@ -122,7 +122,7 @@ export const pancakeGrid: AgentPlugin = {
   protocol: "PancakeSwap V3",
   chainId: 56,
   summary:
-    "Runs a geometric buy-low/sell-high ladder over a price range, swapping only when the wallet drifts a full grid cell away from where the ladder says it should sit.",
+    "Buys a little more when the price falls and sells a little when it rises, across a range you choose. It only trades once the price has moved far enough to be worth the fee.",
   paramSchema: [
     {
       key: "pool",
@@ -142,11 +142,11 @@ export const pancakeGrid: AgentPlugin = {
     grids: "10",
   },
   grants: [
-    "Reads the pool price and your balance of the two pool tokens",
-    "Swaps only between those two tokens, on the pool you named",
-    "Approves the router for the exact swap amount, never an unlimited allowance",
-    "You sign each swap, or a session key you capped and can revoke does",
-    "Every swap carries a 1% floor on the amount received",
+    "Looks at the current price and how much of each token you hold",
+    "Only ever trades those two tokens, in the market you picked",
+    "Gives permission for the exact amount of each trade — never an open-ended one",
+    "Nothing trades until you approve it — or until a temporary key you set limits on and can cancel approves it for you",
+    "Every trade has a floor: if you would get more than 1% less than quoted, it does not go through",
   ],
 
   async insights(params): Promise<AgentInsights> {
