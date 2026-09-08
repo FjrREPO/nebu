@@ -24,13 +24,13 @@ const CONTRACTS = [
 ] as const;
 
 const LIMITS = [
-  "Public BSC endpoints reject getLogs over roughly 20,000 blocks, so activity feeds cover the last 9,000.",
-  "Fee APR is annualised from one day of volume against current liquidity. It is an estimate, and the pages that show it say so.",
-  "The pool feed is a free tier with a per-minute budget. Requests are queued and cached, but a burst can still be turned away — a card with no history says so rather than inventing one.",
-  "A health factor has no on-chain history and public endpoints will not serve archive state, so that chart replays the collateral price at fixed balances. The label names the asset driving it.",
-  "Sessions default to BNB testnet: a grant registers a key on chain and costs a fee. Set NEXT_PUBLIC_SESSION_NETWORK=mainnet to grant against the live protocols.",
-  "A session key is held in your browser. It is scoped to the agent's contracts, capped per day and expiring — but it is still a key, so revoke when you are done.",
-  "Set BSC_RPC_URL to a private endpoint before pointing real traffic at this.",
+  "Activity lists cover roughly the last few hours. Free blockchain endpoints refuse to search further back in one go, so that is the window rather than a choice.",
+  '"Fee APR" is an estimate: yesterday\'s trading fees, stretched over a year. A quiet day or a busy one moves it, and every page showing it says so.',
+  "Market data comes from a free plan with a per-minute allowance. It is queued and cached, but a busy moment can still be refused — a card with no chart says so rather than inventing one.",
+  "Nothing records how safe a loan was last week, and public endpoints will not serve old blockchain state, so that chart replays the price of the collateral against today's balances. The label names the coin driving it.",
+  "Hiring an agent is set to BNB's test network by default, because giving one permission writes to the blockchain and costs a small fee. Set NEXT_PUBLIC_SESSION_NETWORK=mainnet to use the real one.",
+  "The permission you give an agent lives in your browser. It is limited to that agent's contracts, capped per day and expires on its own — but it is still a permission, so cancel it when you are done.",
+  "Set BSC_RPC_URL to a private blockchain endpoint before pointing real traffic at this.",
 ];
 
 export default async function StatusPage() {
@@ -47,25 +47,25 @@ export default async function StatusPage() {
   const feeds = [
     {
       name: "BNB Smart Chain RPC",
-      note: "public dataseeds, batched through Multicall3",
-      detail: head ? `head block ${head}` : "unreachable",
+      note: "the public blockchain endpoints this reads BNB Chain through",
+      detail: head ? `latest block ${head}` : "not answering",
       ok: head !== null,
     },
     {
       name: "GeckoTerminal",
-      note: "24h volume, swap counts and hourly candles · cached 15 minutes",
-      detail: pools === null ? "unreachable" : `${pools} pools in the last pull`,
+      note: "how much each market traded and how often · refreshed every 15 minutes",
+      detail: pools === null ? "not answering" : `${pools} markets in the last refresh`,
       ok: pools !== null,
     },
     {
       name: "DefiLlama yields",
-      note: "supply APY history for Aave V3 and Venus · cached 30 minutes",
+      note: "how interest rates on Aave and Venus have moved · refreshed every 30 minutes",
       detail: "daily resolution",
       ok: true,
     },
     {
       name: "Agent registry",
-      note: "in-process, no network hop",
+      note: "the agents themselves, running here",
       detail: `${plugins.length} agents across ${new Set(plugins.map((p) => p.category)).size} categories`,
       ok: plugins.length > 0,
     },
@@ -104,7 +104,7 @@ export default async function StatusPage() {
           site is built from, checked when you loaded this page.
         </Muted>
 
-        <section>
+        <section className="anim-fade-up" style={{ animationDelay: "450ms" }}>
           <h2 className="font-graphik text-white text-[22px] leading-[1.1] mb-[12px]">Feeds</h2>
           <ul className="border border-white/15 divide-y divide-white/5">
             {feeds.map((feed) => (
@@ -131,7 +131,7 @@ export default async function StatusPage() {
           </ul>
         </section>
 
-        <section>
+        <section className="anim-fade-up" style={{ animationDelay: "600ms" }}>
           <h2 className="font-graphik text-white text-[22px] leading-[1.1] mb-[12px]">
             Contracts read
           </h2>
@@ -155,7 +155,7 @@ export default async function StatusPage() {
           </ul>
         </section>
 
-        <section>
+        <section className="anim-fade-up" style={{ animationDelay: "750ms" }}>
           <h2 className="font-graphik text-white text-[22px] leading-[1.1] mb-[12px]">
             Known limits
           </h2>

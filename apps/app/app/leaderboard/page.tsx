@@ -7,7 +7,7 @@ import { Chip, GridLines, Muted, TokenMarks } from "@/components/ui";
 export const metadata = {
   title: "Leaderboard",
   description:
-    "What the agents are picking from: PancakeSwap V3 pools ranked by fee momentum, and Aave V3 against Venus supply rates on every asset both list.",
+    "Where the agents shop: PancakeSwap V3 pools ranked by fee momentum, and Aave V3 against Venus supply rates on every asset both list.",
   alternates: { canonical: "/leaderboard" },
 };
 /** Both boards are live reads; a minute of staleness is plenty. */
@@ -52,7 +52,7 @@ export default async function LeaderboardPage() {
             className="font-manrope text-[#AFDDFF]/80 text-[13px] leading-[15.6px] anim-fade-up"
             style={{ animationDelay: "300ms" }}
           >
-            [ LEADERBOARD ]
+            [ THE MARKET ]
           </span>
           <div className="flex flex-wrap items-end justify-between gap-4 mt-[10px]">
             <h1
@@ -62,35 +62,38 @@ export default async function LeaderboardPage() {
               What the agents are picking from
             </h1>
             <div className="flex gap-[10px] anim-slide-right" style={{ animationDelay: "600ms" }}>
-              <Chip>{pools.length} POOLS</Chip>
-              <Chip>{radar.length} ASSETS</Chip>
+              <Chip>{pools.length} markets</Chip>
+              <Chip>{radar.length} coins</Chip>
             </div>
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-[1280px] px-5 md:px-[35px] py-[40px] md:py-[56px] space-y-[40px]">
-        <section>
+        <section className="anim-fade-up" style={{ animationDelay: "500ms" }}>
           <div className="flex items-end justify-between gap-4 mb-[10px]">
-            <h2 className="font-graphik text-white text-[22px] leading-[1.1]">Fee momentum</h2>
+            <h2 className="font-graphik text-white text-[22px] leading-[1.1]">
+              Where the trading fees are
+            </h2>
             <span className="font-manrope text-white/50 text-[11px] uppercase">
               {Math.min(pools.length, 20)} rows
             </span>
           </div>
           <Muted className="mb-[12px] max-w-[760px]">
-            PancakeSwap V3 pools past the screen's floor — $250k liquidity, $100k daily volume, 20
-            swaps an hour, at least a week old — annualised from the last day of fees against
-            current liquidity.
+            Traders pay a fee on every swap, and it goes to whoever supplied the two coins. These
+            are the busiest markets on PancakeSwap worth supplying — at least $250k deposited, $100k
+            traded a day, a swap every three minutes, and open for a week or more. "Fee APR" is last
+            year's worth of that, estimated from yesterday.
           </Muted>
           <div className="border border-white/15 overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className={`${head} text-left`}>Pool</th>
+                  <th className={`${head} text-left`}>Market</th>
                   <th className={`${head} text-right`}>Fee APR</th>
-                  <th className={`${head} text-right`}>Liquidity</th>
-                  <th className={`${head} text-right`}>Vol 24h</th>
-                  <th className={`${head} text-right`}>Swaps/h</th>
+                  <th className={`${head} text-right`}>Deposited</th>
+                  <th className={`${head} text-right`}>Traded 24h</th>
+                  <th className={`${head} text-right`}>Trades/h</th>
                   <th className={`${head} text-right`}>Trend 24h</th>
                 </tr>
               </thead>
@@ -131,33 +134,36 @@ export default async function LeaderboardPage() {
             </table>
             {pools.length === 0 && (
               <p className="font-manrope text-white/50 text-[13px] text-center py-[28px]">
-                The pool feed is not answering right now.
+                The market data source is busy right now. It will fill in on the next refresh.
               </p>
             )}
           </div>
         </section>
 
-        <section>
+        <section className="anim-fade-up" style={{ animationDelay: "650ms" }}>
           <div className="flex items-end justify-between gap-4 mb-[10px]">
-            <h2 className="font-graphik text-white text-[22px] leading-[1.1]">Lending spreads</h2>
+            <h2 className="font-graphik text-white text-[22px] leading-[1.1]">
+              Where your savings earn more
+            </h2>
             <span className="font-manrope text-white/50 text-[11px] uppercase">
               {radar.length} rows
             </span>
           </div>
           <Muted className="mb-[12px] max-w-[760px]">
-            Live supply APY on both venues for every asset Aave V3 lists on BNB Chain, widest gap
-            first. Each rate is compounded from its own protocol's unit — a per-second ray on Aave,
-            a per-block rate on Venus — not copied off a dashboard.
+            Lend out a coin and you earn interest. Aave and Venus are two places to do that, and
+            they rarely pay the same — the gap is what the yield agent moves your money across. Both
+            rates are worked out from each app's own contracts rather than copied off a dashboard,
+            which is why they may differ slightly from what those sites display.
           </Muted>
           <div className="border border-white/15 overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
                   <th className={`${head} text-left`}>Asset</th>
-                  <th className={`${head} text-right`}>Best</th>
+                  <th className={`${head} text-right`}>Best rate</th>
                   <th className={`${head} text-right`}>Aave V3</th>
                   <th className={`${head} text-right`}>Venus</th>
-                  <th className={`${head} text-right`}>Spread</th>
+                  <th className={`${head} text-right`}>Gap</th>
                   <th className={`${head} text-right`}>Trend 30d</th>
                 </tr>
               </thead>

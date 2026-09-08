@@ -177,7 +177,10 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
       // prompting a second time.
       const account = connected.address ?? (await connectWallet());
       const injected = (globalThis as { ethereum?: EIP1193Provider }).ethereum;
-      if (!injected) throw new Error("No extension wallet found to send from.");
+      if (!injected)
+        throw new Error(
+          "No wallet found to send from — install MetaMask or another browser wallet first.",
+        );
       const sender = createWalletClient({ chain: CHAIN, transport: custom(injected) });
       if ((await sender.getChainId()) !== CHAIN.id) await switchToChain();
       const hash = await sender.sendTransaction({
@@ -282,15 +285,18 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   const expired = session ? isExpired(session) : false;
 
   return (
-    <div className="border border-white/15 p-[20px]">
+    <div
+      className="border border-white/15 p-[20px] anim-fade-up"
+      style={{ animationDelay: "450ms" }}
+    >
       <span className="font-manrope text-[#AFDDFF]/80 text-[13px] leading-[15.6px]">[ HIRE ]</span>
 
       {grant && session ? (
         <div className="mt-[16px] space-y-[14px]">
           <p className="font-manrope text-white text-[13px] leading-[18px]">
             {expired
-              ? "Session expired. Hire it again to keep it working."
-              : `Working until ${expiresAt(session).toISOString().slice(0, 10)}, inside your caps.`}
+              ? "Its time is up. Hire it again to keep it working."
+              : `Working until ${expiresAt(session).toISOString().slice(0, 10)}, within the limits you set.`}
           </p>
           {auto && (
             <p className="font-manrope text-white/50 text-[11px] leading-[15px]">{auto.reason}</p>
@@ -326,8 +332,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                 </p>
               ) : (
                 <p className="font-manrope text-white text-[13px] leading-[18px]">
-                  Your agent wallet is a passkey on this device. Create it, send it some BNB, and
-                  the agent picks its own venue from there.
+                  The agent gets its own wallet, unlocked by this device the way you unlock your
+                  phone. Create it, send it some BNB, and it takes over from there.
                 </p>
               )}
               <button type="button" disabled={busy} onClick={connect} className={primary}>
@@ -341,7 +347,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
           ) : (
             <>
               <div className="border border-white/10 p-[14px]">
-                <span className={legend}>Agent wallet · passkey on this device</span>
+                <span className={legend}>The agent's wallet · unlocked by this device</span>
                 <p className="font-manrope text-white text-[13px] leading-[18px] mt-[4px] break-all">
                   {short(wallet.address)}
                 </p>
@@ -374,7 +380,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
               {auto ? (
                 <>
                   <div className="border-l border-[#AFDDFF]/50 pl-[12px]">
-                    <span className={legend}>The agent picked</span>
+                    <span className={legend}>The agent chose</span>
                     <p className="font-manrope text-white text-[13px] leading-[18px] mt-[4px]">
                       {auto.reason}
                     </p>
@@ -399,7 +405,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                         </label>
                       ))}
                       <label className="block">
-                        <span className={legend}>Expires in days</span>
+                        <span className={legend}>Stops working after</span>
                         <input
                           className={`${field} mt-[5px]`}
                           value={days}
@@ -440,7 +446,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                 <p className="font-manrope text-white/50 text-[11px] leading-[16px]">
                   {agent.category === "health"
                     ? "This agent guards a loan you already have rather than deploying a deposit. Once this wallet borrows on Aave V3, it picks its own floor and defends it."
-                    : "It picks its venue from the live pool screen, and that feed is not answering right now. Try again in a minute."}
+                    : "It chooses where to put your money from live market data, and that source is busy right now. Try again in a minute."}
                 </p>
               )}
             </>

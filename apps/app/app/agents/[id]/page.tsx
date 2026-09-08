@@ -127,13 +127,16 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
             )}
 
             {series && (
-              <div className="border border-white/15 p-[20px]">
+              <div
+                className="border border-white/15 p-[20px] anim-fade-up"
+                style={{ animationDelay: "500ms" }}
+              >
                 <DetailChart series={series} />
               </div>
             )}
 
             {insights?.table && (
-              <div>
+              <div className="anim-fade-up" style={{ animationDelay: "620ms" }}>
                 <div className="flex items-end justify-between gap-4 mb-[12px]">
                   <h2 className="font-graphik text-white text-[22px] leading-[1.1]">
                     {insights.table.title}
@@ -202,16 +205,16 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                   </table>
                   {insights.table.rows.length === 0 && (
                     <p className="font-manrope text-white/50 text-[13px] text-center py-[28px]">
-                      Nothing matched in the window scanned.
+                      Nothing matched in the period we looked at.
                     </p>
                   )}
                 </div>
               </div>
             )}
 
-            <div>
+            <div className="anim-fade-up" style={{ animationDelay: "740ms" }}>
               <h2 className="font-graphik text-white text-[22px] leading-[1.1] mb-[12px]">
-                What it may do with your wallet
+                What it is allowed to do
               </h2>
               <ul className="border border-white/15 divide-y divide-white/5">
                 {meta.grants.map((grant) => (
@@ -226,13 +229,13 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
             </div>
 
             {insights?.activity && insights.activity.length > 0 && (
-              <div>
+              <div className="anim-fade-up" style={{ animationDelay: "860ms" }}>
                 <div className="flex items-end justify-between gap-4 mb-[12px]">
                   <h2 className="font-graphik text-white text-[22px] leading-[1.1]">
-                    Recent activity
+                    What has happened recently
                   </h2>
                   <span className="font-manrope text-white/50 text-[11px] uppercase">
-                    last ~9,000 blocks
+                    the last few hours on-chain
                   </span>
                 </div>
                 <ul className="border border-white/15 divide-y divide-white/5">
