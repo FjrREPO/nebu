@@ -165,12 +165,20 @@ is a fallback list of public dataseeds, batched through Multicall3.
 
 ## HTTP API
 
+Live on the deployment, so another team's runner can use this registry without
+importing it:
+
 ```
-GET /health
-GET /agents                  # every agent and its param schema
-GET /agents/:id/auto?wallet= # what the agent picks for itself, or null
-GET /agents/:id/status?...   # live reading
-GET /agents/:id/plan?...     # the transactions, or null
+GET https://nebu.ifajar.dev/api/agents                       every agent and its param schema
+GET https://nebu.ifajar.dev/api/agents/:id/auto?wallet=0x…   what it picks for itself, or null
+GET https://nebu.ifajar.dev/api/agents/:id/status?…          live reading
+GET https://nebu.ifajar.dev/api/agents/:id/insights?…        the data it decided from
+GET https://nebu.ifajar.dev/api/agents/:id/plan?…            the transactions, or null
 ```
 
-Bad params come back as 400, chain trouble as 502.
+Bad params come back as 400, chain trouble as 502, and CORS is open. `null`
+from `/auto` is an answer, not a failure — the agent has nothing to work with
+on that wallet.
+
+`apps/api` is the same surface as a standalone Hono service, for anyone
+self-hosting the registry away from the front end.
