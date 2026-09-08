@@ -36,10 +36,11 @@ Each agent already runs a screen, so it can pick its own venue and tell you
 why:
 
 ```
-rebalancer  Watching position #7365949, the newest of 12 this wallet holds
-grid        FLNCB/USDT 0.25% moved 5.0% in 48h, so the ladder spans that
-yield       FDUSD pays 8.46% on Aave V3, the best of 8 assets on both venues
-health      Loan is at 1.27; guarding it at 1.5
+rebalancer  Watching position #7380654, the newest of 12 this wallet holds
+grid        FORM/USDT 0.25% moved 39.2% in 48h, so the ladder spans that
+            either side of spot
+yield       FDUSD pays 8.47% on Aave V3, the best of 8 assets listed on both
+health      Loan is at 1.26, under the 1.5 floor.
 ```
 
 From a bare BNB balance, the yield router wraps, swaps into the best-paying

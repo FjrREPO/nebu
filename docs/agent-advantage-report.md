@@ -24,7 +24,7 @@ a fee APR", it is "how many pools did you look at before you chose".
 
 ---
 
-## Task 1 — Put idle BNB to work as liquidity
+## Task 1 — Pick a pool and size a trading range for it
 
 **By hand**
 
@@ -44,15 +44,20 @@ number attached to it. Estimate: **30–45 minutes**, and the range is a guess.
 **With the agent**
 
 ```
-autoParams (picks its own venue)               1310 ms
-  -> Broccoli/WBNB 1% moved 14.1% in 48h, so the ladder spans that
+autoParams (picks its own venue)               5973 ms
+  -> FORM/USDT 0.25% moved 39.2% in 48h, so the ladder spans that
      either side of spot
-status                                          396 ms
-  -> Ready to deploy 0.0063 BNB
-plan (with calldata)                            879 ms
-  -> 4 tx · Split 0.0063 BNB into 55.0% WBNB and 45.0% Broccoli,
-     where the ladder starts
+status                                          265 ms
+  -> Grid says sell
+plan (with calldata)                            380 ms
+  -> 2 tx · Sell 7.5907 USDT to bring the wallet back to the
+     ladder's 55.0% FORM target
 ```
+
+The wallet already holds both sides here, so the move is a rebalance rather
+than an opening — the screening and the range sizing are the same either way.
+`autoParams` is the slow line because it is the cold one: the pool feed is a
+free tier and requests are spaced two seconds apart to stay inside it.
 
 Sixty pools screened, filtered on liquidity, volume, swap rate and age, ranked
 on fee APR. The range is not a default: it is the pair's own 48-hour movement,
@@ -61,7 +66,7 @@ so a quiet pair gets a tight ladder and a violent one gets a wide one.
 | | Time | Cost | Output |
 |---|---|---|---|
 | Manual | ~30–45 min | free | one pool you had time to check, a guessed range |
-| Agent | 2.6 s | free (no API key) | 60 screened, range sized from measured movement, 4 txs ready |
+| Agent | 6.6 s | free (no API key) | 60 screened, range sized from measured movement, calldata ready |
 
 ---
 
@@ -71,7 +76,7 @@ so a quiet pair gets a tight ladder and a violent one gets a wide one.
 **By hand**
 
 1. Open Aave, search the address, read the health factor.
-2. Decide whether 1.27 is close enough to 1.00 to act on. Nothing on screen
+2. Decide whether 1.26 is close enough to 1.00 to act on. Nothing on screen
    answers that; you pick a floor.
 3. To restore a target health factor you need
    `debt − collateral × liquidationThreshold ÷ targetHF`. The weighted
@@ -89,13 +94,13 @@ Repaying too little and believing you are safe is the expensive failure.
 **With the agent**
 
 ```
-autoParams                                      132 ms
-  -> Loan is at 1.27; guarding it at 1.5
-status                                          130 ms
-  -> At risk: 1.27
-plan (with calldata)                           1014 ms
-  -> 1 tx · Repay 297.615 USDT (about $297.51) to lift the health
-     factor from 1.27 back to 1.5
+autoParams                                      126 ms
+  -> Loan is at 1.26, under the 1.5 floor.
+status                                          123 ms
+  -> At risk: 1.26
+plan (with calldata)                            997 ms
+  -> 1 tx · Repay 311.435 USDT (about $311.32) to lift the health
+     factor from 1.26 back to 1.5
 ```
 
 It reads collateral, debt, the weighted threshold and the health factor in one
@@ -106,7 +111,7 @@ caps at what is actually owed, and approves the exact amount — never unlimited
 | | Time | Cost | Output |
 |---|---|---|---|
 | Manual | ~15–25 min | gas for approve + repay | a repayment you estimated |
-| Agent | 1.3 s | same gas, exact allowance | a repayment derived from the threshold |
+| Agent | 1.2 s | same gas, exact allowance | a repayment derived from the threshold |
 
 Same gas, same transactions. What changes is whether the amount is right. An
 undersized repayment leaves the position liquidatable and costs the 5%+
@@ -134,12 +139,13 @@ by-hand comparisons are quietly wrong.
 **With the agent**
 
 ```
-autoParams                                      749 ms
+autoParams                                      761 ms
   -> FDUSD pays 8.47% on Aave V3, the best of 8 assets listed on both
-status                                          502 ms
-  -> Ready to deploy 0.0063 BNB
-plan (with calldata)                           1070 ms
-  -> 5 tx · Turn 0.0063 BNB into FDUSD and supply it to Aave V3 at 8.47%
+status                                          494 ms
+  -> Ready to deploy 0.0074 BNB
+plan (with calldata)                            985 ms
+  -> 5 tx · Turn 0.00744172 BNB into FDUSD and supply it to
+     Aave V3 at 8.47%
 ```
 
 Sixteen rates, each compounded from its own protocol's unit. The block time
@@ -149,7 +155,7 @@ hardcoded.
 | | Time | Cost | Output |
 |---|---|---|---|
 | Manual | ~10–15 min per asset | free | two numbers, often not comparable |
-| Agent | 2.3 s for 8 assets | free | 16 rates, correctly annualised, plus the route in |
+| Agent | 2.2 s for 8 assets | free | 16 rates, correctly annualised, plus the route in |
 
 ---
 
