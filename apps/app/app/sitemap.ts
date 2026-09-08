@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: at("/"), lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: at("/agents"), lastModified: now, changeFrequency: "hourly", priority: 0.9 },
     { url: at("/leaderboard"), lastModified: now, changeFrequency: "hourly", priority: 0.8 },
+    { url: at("/wallet"), lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: at("/status"), lastModified: now, changeFrequency: "hourly", priority: 0.3 },
     ...agentMeta().map((agent) => ({
       url: at(`/agents/${agent.id}`),

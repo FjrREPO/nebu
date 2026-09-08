@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, Copy, LogOut, Menu, Wallet, X } from "lucide-react";
+import { Bot, ChevronDown, Copy, LogOut, Menu, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { formatBnb as formatAgentBnb, useAgentWallet } from "@/lib/agent-wallet";
 import {
   CHAIN,
   connectWallet,
@@ -134,6 +135,7 @@ const COLUMN = `max(${GUTTER}, calc((100% - 1280px) / 2 + ${GUTTER}))`;
 
 export function Nav() {
   const home = usePathname() === "/";
+  const agentWallet = useAgentWallet();
   const [menuOpen, setMenuOpen] = useState(false);
   const wallet = useWallet();
   const [busy, setBusy] = useState(false);
@@ -179,6 +181,22 @@ export function Nav() {
             className="hidden lg:flex items-center gap-[12px] ml-auto anim-slide-right"
             style={{ animationDelay: "600ms" }}
           >
+            {/* The agents' own wallet, one for all of them, always findable. */}
+            <Link
+              href="/wallet"
+              title="The wallet your agents work from"
+              className="flex items-center gap-[7px] border border-white/15 px-[9px] py-[4px] hover:border-white/40 transition-colors"
+            >
+              {agentWallet.known ? (
+                <WalletMark address={agentWallet.known} size={15} />
+              ) : (
+                <Bot className="w-[14px] h-[14px] text-white/60" strokeWidth={1.5} />
+              )}
+              <span className="font-manrope text-white/70 text-[12px] leading-[15px] whitespace-nowrap">
+                {agentWallet.address ? formatAgentBnb(agentWallet.balance) : "Agent wallet"}
+              </span>
+            </Link>
+
             {wallet.address ? (
               <WalletMenu address={wallet.address} balance={wallet.balance} />
             ) : (
@@ -268,9 +286,28 @@ export function Nav() {
             ))}
           </div>
 
+          <Link
+            href="/wallet"
+            onClick={() => setMenuOpen(false)}
+            className={`mt-auto flex items-center justify-between gap-3 border border-white/15 px-[14px] py-[12px] transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}
+            style={{ transitionDelay: menuOpen ? `${150 + PAGES.length * 75}ms` : "0ms" }}
+          >
+            <span className="flex items-center gap-[10px]">
+              {agentWallet.known ? (
+                <WalletMark address={agentWallet.known} size={20} />
+              ) : (
+                <Bot className="w-[18px] h-[18px] text-white/60" strokeWidth={1.5} />
+              )}
+              <span className="font-manrope text-white text-[14px]">Agent wallet</span>
+            </span>
+            <span className="font-manrope text-[#AFDDFF] text-[13px]">
+              {agentWallet.address ? formatAgentBnb(agentWallet.balance) : "set up"}
+            </span>
+          </Link>
+
           {/* The wallet controls were desktop-only, so a phone had no way in. */}
           <div
-            className={`mt-auto border-t border-white/10 pt-[20px] transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}
+            className={`border-t border-white/10 pt-[20px] mt-[16px] transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}
             style={{ transitionDelay: menuOpen ? `${150 + PAGES.length * 75}ms` : "0ms" }}
           >
             {wallet.address ? (
