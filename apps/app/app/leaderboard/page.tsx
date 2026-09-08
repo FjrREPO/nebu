@@ -1,3 +1,4 @@
+import { poolLink, tokenLink } from "@nebu/core";
 import { bestApy, pct, spreadBps, yieldRadar } from "@nebu/plugin-lending";
 import { compactUsd, livePools, shortlist } from "@nebu/plugin-pancakeswap";
 import { Chip, GridLines, Muted, TokenMark } from "@/components/ui";
@@ -77,7 +78,14 @@ export default async function LeaderboardPage() {
                         <TokenMark src={pool.base.logo ?? undefined} />
                         <TokenMark src={pool.quote.logo ?? undefined} overlap />
                       </span>
-                      {pool.pair} {pool.feePercent}%
+                      <a
+                        href={poolLink(pool.address)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-[#AFDDFF] transition-colors"
+                      >
+                        {pool.pair} {pool.feePercent}% ↗
+                      </a>
                     </td>
                     <td className={`${cell} text-right text-[#AFDDFF]`}>
                       {(pool.feeApr * 100).toFixed(1)}%
@@ -131,7 +139,16 @@ export default async function LeaderboardPage() {
                   .sort((a, b) => (spreadBps(b) ?? -1) - (spreadBps(a) ?? -1))
                   .map((quote) => (
                     <tr key={quote.asset} className="hover:bg-white/[0.03]">
-                      <td className={`${cell} text-white`}>{quote.symbol}</td>
+                      <td className={`${cell} text-white`}>
+                        <a
+                          href={tokenLink(quote.asset)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="hover:text-[#AFDDFF] transition-colors"
+                        >
+                          {quote.symbol} ↗
+                        </a>
+                      </td>
                       <td className={`${cell} text-right text-[#AFDDFF]`}>{pct(bestApy(quote))}</td>
                       <td className={`${cell} text-right text-white/70`}>{pct(quote.aaveApy)}</td>
                       <td className={`${cell} text-right text-white/70`}>{pct(quote.venusApy)}</td>

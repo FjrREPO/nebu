@@ -141,3 +141,14 @@ export async function tokenLogos(addresses: string[]): Promise<Map<string, strin
   }
   return found;
 }
+
+/** Where a pool lives on PancakeSwap, for a row the reader wants to open. */
+export const poolLink = (pool: string) =>
+  `https://pancakeswap.finance/liquidity/pool/bsc/${pool.toLowerCase()}`;
+
+/** Where a token lives on PancakeSwap. */
+export const tokenLink = (token: string) =>
+  `https://pancakeswap.finance/token/bsc/${token.toLowerCase()}`;
+
+/** An address on the explorer, for anything PancakeSwap does not host. */
+export const explorerLink = (address: string) => `https://bscscan.com/address/${address}`;

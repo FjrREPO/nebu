@@ -44,6 +44,10 @@ export type AgentParams = Record<string, string>;
 export type StatTile = { label: string; value: string; hint?: string };
 
 export type TableColumn = { key: string; label: string; align?: "start" | "end" };
+/**
+ * A row's `href` makes its first cell a link, and `logo`/`logoAlt` put icons
+ * in front of it. Everything else is matched to a column by key.
+ */
 export type TableRow = { id: string } & Record<string, string>;
 
 /** The agent's own working data — what it looks at to decide. */

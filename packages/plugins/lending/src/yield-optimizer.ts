@@ -19,6 +19,7 @@ import {
   type SessionScope,
   SMART_ROUTER,
   spendableBnb,
+  tokenLink,
   tokenLogos,
   WBNB,
 } from "@nebu/core";
@@ -210,6 +211,7 @@ export const yieldOptimizer: AgentPlugin = {
         ],
         rows: radarIcons.map((quote) => ({
           id: quote.asset,
+          href: tokenLink(quote.asset),
           asset: quote.symbol,
           logo: quote.logo ?? "",
           aave: pct(quote.aaveApy),

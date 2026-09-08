@@ -11,6 +11,7 @@ import {
   bscClient,
   InvalidParams,
   plainNumber,
+  poolLink,
   poolSeries,
   recentActivity,
   requireAddress,
@@ -276,6 +277,7 @@ export const pancakeRebalancer: AgentPlugin = {
         ],
         rows: shortlisted.slice(0, 12).map((pool) => ({
           id: pool.address,
+          href: poolLink(pool.address),
           pair: `${pool.pair} ${pool.feePercent}%`,
           logo: pool.base.logo ?? "",
           logoAlt: pool.quote.logo ?? "",

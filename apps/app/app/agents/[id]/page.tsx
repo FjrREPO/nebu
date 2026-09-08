@@ -144,7 +144,18 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
                                   <TokenMark src={row.logoAlt} overlap />
                                 </span>
                               )}
-                              {row[column.key]}
+                              {index === 0 && row.href ? (
+                                <a
+                                  href={row.href}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="hover:text-[#AFDDFF] transition-colors"
+                                >
+                                  {row[column.key]} ↗
+                                </a>
+                              ) : (
+                                row[column.key]
+                              )}
                             </td>
                           ))}
                         </tr>

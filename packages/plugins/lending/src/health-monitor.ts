@@ -7,6 +7,7 @@ import {
   type AgentTx,
   type AutoParams,
   bscClient,
+  explorerLink,
   InvalidParams,
   LOG_SPAN,
   plainNumber,
@@ -223,6 +224,7 @@ export const healthMonitor: AgentPlugin = {
         ],
         rows: neighbours.map((entry) => ({
           id: entry.wallet,
+          href: explorerLink(entry.wallet),
           wallet: `${entry.wallet.slice(0, 8)}...${entry.wallet.slice(-4)}${entry.isYou ? "  (you)" : ""}`,
           health:
             entry.healthFactor === Number.POSITIVE_INFINITY
