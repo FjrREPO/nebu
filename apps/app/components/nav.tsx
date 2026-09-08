@@ -251,20 +251,74 @@ export function Nav() {
           className={`relative h-full flex flex-col px-5 pt-24 pb-10 transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"}`}
         >
           <div className="flex flex-col gap-8">
+            {/* These were plain divs: the menu looked navigable and was not. */}
             {PAGES.map((item, index) => (
-              <div
+              <Link
                 key={item.href}
-                className={`transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}`}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className={`flex items-center gap-3 transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"}`}
                 style={{ transitionDelay: menuOpen ? `${150 + index * 75}ms` : "0ms" }}
               >
-                <div className="flex items-center gap-3">
-                  <span className="font-manrope text-[#AFDDFF]/80 text-[14px]">{item.number}.</span>
-                  <span className="font-manrope text-white text-[28px] leading-[1.2] tracking-tight">
-                    {item.label}
-                  </span>
-                </div>
-              </div>
+                <span className="font-manrope text-[#AFDDFF]/80 text-[14px]">{item.number}.</span>
+                <span className="font-manrope text-white text-[28px] leading-[1.2] tracking-tight">
+                  {item.label}
+                </span>
+              </Link>
             ))}
+          </div>
+
+          {/* The wallet controls were desktop-only, so a phone had no way in. */}
+          <div
+            className={`mt-auto border-t border-white/10 pt-[20px] transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}
+            style={{ transitionDelay: menuOpen ? `${150 + PAGES.length * 75}ms` : "0ms" }}
+          >
+            {wallet.address ? (
+              <div className="flex items-center gap-[10px]">
+                <WalletMark address={wallet.address} size={26} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-manrope text-white text-[15px] leading-[18px]">
+                    {short(wallet.address)}
+                  </p>
+                  <p className="font-manrope text-white/50 text-[12px] leading-[15px]">
+                    {formatBnb(wallet.balance)}
+                  </p>
+                </div>
+                <ChainMark className="size-[20px]" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    disconnectWallet();
+                    setMenuOpen(false);
+                  }}
+                  className="font-manrope text-white/50 text-[12px] uppercase tracking-wide hover:text-white transition-colors"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-[12px]">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={connect}
+                  className="flex flex-1 items-center justify-center gap-[8px] bg-[#AFDDFF] px-[16px] py-[12px] font-manrope text-black text-[13px] uppercase tracking-wide disabled:opacity-40 transition-colors"
+                >
+                  <Wallet className="w-[15px] h-[15px]" strokeWidth={1.5} />
+                  {busy ? "Connecting…" : "Connect wallet"}
+                </button>
+                <ChainMark className="size-[22px]" />
+              </div>
+            )}
+            {wrongChain && (
+              <button
+                type="button"
+                onClick={switchToChain}
+                className="mt-[12px] w-full border border-[#ff8a8a]/60 px-[16px] py-[10px] font-manrope text-[#ff8a8a] text-[12px] uppercase tracking-wide"
+              >
+                Switch to {CHAIN.name}
+              </button>
+            )}
           </div>
         </div>
       </div>
