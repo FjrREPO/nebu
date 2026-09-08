@@ -2,50 +2,49 @@
 
 Live at **https://nebu.ifajar.dev**
 
-The host runs nginx on 80/443 with a vhost per domain, and pm2 for the
-processes. Coolify is on the same box but is not in this path — the nebu vhost
-predates it and proxies straight to a port.
-
-## How it is wired
+Coolify builds and runs it. The host also runs nginx on 80/443 with a vhost per
+domain — Coolify's own proxy is not in use here — so the container publishes a
+fixed host port and the existing vhost proxies to it.
 
 ```
-nebu.ifajar.dev ──nginx (TLS, certs in ~/le/config)──> 127.0.0.1:3016 ──pm2 "nebu-app"──> next start
+nebu.ifajar.dev ──nginx (TLS, certs in ~/le/config)──> host :3016 ──> container :3000
 ```
 
-Port 3016 is fixed by the vhost. The app is told which port to bind by
-`run-app.sh`, so nothing needs root to change what is served — swapping the
-process on that port is the whole deploy.
+| | |
+|---|---|
+| Project | `nebu` · `jnbyogr81eiuplqfsoz9pp4n` |
+| Application | `nebu-marketplace` · `vsgbjhvdsn4g21o8ihhjq2hc` |
+| Server | `localhost` · `tqvd5nk6ik99fpmdenxd9jnx` |
+| Build | Dockerfile at the repo root, `main` branch |
+| Port mapping | `3016:3000` |
 
-## First install
+## Redeploying
+
+Through the Coolify UI, or with an API token from Settings → API Tokens:
 
 ```bash
-ssh cuyvps
-git clone https://github.com/FjrREPO/nebu ~/nebu-agents
-cd ~/nebu-agents && pnpm install
-NEXT_PUBLIC_SESSION_NETWORK=testnet pnpm --filter @nebu/app build
-pm2 start ~/nebu-agents/run-app.sh --name nebu-app && pm2 save
+curl -X POST -H "Authorization: Bearer $COOLIFY_TOKEN" \
+  "http://localhost:8000/api/v1/deploy?uuid=vsgbjhvdsn4g21o8ihhjq2hc"
 ```
 
-## Updating
+Coolify clones the repo itself, so nothing needs to be checked out on the host.
 
-```bash
-ssh cuyvps 'cd ~/nebu-agents && git fetch --depth 1 origin main && git reset --hard origin/main \
-  && pnpm install && NEXT_PUBLIC_SESSION_NETWORK=testnet pnpm --filter @nebu/app build \
-  && pm2 restart nebu-app'
-```
+## The build
 
-## Moving the domain to a different port
+`Dockerfile` at the repo root copies the whole workspace, because `apps/app`
+imports the plugin packages as TypeScript source — there is no published build
+to install instead. Next's standalone output traces from the repo root for the
+same reason, and the runner stage carries only what that trace produced.
 
-`deploy/point-domain.sh` rewrites the vhost's upstream and reloads nginx. It
-needs a sudo that can write to `/etc/nginx/sites-enabled`; on this box sudo is
-NOPASSWD only for `nginx` and `systemctl reload nginx`, so the deploy above
-avoids it entirely by taking over the port instead.
+`NEXT_PUBLIC_SESSION_NETWORK` defaults to `testnet` as a build arg. Set it to
+`mainnet` in Coolify's build variables to grant sessions against live
+protocols — a grant registers a key on chain and costs a real fee.
 
 ## What this replaced
 
-`nebu.ifajar.dev` previously served the `~/lp-auto` project through pm2
-process `lp-dapp` on the same port. That process is stopped, not deleted:
+`nebu.ifajar.dev` previously served the `~/lp-auto` project through pm2 process
+`lp-dapp` on the same port. That process is stopped, not deleted:
 
 ```bash
-pm2 stop nebu-app && pm2 start lp-dapp    # put the old site back
+pm2 start lp-dapp    # after stopping the Coolify app, which holds :3016
 ```
