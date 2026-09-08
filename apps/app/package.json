@@ -3,32 +3,30 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@once-ui-system/core": "^1.7.6",
-    "classnames": "^2.5.1",
-    "next": "^16.2.3",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "react-icons": "^5.2.1",
-    "sass": "^1.77.6",
-    "sharp": "^0.33.4",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "lucide-react": "^0.446.0",
     "@nebu/core": "workspace:*",
     "@nebu/plugins": "workspace:*",
-    "viem": "^2.40.0",
     "@nebu/plugin-pancakeswap": "workspace:*",
     "@nebu/plugin-lending": "workspace:*",
     "@nebu/session": "workspace:*",
+    "viem": "^2.40.0",
     "@altananetwork/sdk": "^0.9.0"
   },
   "devDependencies": {
-    "@types/node": "20.17.23",
-    "@types/react": "19.0.1",
-    "@types/react-dom": "19.0.2",
-    "typescript": "5.8.2"
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }

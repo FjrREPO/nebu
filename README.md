@@ -104,7 +104,7 @@ again.
 
 ```
 apps/
-  app       marketplace — Next 16 + Once UI, the thing judges open
+  app       marketplace — Next 16 + Tailwind, the thing judges open
   landing   public marketing page, live counters
   api       Hono service exposing the same agents over HTTP
   agents    headless runner that ticks a watchlist on an interval
