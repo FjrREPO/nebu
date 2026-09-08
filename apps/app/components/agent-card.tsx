@@ -32,13 +32,15 @@ export function AgentNode({ agent, index }: { agent: AgentCardData; index: numbe
               [ {agent.error ? "OFFLINE" : "LIVE"} ]
             </span>
           </div>
-          <p className="font-graphik text-white text-[20px] leading-[1.15] mt-[6px]">
+          {/*
+            Two lines whether the name needs them or not. A subtitle that comes
+            and goes — and a name that wraps on two cards of four — left every
+            card in the row starting its reading at a different height. The
+            protocol lives on the agent's own page, where there is room for it.
+          */}
+          <p className="font-graphik text-white text-[20px] leading-[1.15] mt-[6px] min-h-[46px] line-clamp-2">
             {agent.name}
           </p>
-          {/* "PancakeSwap V3 Rebalancer" does not need "PancakeSwap V3" under it. */}
-          {!agent.name.includes(agent.protocol) && (
-            <Muted className="mt-[6px]">{agent.protocol}</Muted>
-          )}
         </div>
       </div>
 
@@ -52,9 +54,10 @@ export function AgentNode({ agent, index }: { agent: AgentCardData; index: numbe
       {agent.series && trend ? (
         <div className="mt-auto">
           <div className="flex items-baseline justify-between gap-3 px-[20px] pb-[6px]">
-            <span className="flex items-center gap-[8px] font-manrope text-white/50 text-[11px] leading-[14px] uppercase">
+            <span className="flex min-w-0 items-center gap-[8px] font-manrope text-white/50 text-[11px] leading-[14px] uppercase">
               <TokenMarks srcs={agent.series.logos} />
-              {agent.series.label}
+              {/* A label that wraps pushes its sparkline out of line with the rest. */}
+              <span className="truncate">{agent.series.label}</span>
             </span>
             <span className="font-manrope text-[#AFDDFF] text-[13px] leading-[15.6px]">
               {fmt(trend.last, agent.series.unit)}

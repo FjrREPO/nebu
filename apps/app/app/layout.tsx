@@ -10,10 +10,10 @@ export const metadata: Metadata = {
   // Every other URL in the app's metadata is written relative to this.
   metadataBase: SITE,
   title: {
-    default: "Nebu — autonomous DeFi agents for BNB Smart Chain",
+    default: "NEBU // Autonomous agents for BNB Smart Chain",
     // Pages set the short half; the brand belongs on the end, where a search
     // result truncates last.
-    template: "%s — Nebu",
+    template: "%s // NEBU",
   },
   description: TAGLINE,
   applicationName: "Nebu",
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "Nebu",
     url: "/",
-    title: "Nebu — autonomous DeFi agents for BNB Smart Chain",
+    title: "NEBU // Autonomous agents for BNB Smart Chain",
     description: TAGLINE,
     locale: "en",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nebu — autonomous DeFi agents for BNB Smart Chain",
+    title: "NEBU // Autonomous agents for BNB Smart Chain",
     description: TAGLINE,
   },
   robots: {
