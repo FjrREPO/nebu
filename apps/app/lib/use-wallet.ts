@@ -12,7 +12,7 @@ import {
 import { bsc, bscTestnet } from "viem/chains";
 
 /** Testnet unless the build says otherwise, matching the session network. */
-export const CHAIN = process.env.NEXT_PUBLIC_SESSION_NETWORK === "mainnet" ? bsc : bscTestnet;
+export const CHAIN = process.env.NEXT_PUBLIC_SESSION_NETWORK === "testnet" ? bscTestnet : bsc;
 
 const reader = createPublicClient({ chain: CHAIN, transport: http() });
 

@@ -71,8 +71,14 @@ One detail worth knowing if you build on this: native value is a separate
 permission from any token allowance. A session granted without it reverts with
 `NoSpendPermissions` the first time it tries to wrap BNB.
 
-Sessions default to BNB testnet, since granting a key writes it on chain and
-costs a fee. To watch the whole lifecycle happen:
+Sessions are granted on BNB Smart Chain, because that is where the agents'
+calldata points. The two have to agree: a call to an address with no code
+succeeds rather than reverting, so pointing a session at a chain the contracts
+are not on spends gas and reports success while doing nothing. The panel
+refuses when they differ. Build with `NEXT_PUBLIC_SESSION_NETWORK=testnet`
+only alongside plugins that name testnet addresses.
+
+To watch the whole lifecycle happen:
 
 ```bash
 NEBU_ADMIN_KEY=0x... pnpm --filter @nebu/session demo

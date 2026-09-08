@@ -22,9 +22,14 @@ import {
 import { bsc, bscTestnet } from "viem/chains";
 import { connectWallet, switchToChain } from "./use-wallet";
 
-/** Testnet by default: a grant registers a key on chain and costs a fee. */
+/**
+ * The chain sessions are granted on. It has to match the chain the agents
+ * plan against — their calldata names BNB Smart Chain contracts, and a call to
+ * an address with no code succeeds rather than reverting, so a mismatch spends
+ * gas and reports success while doing nothing.
+ */
 export const NETWORK: SessionNetwork =
-  (process.env.NEXT_PUBLIC_SESSION_NETWORK as SessionNetwork) ?? "testnet";
+  process.env.NEXT_PUBLIC_SESSION_NETWORK === "testnet" ? "testnet" : "mainnet";
 export const CONFIG = NETWORK === "mainnet" ? BNB : BNB_TESTNET;
 export const CHAIN = NETWORK === "mainnet" ? bsc : bscTestnet;
 export const EXPLORER =

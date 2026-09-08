@@ -8,7 +8,10 @@ WORKDIR /repo
 
 COPY . .
 RUN pnpm install --frozen-lockfile
-ARG NEXT_PUBLIC_SESSION_NETWORK=testnet
+# The agents plan against BNB Smart Chain contracts, so this is the chain
+# their sessions have to be granted on. Build with =testnet only alongside
+# plugins that name testnet addresses, or the calldata lands nowhere.
+ARG NEXT_PUBLIC_SESSION_NETWORK=mainnet
 ENV NEXT_PUBLIC_SESSION_NETWORK=$NEXT_PUBLIC_SESSION_NETWORK
 RUN pnpm --filter @nebu/app build
 
