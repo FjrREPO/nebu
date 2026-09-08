@@ -172,6 +172,50 @@ What changes:
   session and it signs them itself — inside limits the account contract
   enforces, revocable in one transaction.
 
+## The session, proven on chain
+
+The claim that an agent can act on its own inside limits you set is only worth
+as much as the transactions behind it. Run on BNB Smart Chain testnet from
+`0x38d6CDC918f0f37f59a9f770987e1216B27987CC`:
+
+| Step | Transaction |
+|---|---|
+| Grant a scoped session | [`0x6f308b63…`](https://testnet.bscscan.com/tx/0x6f308b632c3f65ca0d6b0554622471d2be8a1fa208e8bd4db95c126ab016b288) |
+| Session acts, no admin signature | [`0xfebf7a02…`](https://testnet.bscscan.com/tx/0xfebf7a02c6cfd429bbeb81691997baf6563fa1692c626f766a31991956afd345) |
+| Revoke | [`0xbbdc54d5…`](https://testnet.bscscan.com/tx/0xbbdc54d5ccb6649c2ff676783d07a4e0707ccfaeb235ecf9711c272f078307c1) |
+
+The KeyStore is the part worth reading. Before the grant the wallet had two
+authorized keys; after it, three; after the revoke, two again:
+
+```
+after grant    0x95377f87…  0x454742ff…  0x33b5818f…   <- the session key
+after revoke   0x95377f87…  0x454742ff…
+```
+
+The middle transaction was signed by the session key alone. The admin key did
+not sign it, and after the third transaction that session key cannot sign for
+this wallet again.
+
+Reproduce with `NEBU_ADMIN_KEY=0x… pnpm --filter @nebu/session demo`.
+
+## What running it on chain caught
+
+Two bugs that no amount of reading would have found, both from the same root:
+the grant described the *rebalance* an agent does, not the *deposit* it starts
+from.
+
+**A session with token allowances and no native one cannot wrap BNB.** The
+relay rejected the first execute with `NoSpendPermissions`. Native value is a
+separate permission from any token allowance, and wrapping a deposit moves
+native value — so `SessionScope` grew `nativeSpend`, and every agent that can
+bootstrap now asks for it.
+
+**No scope listed the wrapper or the router.** Hiring an agent, depositing BNB
+and pressing Run would have reverted at validation: the plan wraps through
+WBNB and swaps through the smart router, and the grant allowed neither. Every
+scope now covers the opening move, and the rebalancer's no longer demands a
+position id that a fresh wallet does not have.
+
 ## Reproducing this
 
 ```bash

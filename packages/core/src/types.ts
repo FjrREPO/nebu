@@ -84,6 +84,14 @@ export type ScopedSpend = {
 export type SessionScope = {
   calls: ScopedCall[];
   spend: ScopedSpend[];
+  /**
+   * BNB the session may move, in whole BNB.
+   *
+   * Wrapping a deposit sends native value, and native value needs its own
+   * permission — a session with token allowances but no native one reverts at
+   * validation with NoSpendPermissions the first time it tries to wrap.
+   */
+  nativeSpend?: string;
 };
 
 /** One reading in an agent's history: unix seconds, and the value. */

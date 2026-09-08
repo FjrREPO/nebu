@@ -18,12 +18,13 @@ import {
   type Session,
   type SessionPermissions,
   type Signer,
+  type SpendPermission,
   serializeSession,
   signerFromPrivateKey,
   type Wallet,
 } from "@altananetwork/sdk";
 import type { AgentTx, SessionScope } from "@nebu/core";
-import { type Hex, parseUnits } from "viem";
+import { type Hex, parseEther, parseUnits } from "viem";
 
 export type SessionNetwork = "mainnet" | "testnet";
 
@@ -35,7 +36,10 @@ export const NETWORKS: Record<SessionNetwork, NetworkConfig> = {
 export const sessionClient = (network: SessionNetwork) =>
   createClient({ chains: [NETWORKS[network]] });
 
-/** Caps the user chose, in whole tokens, keyed by token address. */
+/**
+ * Caps the user chose, in whole tokens, keyed by token address. The key
+ * "native" caps BNB itself, which wrapping a deposit needs.
+ */
 export type SpendLimits = Record<string, string>;
 
 /**
@@ -44,7 +48,8 @@ export type SpendLimits = Record<string, string>;
  * a zero allowance, so the agent simply cannot move it.
  */
 export function toPermissions(scope: SessionScope, limits: SpendLimits): SessionPermissions {
-  const spend = scope.spend
+  // Native entries carry no token, so the array holds both shapes.
+  const spend: SpendPermission[] = scope.spend
     .map((entry) => {
       const raw = limits[entry.token.toLowerCase()] ?? entry.suggested;
       const amount = Number(raw);
@@ -56,6 +61,12 @@ export function toPermissions(scope: SessionScope, limits: SpendLimits): Session
       };
     })
     .filter((entry) => entry !== null);
+
+  // Native value is a separate permission from any token allowance.
+  const native = Number(limits.native ?? scope.nativeSpend ?? 0);
+  if (Number.isFinite(native) && native > 0) {
+    spend.push({ limit: parseEther(native.toFixed(18)), period: "day" as const });
+  }
 
   return {
     // Every contract the agent touches, and nothing else.

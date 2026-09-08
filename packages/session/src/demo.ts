@@ -49,7 +49,8 @@ const granted = await grantAgentSession({
   network: "testnet",
   wallet,
   signer,
-  scope: { calls: [{ to: DEAD, label: "burn address" }], spend: [] },
+  // Sending native value needs a native permission, not just a call permission.
+  scope: { calls: [{ to: DEAD, label: "burn address" }], spend: [], nativeSpend: "0.001" },
   limits: {},
   days: 1,
 });

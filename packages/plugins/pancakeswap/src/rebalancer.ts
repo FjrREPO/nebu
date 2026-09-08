@@ -10,12 +10,15 @@ import {
   bnbInto,
   bscClient,
   InvalidParams,
+  plainNumber,
   poolSeries,
   recentActivity,
   requireAddress,
   requireInt,
   type SessionScope,
+  SMART_ROUTER,
   spendableBnb,
+  WBNB,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, maxUint128, parseAbiItem } from "viem";
 import { erc20Abi, POSITION_MANAGER, poolAbi, positionManagerAbi } from "./abi.ts";
@@ -93,6 +96,54 @@ function describe(position: Position) {
   const { meta0, meta1 } = position;
   const price = (tick: number) => formatPrice(tickToPrice(tick, meta0.decimals, meta1.decimals));
   return `${meta0.symbol}/${meta1.symbol} at ${price(position.tick)}, range ${price(position.tickLower)}-${price(position.tickUpper)}`;
+}
+
+/**
+ * What a session needs before it can turn a BNB deposit into a position:
+ * the wrapper, the router, both tokens, and native value to wrap.
+ */
+async function openingScope(params: Record<string, string>): Promise<SessionScope> {
+  const pool = requireAddress(params, "pool");
+  const wallet = requireAddress(params, "wallet");
+
+  const [token0, token1, budget] = await Promise.all([
+    bscClient.readContract({ address: pool, abi: poolAbi, functionName: "token0" }),
+    bscClient.readContract({ address: pool, abi: poolAbi, functionName: "token1" }),
+    spendableBnb(wallet),
+  ]);
+  const [meta0, meta1] = await Promise.all([tokenMeta(token0), tokenMeta(token1)]);
+
+  // Cap each token at what its half of the deposit is expected to buy.
+  const half = budget / 2n;
+  const [leg0, leg1] = await Promise.all([
+    bnbInto(wallet, token0, half).catch(() => null),
+    bnbInto(wallet, token1, budget - half).catch(() => null),
+  ]);
+
+  return {
+    calls: [
+      { to: POSITION_MANAGER, label: "PancakeSwap position manager" },
+      { to: SMART_ROUTER, label: "PancakeSwap smart router" },
+      { to: WBNB, label: "Wrapped BNB" },
+      { to: token0, label: `${meta0.symbol} token` },
+      { to: token1, label: `${meta1.symbol} token` },
+    ],
+    spend: [
+      {
+        token: token0,
+        symbol: meta0.symbol,
+        decimals: meta0.decimals,
+        suggested: plainNumber(Number(formatUnits(leg0?.minOut ?? 0n, meta0.decimals))),
+      },
+      {
+        token: token1,
+        symbol: meta1.symbol,
+        decimals: meta1.decimals,
+        suggested: plainNumber(Number(formatUnits(leg1?.minOut ?? 0n, meta1.decimals))),
+      },
+    ],
+    nativeSpend: plainNumber(Number(formatUnits(budget, 18))),
+  };
 }
 
 /** Half a position's width either side of spot, in ticks. */
@@ -325,6 +376,10 @@ export const pancakeRebalancer: AgentPlugin = {
   },
 
   async scope(params): Promise<SessionScope> {
+    // A fresh deposit has no position yet, so the grant has to cover the
+    // opening move — wrap, swap, mint — not just a rebalance.
+    if (!params.tokenId && params.pool) return openingScope(params);
+
     const position = await loadPosition(tokenId(params));
     return {
       calls: [

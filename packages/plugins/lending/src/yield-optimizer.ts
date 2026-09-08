@@ -17,7 +17,9 @@ import {
   requireAddress,
   requireInt,
   type SessionScope,
+  SMART_ROUTER,
   spendableBnb,
+  WBNB,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { AAVE_POOL, erc20Abi, liquidityRateToApy, poolAbi, reserveData } from "./aave.ts";
@@ -306,14 +308,36 @@ export const yieldOptimizer: AgentPlugin = {
     if (market.vToken) calls.push({ to: market.vToken, label: `Venus v${market.symbol} market` });
 
     const funded = market.venues.find((venue) => venue.supplied > 0);
+    const budget = await spendableBnb(market.wallet).catch(() => 0n);
+
+    // A fresh deposit is wrapped and swapped before anything is supplied.
+    calls.push(
+      { to: SMART_ROUTER, label: "PancakeSwap smart router" },
+      { to: WBNB, label: "Wrapped BNB" },
+    );
+
     return {
       calls,
+      nativeSpend: plainNumber(Number(formatUnits(budget, 18))),
       spend: [
         {
           token: market.asset,
           symbol: market.symbol,
           decimals: market.decimals,
-          suggested: funded ? plainNumber(funded.supplied) : "0",
+          // Already supplied: cap at what would move. Fresh deposit: cap at
+          // what the swap is expected to buy, or the supply step reverts on a
+          // zero allowance.
+          suggested: funded
+            ? plainNumber(funded.supplied)
+            : plainNumber(
+                Number(
+                  formatUnits(
+                    (await bnbInto(market.wallet, market.asset, budget).catch(() => null))
+                      ?.minOut ?? 0n,
+                    market.decimals,
+                  ),
+                ),
+              ),
         },
       ],
     };

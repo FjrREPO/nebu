@@ -16,6 +16,7 @@ import {
   requireNumber,
   type SessionScope,
   spendableBnb,
+  WBNB,
 } from "@nebu/core";
 import { encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { erc20Abi, poolAbi, SMART_ROUTER, smartRouterAbi } from "./abi.ts";
@@ -310,12 +311,17 @@ export const pancakeGrid: AgentPlugin = {
 
   async scope(params): Promise<SessionScope> {
     const market = await loadMarket(params);
+    const budget = await spendableBnb(market.wallet).catch(() => 0n);
+
     return {
       calls: [
         { to: SMART_ROUTER, label: "PancakeSwap smart router" },
+        // Wrapping is how a BNB deposit becomes something the router can move.
+        { to: WBNB, label: "Wrapped BNB" },
         { to: market.meta0.address, label: `${market.meta0.symbol} token` },
         { to: market.meta1.address, label: `${market.meta1.symbol} token` },
       ],
+      nativeSpend: plainNumber(Number(formatUnits(budget, 18))),
       spend: [
         {
           token: market.meta0.address,
