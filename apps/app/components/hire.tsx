@@ -45,6 +45,14 @@ type Grant = {
 };
 
 const storageKey = (id: string) => `nebu2.grant.${id}`;
+/**
+ * One passkey serves every agent, so the wallet it opens is remembered once,
+ * not per agent. Remembering it at all is the point: without it there is no
+ * way to tell "recovery failed" from "there is nothing to recover", and the
+ * panel used to answer both by minting a fresh wallet — which quietly strands
+ * whatever the previous one was holding.
+ */
+const WALLET_KEY = "nebu2.wallet";
 const short = (address: string) => `${address.slice(0, 10)}…${address.slice(-8)}`;
 
 const field =
@@ -65,6 +73,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   const [wallet, setWallet] = useState<{ address: `0x${string}`; signer: PasskeySigner } | null>(
     null,
   );
+  /** The agent wallet this device has already made, before any passkey prompt. */
+  const [knownAddress, setKnownAddress] = useState<`0x${string}` | null>(null);
   const [balance, setBalance] = useState<bigint | null>(null);
   const [auto, setAuto] = useState<AutoParams | null>(null);
   const [scope, setScope] = useState<SessionScope | null>(null);
@@ -86,8 +96,10 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     try {
       const raw = localStorage.getItem(storageKey(agent.id));
       if (raw) setGrant(JSON.parse(raw) as Grant);
+      const known = localStorage.getItem(WALLET_KEY);
+      if (known?.startsWith("0x")) setKnownAddress(known as `0x${string}`);
     } catch {
-      // Blocked storage just means the grant does not survive a reload.
+      // Blocked storage just means none of this survives a reload.
     }
   }, [agent.id]);
 
@@ -119,11 +131,24 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   async function openWallet() {
     if (wallet) return wallet;
     const client = createClient({ chains: [CONFIG] });
-    const opened = await client
-      .recoverFromPasskey({ chainId: CONFIG.chainId })
-      .catch(() => client.createPasskeyWallet({ name: "nebu" }));
+
+    // Once a wallet exists, recovery is the only correct answer. Falling back
+    // to creating one turns a cancelled passkey prompt into a brand new
+    // address, and the BNB in the old one becomes unreachable from here.
+    const opened = knownAddress
+      ? await client.recoverFromPasskey({ chainId: CONFIG.chainId })
+      : await client
+          .recoverFromPasskey({ chainId: CONFIG.chainId })
+          .catch(() => client.createPasskeyWallet({ name: "nebu" }));
+
     const next = { address: opened.address, signer: opened.signer };
     setWallet(next);
+    setKnownAddress(next.address);
+    try {
+      localStorage.setItem(WALLET_KEY, next.address);
+    } catch {
+      // Blocked storage costs the memory, not the wallet.
+    }
     await inspect(next.address);
     return next;
   }
@@ -291,12 +316,26 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
         <div className="mt-[16px] space-y-[16px]">
           {!wallet ? (
             <>
-              <p className="font-manrope text-white text-[13px] leading-[18px]">
-                Your agent wallet is a passkey on this device. Create it, send it some BNB, and the
-                agent picks its own venue from there.
-              </p>
+              {/* Asking someone to "create" the wallet they already made is how
+                  they end up with two of them. */}
+              {knownAddress ? (
+                <p className="font-manrope text-white text-[13px] leading-[18px]">
+                  This device already has an agent wallet,{" "}
+                  <span className="text-[#AFDDFF]">{short(knownAddress)}</span>. Unlock it with your
+                  passkey to carry on.
+                </p>
+              ) : (
+                <p className="font-manrope text-white text-[13px] leading-[18px]">
+                  Your agent wallet is a passkey on this device. Create it, send it some BNB, and
+                  the agent picks its own venue from there.
+                </p>
+              )}
               <button type="button" disabled={busy} onClick={connect} className={primary}>
-                {phase === "opening" ? "Opening…" : "Create agent wallet"}
+                {phase === "opening"
+                  ? "Opening…"
+                  : knownAddress
+                    ? "Unlock agent wallet"
+                    : "Create agent wallet"}
               </button>
             </>
           ) : (
