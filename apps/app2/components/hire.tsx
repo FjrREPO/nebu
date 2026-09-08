@@ -395,9 +395,9 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                 </>
               ) : (
                 <p className="font-manrope text-white/50 text-[11px] leading-[16px]">
-                  This agent guards a position you already hold rather than deploying a fresh
-                  deposit. Once this wallet has a loan on Aave V3, it will pick its own floor and
-                  defend it.
+                  {agent.category === "health"
+                    ? "This agent guards a loan you already have rather than deploying a deposit. Once this wallet borrows on Aave V3, it picks its own floor and defends it."
+                    : "It picks its venue from the live pool screen, and that feed is not answering right now. Try again in a minute."}
                 </p>
               )}
             </>

@@ -6,14 +6,18 @@ import {
   type AgentStatus,
   type AgentTx,
   type AutoParams,
+  approveIfShort,
+  bnbInto,
   bscClient,
   InvalidParams,
   poolSeries,
   recentActivity,
+  requireAddress,
   requireInt,
   type SessionScope,
+  spendableBnb,
 } from "@nebu/core";
-import { type Address, encodeFunctionData, maxUint128, parseAbiItem } from "viem";
+import { type Address, encodeFunctionData, formatUnits, maxUint128, parseAbiItem } from "viem";
 import { erc20Abi, POSITION_MANAGER, poolAbi, positionManagerAbi } from "./abi.ts";
 import {
   formatPrice,
@@ -89,6 +93,82 @@ function describe(position: Position) {
   const { meta0, meta1 } = position;
   const price = (tick: number) => formatPrice(tickToPrice(tick, meta0.decimals, meta1.decimals));
   return `${meta0.symbol}/${meta1.symbol} at ${price(position.tick)}, range ${price(position.tickLower)}-${price(position.tickUpper)}`;
+}
+
+/** Half a position's width either side of spot, in ticks. */
+const DEFAULT_HALF_WIDTH = Math.round(Math.log(1.15) / Math.log(1.0001));
+
+/**
+ * Turn a BNB deposit into a brand new concentrated position: buy both sides,
+ * then mint a range centred on where the pool trades right now.
+ *
+ * Amounts are sized off each swap's floor rather than its quote, and the mint
+ * takes them as `desired` with no minimum — the position manager refunds
+ * whatever will not fit the ratio, so a floor here could only cause a revert.
+ */
+async function openPosition(params: Record<string, string>): Promise<AgentAction | null> {
+  const pool = requireAddress(params, "pool");
+  const wallet = requireAddress(params, "wallet");
+
+  const budget = await spendableBnb(wallet);
+  if (budget <= 0n) return null;
+
+  const [token0, token1, fee, spacing, [, tick]] = await Promise.all([
+    bscClient.readContract({ address: pool, abi: poolAbi, functionName: "token0" }),
+    bscClient.readContract({ address: pool, abi: poolAbi, functionName: "token1" }),
+    bscClient.readContract({ address: pool, abi: poolAbi, functionName: "fee" }),
+    bscClient.readContract({ address: pool, abi: poolAbi, functionName: "tickSpacing" }),
+    slot0(pool),
+  ]);
+  const [meta0, meta1] = await Promise.all([tokenMeta(token0), tokenMeta(token1)]);
+
+  const half = budget / 2n;
+  const [leg0, leg1] = await Promise.all([
+    bnbInto(wallet, token0, half),
+    bnbInto(wallet, token1, budget - half),
+  ]);
+  if (leg0.minOut === 0n || leg1.minOut === 0n) return null;
+
+  const tickLower = snapToSpacing(tick - DEFAULT_HALF_WIDTH, spacing);
+  const tickUpper = snapToSpacing(tick + DEFAULT_HALF_WIDTH, spacing);
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + DEADLINE_SECONDS);
+
+  const approvals = [
+    ...(await approveIfShort(token0, wallet, POSITION_MANAGER, leg0.minOut)),
+    ...(await approveIfShort(token1, wallet, POSITION_MANAGER, leg1.minOut)),
+  ];
+
+  const price = (value: number) => formatPrice(tickToPrice(value, meta0.decimals, meta1.decimals));
+  return {
+    reason: `Open a ${meta0.symbol}/${meta1.symbol} position from ${formatUnits(budget, 18)} BNB, ranged ${price(tickLower)}-${price(tickUpper)} around the live price.`,
+    txs: [
+      ...leg0.txs,
+      ...leg1.txs,
+      ...approvals,
+      {
+        to: POSITION_MANAGER,
+        data: encodeFunctionData({
+          abi: positionManagerAbi,
+          functionName: "mint",
+          args: [
+            {
+              token0,
+              token1,
+              fee,
+              tickLower,
+              tickUpper,
+              amount0Desired: leg0.minOut,
+              amount1Desired: leg1.minOut,
+              amount0Min: 0n,
+              amount1Min: 0n,
+              recipient: wallet,
+              deadline,
+            },
+          ],
+        }),
+      },
+    ],
+  };
 }
 
 export const pancakeRebalancer: AgentPlugin = {
@@ -174,6 +254,22 @@ export const pancakeRebalancer: AgentPlugin = {
   },
 
   async status(params): Promise<AgentStatus> {
+    // No position yet, but a pool chosen and a wallet funded: that is an
+    // opening waiting to happen, not an idle agent.
+    if (!params.tokenId && params.pool) {
+      const wallet = requireAddress(params, "wallet");
+      const idle = await spendableBnb(wallet).catch(() => 0n);
+      return {
+        headline:
+          idle > 0n
+            ? `Ready to open with ${Number(formatUnits(idle, 18)).toFixed(4)} BNB`
+            : "Waiting for a deposit",
+        detail:
+          "No position yet — the agent will buy both sides and mint a range around the live price.",
+        actionable: idle > 0n,
+      };
+    }
+
     const position = await loadPosition(tokenId(params));
     const live = inRange(position.tick, position.tickLower, position.tickUpper);
     return {
@@ -202,8 +298,8 @@ export const pancakeRebalancer: AgentPlugin = {
     const best = shortlist(pools)[0];
     if (!best) return null;
     return {
-      params: {},
-      reason: `No position yet. Best pool on the screen is ${best.pair} ${best.feePercent}% at ${(best.feeApr * 100).toFixed(0)}% fee APR`,
+      params: { pool: best.address, wallet },
+      reason: `No position yet. Opening in ${best.pair} ${best.feePercent}%, the best on the screen at ${(best.feeApr * 100).toFixed(0)}% fee APR`,
     };
   },
 
@@ -254,6 +350,8 @@ export const pancakeRebalancer: AgentPlugin = {
   },
 
   async plan(params): Promise<AgentAction | null> {
+    if (!params.tokenId && params.pool) return openPosition(params);
+
     const position = await loadPosition(tokenId(params));
     if (inRange(position.tick, position.tickLower, position.tickUpper)) return null;
     if (position.liquidity === 0n) return null;

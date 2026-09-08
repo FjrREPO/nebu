@@ -50,8 +50,8 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
       <div className="relative h-[220px] md:h-[260px] overflow-hidden border-b border-white/10">
         <GridLines delay={200} />
         <Nav />
-        <div className="absolute bottom-[28px] left-5 md:left-[35px] right-5 md:right-[35px]">
-          <div className="flex items-end gap-[18px]">
+        <div className="absolute bottom-[28px] inset-x-0">
+          <div className="mx-auto max-w-[1280px] px-5 md:px-[35px] flex items-end gap-[18px]">
             <div
               className="grid size-[76px] shrink-0 place-items-center border border-white/80 anim-scale-in"
               style={{ animationDelay: "300ms" }}

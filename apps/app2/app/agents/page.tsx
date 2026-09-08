@@ -17,7 +17,7 @@ export default async function AgentsPage() {
       <div className="relative h-[240px] md:h-[280px] overflow-hidden border-b border-white/10">
         <GridLines delay={200} />
         <Nav />
-        <div className="absolute bottom-[32px] left-5 md:left-[35px] right-5 md:right-[35px]">
+        <div className="absolute bottom-[32px] inset-x-0 mx-auto max-w-[1280px] px-5 md:px-[35px]">
           <span
             className="font-manrope text-[#AFDDFF]/80 text-[13px] leading-[15.6px] anim-fade-up"
             style={{ animationDelay: "300ms" }}

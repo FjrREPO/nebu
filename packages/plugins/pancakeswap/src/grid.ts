@@ -5,6 +5,7 @@ import {
   type AgentSeries,
   type AgentStatus,
   type AutoParams,
+  bnbInto,
   bscClient,
   InvalidParams,
   plainNumber,
@@ -14,6 +15,7 @@ import {
   requireInt,
   requireNumber,
   type SessionScope,
+  spendableBnb,
 } from "@nebu/core";
 import { encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { erc20Abi, poolAbi, SMART_ROUTER, smartRouterAbi } from "./abi.ts";
@@ -216,6 +218,16 @@ export const pancakeGrid: AgentPlugin = {
     const off = drift(market);
     const outside = market.price < market.lower || market.price > market.upper;
     const side = off > 0 ? "sell" : "buy";
+    // An empty wallet holding BNB has not failed, it just has not started.
+    const idle = market.total === 0 ? await spendableBnb(market.wallet).catch(() => 0n) : 0n;
+
+    if (idle > 0n && !outside) {
+      return {
+        headline: `Ready to deploy ${Number(formatUnits(idle, 18)).toFixed(4)} BNB`,
+        detail: `${market.meta0.symbol}/${market.meta1.symbol} ladder wants ${(market.target * 100).toFixed(1)}% ${market.meta1.symbol} to start`,
+        actionable: true,
+      };
+    }
 
     return {
       headline: outside
@@ -234,12 +246,34 @@ export const pancakeGrid: AgentPlugin = {
 
     // Size the range from what the pair has actually done over two days, not
     // from a number picked out of the air. A quiet pair gets a tight ladder.
-    const history = await poolSeries(best.address, 48);
+    //
+    // Priced in the pool's own units: loadMarket derives its price from the
+    // tick, and a range quoted in USD would put the ladder nowhere near it.
+    const token0 = await bscClient.readContract({
+      address: best.address as `0x${string}`,
+      abi: poolAbi,
+      functionName: "token0",
+    });
+    const history = await poolSeries(best.address, 48, token0);
     const prices = history.map((point) => point.v).filter((value) => value > 0);
-    if (prices.length < 2) return null;
 
-    const spot = prices[prices.length - 1];
-    const swing = Math.max(0.05, Math.min(0.5, (Math.max(...prices) - Math.min(...prices)) / spot));
+    // The chart feed is a throttled free tier. Losing it should cost the agent
+    // its measured range, not its ability to work — fall back to the live tick
+    // and a default band, and say which one this is.
+    const token1 = await bscClient.readContract({
+      address: best.address as `0x${string}`,
+      abi: poolAbi,
+      functionName: "token1",
+    });
+    const [meta0, meta1] = await Promise.all([tokenMeta(token0), tokenMeta(token1)]);
+    const [, tick] = await slot0(best.address as `0x${string}`);
+    const spot = prices.at(-1) ?? tickToPrice(tick, meta0.decimals, meta1.decimals);
+    if (!(spot > 0)) return null;
+
+    const measured = prices.length >= 2;
+    const swing = measured
+      ? Math.max(0.05, Math.min(0.5, (Math.max(...prices) - Math.min(...prices)) / spot))
+      : 0.15;
 
     return {
       params: {
@@ -249,7 +283,9 @@ export const pancakeGrid: AgentPlugin = {
         upperPrice: plainNumber(spot * (1 + swing), 12),
         grids: "10",
       },
-      reason: `${best.pair} ${best.feePercent}% moved ${(swing * 100).toFixed(1)}% in 48h, so the ladder spans that either side of spot`,
+      reason: measured
+        ? `${best.pair} ${best.feePercent}% moved ${(swing * 100).toFixed(1)}% in 48h, so the ladder spans that either side of spot`
+        : `${best.pair} ${best.feePercent}% picked on fee APR; no price history right now, so the ladder uses a default ${(swing * 100).toFixed(0)}% band`,
     };
   },
 
@@ -301,6 +337,26 @@ export const pancakeGrid: AgentPlugin = {
     const market = await loadMarket(params);
     const off = drift(market);
     if (market.price < market.lower || market.price > market.upper) return null;
+
+    // Fresh deposit: buy into both sides at the ratio the ladder wants, then
+    // every run after this is an ordinary rebalance.
+    if (market.total === 0) {
+      const budget = await spendableBnb(market.wallet);
+      if (budget <= 0n) return null;
+
+      const toQuote = (budget * BigInt(Math.round(market.target * 10_000))) / 10_000n;
+      const [quoteLeg, baseLeg] = await Promise.all([
+        bnbInto(market.wallet, market.meta1.address, toQuote),
+        bnbInto(market.wallet, market.meta0.address, budget - toQuote),
+      ]);
+      const txs = [...quoteLeg.txs, ...baseLeg.txs];
+      if (txs.length === 0) return null;
+
+      return {
+        reason: `Split ${formatUnits(budget, 18)} BNB into ${(market.target * 100).toFixed(1)}% ${market.meta1.symbol} and ${((1 - market.target) * 100).toFixed(1)}% ${market.meta0.symbol}, where the ladder starts.`,
+        txs,
+      };
+    }
     if (Math.abs(off) <= tolerance(market) || market.total === 0) return null;
 
     const sellingBase = off > 0;

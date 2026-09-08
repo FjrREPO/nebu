@@ -8,6 +8,7 @@ import {
   type AutoParams,
   alignDaily,
   apyHistory,
+  bnbInto,
   bscClient,
   InvalidParams,
   marketId,
@@ -16,6 +17,7 @@ import {
   requireAddress,
   requireInt,
   type SessionScope,
+  spendableBnb,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { AAVE_POOL, erc20Abi, liquidityRateToApy, poolAbi, reserveData } from "./aave.ts";
@@ -229,20 +231,29 @@ export const yieldOptimizer: AgentPlugin = {
 
   async status(params): Promise<AgentStatus> {
     const market = await loadMarket(params);
+    const idle = await spendableBnb(market.wallet).catch(() => 0n);
     const quotes = market.venues
       .map((venue) => `${venue.protocol} ${(venue.apy * 100).toFixed(2)}%`)
       .join(" vs ");
     const move = bestMove(market.venues, market.minGainBps);
     const funded = market.venues.filter((venue) => venue.supplied > 0);
 
+    // A funded wallet with nothing deployed is work waiting, not a quiet state.
+    const deployable = funded.length === 0 && idle > 0n;
+    const best = market.venues.reduce((a, b) => (b.apy > a.apy ? b : a));
+
     return {
       headline: move
         ? `Move to ${move.to.protocol} for +${(move.gainBps / 100).toFixed(2)}%`
-        : funded.length > 0
-          ? "Already in the best venue"
-          : "Nothing supplied yet",
-      detail: `${market.symbol}: ${quotes}${funded.length ? ` · holding ${funded[0].supplied.toPrecision(6)} on ${funded[0].protocol}` : ""}`,
-      actionable: move !== null,
+        : deployable
+          ? `Ready to deploy ${Number(formatUnits(idle, 18)).toFixed(4)} BNB`
+          : funded.length > 0
+            ? "Already in the best venue"
+            : "Waiting for a deposit",
+      detail: deployable
+        ? `${market.symbol} pays ${(best.apy * 100).toFixed(2)}% on ${best.protocol} — ${quotes}`
+        : `${market.symbol}: ${quotes}${funded.length ? ` · holding ${funded[0].supplied.toPrecision(6)} on ${funded[0].protocol}` : ""}`,
+      actionable: move !== null || deployable,
     };
   },
 
@@ -310,6 +321,25 @@ export const yieldOptimizer: AgentPlugin = {
 
   async plan(params): Promise<AgentAction | null> {
     const market = await loadMarket(params);
+
+    // Nothing supplied anywhere yet: this is a fresh BNB deposit, so turn it
+    // into the asset and put it to work rather than reporting no-op forever.
+    if (market.venues.every((venue) => venue.supplied === 0)) {
+      const budget = await spendableBnb(market.wallet);
+      if (budget <= 0n) return null;
+
+      const best = market.venues.reduce((a, b) => (b.apy > a.apy ? b : a));
+      const bootstrap = await bnbInto(market.wallet, market.asset, budget);
+      if (bootstrap.minOut === 0n) return null;
+
+      // Size the deposit off the swap's floor, not its quote: the floor is the
+      // amount that is guaranteed to be there when the next call runs.
+      return {
+        reason: `Turn ${formatUnits(budget, 18)} BNB into ${market.symbol} and supply it to ${best.protocol} at ${(best.apy * 100).toFixed(2)}%.`,
+        txs: [...bootstrap.txs, ...depositTxs(market, best.protocol, bootstrap.minOut)],
+      };
+    }
+
     const move = bestMove(market.venues, market.minGainBps);
     if (!move) return null;
 

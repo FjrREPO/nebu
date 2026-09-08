@@ -26,59 +26,61 @@ export function Nav() {
 
   return (
     <>
-      <nav className="absolute top-0 left-0 z-20 w-full flex items-center px-5 md:px-[35px] py-5 md:py-[27px]">
-        <div className="flex items-center gap-[40px]">
-          <Link
-            href="/"
-            className="font-graphik text-white text-[18px] md:text-[21px] leading-[21px] whitespace-nowrap anim-fade-up"
-            style={{ animationDelay: "200ms" }}
-          >
-            {"NEBU // AGENTS"}
-          </Link>
-          <div className="hidden lg:flex items-center gap-[40px]">
-            {CATEGORIES.map((item, index) => (
-              <NavItem
-                key={item.key}
-                number={item.number}
-                label={item.label}
-                delay={350 + index * 100}
-              />
-            ))}
+      <nav className="absolute top-0 left-0 z-20 w-full py-5 md:py-[27px]">
+        <div className="mx-auto max-w-[1280px] px-5 md:px-[35px] flex items-center">
+          <div className="flex items-center gap-[40px]">
+            <Link
+              href="/"
+              className="font-graphik text-white text-[18px] md:text-[21px] leading-[21px] whitespace-nowrap anim-fade-up"
+              style={{ animationDelay: "200ms" }}
+            >
+              {"NEBU // AGENTS"}
+            </Link>
+            <div className="hidden lg:flex items-center gap-[40px]">
+              {CATEGORIES.map((item, index) => (
+                <NavItem
+                  key={item.key}
+                  number={item.number}
+                  label={item.label}
+                  delay={350 + index * 100}
+                />
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div
-          className="hidden lg:flex items-center gap-[12px] ml-auto anim-slide-right"
-          style={{ animationDelay: "600ms" }}
-        >
-          <Wallet className="w-[15px] h-[15px] text-white" strokeWidth={1.5} />
-          <span className="font-manrope text-white text-[13px] leading-[15.6px]">
-            NOT_CONNECTED
-          </span>
-          <span className="font-manrope text-white text-[13px] leading-[15.6px] ml-[20px]">
-            CHAIN:
-          </span>
-          <span className={chipClass}>BNB_56</span>
-        </div>
+          <div
+            className="hidden lg:flex items-center gap-[12px] ml-auto anim-slide-right"
+            style={{ animationDelay: "600ms" }}
+          >
+            <Wallet className="w-[15px] h-[15px] text-white" strokeWidth={1.5} />
+            <span className="font-manrope text-white text-[13px] leading-[15.6px]">
+              NOT_CONNECTED
+            </span>
+            <span className="font-manrope text-white text-[13px] leading-[15.6px] ml-[20px]">
+              CHAIN:
+            </span>
+            <span className={chipClass}>BNB_56</span>
+          </div>
 
-        <button
-          type="button"
-          aria-label="Toggle menu"
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="lg:hidden ml-auto relative w-[40px] h-[40px] flex items-center justify-center anim-fade-in"
-          style={{ animationDelay: "400ms" }}
-        >
-          <span
-            className={`absolute transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-0 rotate-90 scale-50" : "opacity-100 rotate-0 scale-100"}`}
+          <button
+            type="button"
+            aria-label="Toggle menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="lg:hidden ml-auto relative w-[40px] h-[40px] flex items-center justify-center anim-fade-in"
+            style={{ animationDelay: "400ms" }}
           >
-            <Menu className="w-[22px] h-[22px] text-white" strokeWidth={1.5} />
-          </span>
-          <span
-            className={`absolute transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-50"}`}
-          >
-            <X className="w-[22px] h-[22px] text-white" strokeWidth={1.5} />
-          </span>
-        </button>
+            <span
+              className={`absolute transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-0 rotate-90 scale-50" : "opacity-100 rotate-0 scale-100"}`}
+            >
+              <Menu className="w-[22px] h-[22px] text-white" strokeWidth={1.5} />
+            </span>
+            <span
+              className={`absolute transition-all duration-300 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-50"}`}
+            >
+              <X className="w-[22px] h-[22px] text-white" strokeWidth={1.5} />
+            </span>
+          </button>
+        </div>
       </nav>
 
       <div
