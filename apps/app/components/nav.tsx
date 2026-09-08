@@ -2,6 +2,7 @@
 
 import { ChevronDown, Copy, LogOut, Menu, Wallet, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   CHAIN,
@@ -122,7 +123,17 @@ function WalletMenu({ address, balance }: { address: `0x${string}`; balance: big
   );
 }
 
+/**
+ * The landing page is full-bleed, every other page sits in a 1280 column. The
+ * nav follows whichever it is on: a gutter from the edge at home, and the same
+ * inset the content below it uses everywhere else. Both resolve to pixels, so
+ * the change between them is something the browser can animate.
+ */
+const GUTTER = "var(--gut)";
+const COLUMN = `max(${GUTTER}, calc((100% - 1280px) / 2 + ${GUTTER}))`;
+
 export function Nav() {
+  const home = usePathname() === "/";
   const [menuOpen, setMenuOpen] = useState(false);
   const wallet = useWallet();
   const [busy, setBusy] = useState(false);
@@ -145,7 +156,10 @@ export function Nav() {
   return (
     <>
       <nav className="absolute top-0 left-0 z-20 w-full py-5 md:py-[27px]">
-        <div className="mx-auto max-w-[1280px] px-5 md:px-[35px] flex items-center">
+        <div
+          className="w-full flex items-center [--gut:20px] md:[--gut:35px] transition-[padding] duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+          style={{ paddingInline: home ? GUTTER : COLUMN }}
+        >
           <div className="flex items-center gap-[40px]">
             <Link
               href="/"
