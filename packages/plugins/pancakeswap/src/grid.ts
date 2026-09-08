@@ -6,6 +6,7 @@ import {
   type AgentStatus,
   bscClient,
   InvalidParams,
+  plainNumber,
   poolSeries,
   recentActivity,
   requireAddress,
@@ -257,13 +258,13 @@ export const pancakeGrid: AgentPlugin = {
           token: market.meta0.address,
           symbol: market.meta0.symbol,
           decimals: market.meta0.decimals,
-          suggested: (market.total / market.price / market.grids).toPrecision(4),
+          suggested: plainNumber(market.total / market.price / market.grids),
         },
         {
           token: market.meta1.address,
           symbol: market.meta1.symbol,
           decimals: market.meta1.decimals,
-          suggested: (market.total / market.grids).toPrecision(4),
+          suggested: plainNumber(market.total / market.grids),
         },
       ],
     };

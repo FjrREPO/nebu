@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+body {
+  background: #000;
+  overflow-x: hidden;
+}
+
+.font-graphik {
+  font-family: "Graphik LCG Regular Regular", "Graphik LCG", sans-serif;
+}
+
+.font-manrope {
+  font-family: var(--font-manrope), Manrope, sans-serif;
+}
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes slideInLeft {
+  0% {
+    opacity: 0;
+    transform: translate(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0);
+  }
+}
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translate(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0);
+  }
+}
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes drawLine {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 100px;
+  }
+  to {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes gridReveal {
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+@keyframes gridRevealH {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+.anim-fade-up {
+  opacity: 0;
+  animation: 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards fadeUp;
+}
+.anim-fade-in {
+  opacity: 0;
+  animation: 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards fadeIn;
+}
+.anim-slide-left {
+  opacity: 0;
+  animation: 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards slideInLeft;
+}
+.anim-slide-right {
+  opacity: 0;
+  animation: 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards slideInRight;
+}
+.anim-scale-in {
+  opacity: 0;
+  animation: 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards scaleIn;
+}
+.anim-grid-v {
+  opacity: 0;
+  transform-origin: top;
+  animation: 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards gridReveal;
+}
+.anim-grid-h {
+  opacity: 0;
+  transform-origin: 0;
+  animation: 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards gridRevealH;
+}
+.anim-draw-line {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100px;
+  animation: 1s cubic-bezier(0.16, 1, 0.3, 1) forwards drawLine;
+}

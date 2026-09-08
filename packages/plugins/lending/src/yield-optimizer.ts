@@ -10,6 +10,7 @@ import {
   bscClient,
   InvalidParams,
   marketId,
+  plainNumber,
   recentActivity,
   requireAddress,
   requireInt,
@@ -287,7 +288,7 @@ export const yieldOptimizer: AgentPlugin = {
           token: market.asset,
           symbol: market.symbol,
           decimals: market.decimals,
-          suggested: funded ? funded.supplied.toPrecision(6) : "0",
+          suggested: funded ? plainNumber(funded.supplied) : "0",
         },
       ],
     };

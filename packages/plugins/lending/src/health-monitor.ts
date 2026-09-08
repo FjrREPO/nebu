@@ -8,6 +8,7 @@ import {
   bscClient,
   InvalidParams,
   LOG_SPAN,
+  plainNumber,
   recentActivity,
   requireAddress,
   requireNumber,
@@ -327,7 +328,7 @@ export const healthMonitor: AgentPlugin = {
           symbol: debt.symbol,
           decimals: debt.decimals,
           // Cap at the repayment that restores the floor, not the whole debt.
-          suggested: (price > 0 ? repayBase / price : 0).toPrecision(6),
+          suggested: plainNumber(price > 0 ? repayBase / price : 0),
         },
       ],
     };

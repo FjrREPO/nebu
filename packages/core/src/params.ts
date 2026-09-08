@@ -23,3 +23,12 @@ export function requireNumber(params: AgentParams, key: string): number {
   if (!Number.isFinite(n)) throw new InvalidParams(`${key} must be a number`);
   return n;
 }
+
+/**
+ * A number a form field can hold. toPrecision hands back "1.931e+7" past seven
+ * digits, which an input will happily submit and every parser will reject.
+ */
+export function plainNumber(value: number, digits = 6) {
+  if (!Number.isFinite(value)) return "0";
+  return value.toLocaleString("en-US", { maximumFractionDigits: digits, useGrouping: false });
+}

@@ -1,0 +1,98 @@
+import type { ReactNode } from "react";
+
+export const ACCENT = "#AFDDFF";
+
+export const chipClass =
+  "font-manrope bg-[#AFDDFF] rounded-[3px] px-[5px] py-[2px] text-black text-[13px] leading-[15.6px]";
+
+export function Chip({ children }: { children: ReactNode }) {
+  return <span className={chipClass}>{children}</span>;
+}
+
+/** The bracketed caps this design uses for every technical label. */
+export function Bracket({ children }: { children: ReactNode }) {
+  return (
+    <span className="font-manrope text-white text-[13px] leading-[15.6px] whitespace-nowrap">
+      [ {children} ]
+    </span>
+  );
+}
+
+export function Muted({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return (
+    <p className={`font-manrope text-white/50 text-[11px] leading-[14px] ${className}`}>
+      {children}
+    </p>
+  );
+}
+
+const verticalPositions = ["12.6%", "37.5%", "61.9%", "86.2%"];
+const horizontalPositions = ["32.7%", "71.4%"];
+
+/** Plotting grid with a crosshair tick at every intersection. */
+export function GridLines({ delay = 600 }: { delay?: number }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {verticalPositions.map((left, i) => (
+        <div
+          key={left}
+          className="absolute top-0 h-full w-px bg-white/[0.04] anim-grid-v"
+          style={{ left, animationDelay: `${delay + i * 100}ms` }}
+        />
+      ))}
+      {horizontalPositions.map((top, i) => (
+        <div
+          key={top}
+          className="absolute left-0 w-full h-px bg-white/[0.04] anim-grid-h"
+          style={{ top, animationDelay: `${delay + 200 + i * 150}ms` }}
+        />
+      ))}
+      {horizontalPositions.map((top, hi) =>
+        verticalPositions.map((left, vi) => (
+          <div
+            key={`${top}-${left}`}
+            className="absolute anim-scale-in"
+            style={{ top, left, animationDelay: `${delay + 400 + (hi * 4 + vi) * 80}ms` }}
+          >
+            <div className="absolute w-[10px] h-px bg-white/70 -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute w-px h-[10px] bg-white/70 -translate-x-1/2 -translate-y-1/2" />
+          </div>
+        )),
+      )}
+    </div>
+  );
+}
+
+/**
+ * The notched panel: a rectangle with its bottom-left corner cut away, drawn
+ * as an SVG outline so the border can be one hairline at any size.
+ */
+export function Notch({
+  children,
+  className = "",
+  stroke = ACCENT,
+}: {
+  children: ReactNode;
+  className?: string;
+  stroke?: string;
+}) {
+  return (
+    <div className={`relative p-[20px] ${className}`}>
+      <svg
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        viewBox="0 0 280 168"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <polygon
+          points="0.5,0.5 279.5,0.5 279.5,167.5 30,167.5 0.5,137.5"
+          fill="none"
+          stroke={stroke}
+          strokeWidth="1"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
