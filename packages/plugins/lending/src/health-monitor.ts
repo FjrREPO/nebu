@@ -7,6 +7,8 @@ import {
   type AgentTx,
   type AutoParams,
   bscClient,
+  dailyVolatility,
+  daysToMove,
   explorerLink,
   InvalidParams,
   LOG_SPAN,
@@ -40,6 +42,35 @@ import {
 import { repayToReachHealth } from "./venue.ts";
 
 const DEFAULT_MIN_HF = 1.5;
+/** Floors outside this are not safety, they are a different decision. */
+const FLOOR_RANGE = [1.15, 2.5] as const;
+/** How much warning the floor should buy, in days of ordinary movement. */
+const CUSHION_DAYS = 7;
+
+/**
+ * The fall in collateral value that would put this loan at the liquidation
+ * line. A health factor of 1.30 survives a 23% drop and not a 24% one.
+ */
+export const dropToLiquidation = (healthFactor: number) =>
+  healthFactor > 1 && Number.isFinite(healthFactor) ? 1 - 1 / healthFactor : 0;
+
+/**
+ * A floor that leaves a week of ordinary movement between the loan and
+ * liquidation.
+ *
+ * 1.5 was a reasonable constant and a poor rule: on BTCB it is needlessly
+ * tight, and on something that moves 15% a day it is a floor you would fall
+ * through before anyone looked. Solved from the volatility of whatever is
+ * actually posted, and clamped, because a number this far from 1 stops being
+ * about safety.
+ */
+export function floorFor(daily: number | null) {
+  if (daily === null || !(daily > 0)) return DEFAULT_MIN_HF;
+  // A week of movement scales with the square root of time.
+  const cushion = Math.min(0.9, daily * Math.sqrt(CUSHION_DAYS));
+  const floor = 1 / (1 - cushion);
+  return Math.min(FLOOR_RANGE[1], Math.max(FLOOR_RANGE[0], Number(floor.toFixed(2))));
+}
 /** Aave marks the variable rate mode as 2 in repay(). */
 const VARIABLE_RATE = 2n;
 
@@ -300,15 +331,26 @@ export const healthMonitor: AgentPlugin = {
         : Number(formatUnits(healthFactor, 18));
 
     // The floor is a safety threshold, not a function of where the loan
-    // happens to sit. Deriving it from the current health factor would make a
-    // comfortable loan permanently "at risk" and repay it for no reason.
-    const floor = DEFAULT_MIN_HF;
+    // happens to sit — deriving it from the current health factor would make a
+    // comfortable loan permanently "at risk". It does depend on what is posted:
+    // the same 1.5 is slack on BTCB and thin on something that moves 15% a day.
+    const collateral = await largestCollateral(wallet).catch(() => null);
+    const daily = collateral ? dailyVolatility(await tokenSeries(collateral.asset, 48)) : null;
+    const floor = floorFor(daily);
+
+    const room = dropToLiquidation(current);
+    const days = daily ? daysToMove(room, daily) : null;
+    const runway =
+      days === null
+        ? ""
+        : ` A ${(room * 100).toFixed(0)}% fall liquidates it, about ${days < 1 ? "a day" : `${Math.round(days)} days`} of ordinary movement away.`;
+
     return {
       params: { wallet, minHealthFactor: String(floor) },
       reason:
         current >= floor
-          ? `Loan is at ${current.toFixed(2)}, above the ${floor} floor. Watching.`
-          : `Loan is at ${current.toFixed(2)}, under the ${floor} floor.`,
+          ? `Loan is at ${current.toFixed(2)}, above the ${floor} floor.${runway}`
+          : `Loan is at ${current.toFixed(2)}, under the ${floor} floor.${runway}`,
     };
   },
 

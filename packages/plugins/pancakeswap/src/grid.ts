@@ -39,6 +39,23 @@ export function targetQuoteShare(price: number, lower: number, upper: number, gr
   return (cell + 0.5) / grids;
 }
 
+/**
+ * How many cells a range should be cut into, given what the pool charges.
+ *
+ * A cell is only worth trading if the move across it beats the cost of making
+ * the trip: buy and sell is two fees, and a ladder whose cells are thinner
+ * than that loses money on every cycle no matter which way the price goes.
+ * The agent used to write ten cells regardless of the pool, which on a 0.25%
+ * pool over a tight range is exactly that mistake.
+ */
+export function gridsThatPay(lower: number, upper: number, feePercent: number) {
+  const roundTrip = (2 * feePercent) / 100;
+  // Three times the round trip, so a completed cycle is worth the gas too.
+  const minCell = Math.max(roundTrip * 3, 0.005);
+  const cells = Math.floor(Math.log(upper / lower) / Math.log(1 + minCell));
+  return Math.max(2, Math.min(50, cells));
+}
+
 /** Grid lines are geometric, so every cell is the same percentage move. */
 export function gridLines(lower: number, upper: number, grids: number) {
   const step = (upper / lower) ** (1 / grids);
@@ -287,7 +304,7 @@ export const pancakeGrid: AgentPlugin = {
         // Significant figures keep a small price small instead of losing it.
         lowerPrice: formatPrice(spot * (1 - swing)),
         upperPrice: formatPrice(spot * (1 + swing)),
-        grids: "10",
+        grids: String(gridsThatPay(spot * (1 - swing), spot * (1 + swing), best.feePercent)),
       },
       reason: measured
         ? `${best.pair} ${best.feePercent}% moved ${(swing * 100).toFixed(1)}% in 48h, so the ladder spans that either side of spot`

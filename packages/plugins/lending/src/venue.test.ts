@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { dropToLiquidation, floorFor } from "./health-monitor.ts";
 import { bestMove, repayToReachHealth } from "./venue.ts";
 
 const aave = { protocol: "Aave V3", apy: 0.0858, supplied: 0 };
@@ -52,4 +53,19 @@ console.log("ok");
   const stuck = { protocol: "Aave V3", apy: 0.02, supplied: 100, used: 0.95 };
   const wayOut = { protocol: "Venus", apy: 0.03, supplied: 0, used: 0.5 };
   assert.ok(bestMove([stuck, wayOut], 25), "moving out of a crowded market is not penalised");
+}
+
+// The floor follows what is posted as collateral, not a constant.
+{
+  assert.equal(floorFor(null), 1.5, "no measurement keeps the old default");
+  assert.ok(floorFor(0.01) < floorFor(0.15), "calmer collateral needs less cushion");
+  assert.ok(floorFor(0.6) <= 2.5, "and it is clamped before it stops being safety");
+  assert.ok(floorFor(0.01) >= 1.15, "never so tight it is not a floor");
+}
+
+// A health factor is a distance from liquidation, expressed as a fall.
+{
+  assert.ok(Math.abs(dropToLiquidation(1.3) - 0.2308) < 1e-3);
+  assert.equal(dropToLiquidation(1), 0, "already at the line");
+  assert.equal(dropToLiquidation(Number.POSITIVE_INFINITY), 0, "no debt, no distance to measure");
 }
