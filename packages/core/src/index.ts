@@ -2,6 +2,7 @@ export * from "./activity.ts";
 export * from "./chain.ts";
 export * from "./market.ts";
 export * from "./params.ts";
+export * from "./risk.ts";
 export * from "./router.ts";
 export * from "./types.ts";
 export * from "./yields.ts";

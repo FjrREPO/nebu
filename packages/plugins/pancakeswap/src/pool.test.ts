@@ -7,6 +7,7 @@ import {
   snapToSpacing,
   tickToPrice,
 } from "./pool.ts";
+import { driftPastRange, halfWidthTicks } from "./rebalancer.ts";
 
 assert.equal(inRange(0, -100, 100), true);
 assert.equal(inRange(-100, -100, 100), true, "lower tick is inclusive");
@@ -87,3 +88,22 @@ assert.equal(
   }),
   0n,
 );
+
+// Range width follows how much the pair actually moves, and falls back to the
+// width it had when there is no history to go on.
+{
+  const pos = { tickLower: -1000, tickUpper: 1000, tick: 0, spacing: 10 };
+  assert.equal(halfWidthTicks(pos, null), 1000, "no measurement keeps the old width");
+  // Two standard deviations of a 5% day is about a 10% band either side.
+  const calm = halfWidthTicks(pos, 0.05);
+  const wild = halfWidthTicks(pos, 0.4);
+  assert.ok(calm < wild, "a wilder pair gets a wider range");
+  assert.ok(calm > 0 && calm < 2000, `calm width looked wrong: ${calm}`);
+}
+
+// Drift is measured against the boundary, and zero while still inside.
+{
+  assert.equal(driftPastRange({ tick: 0, tickLower: -100, tickUpper: 100 }), 0);
+  const out = driftPastRange({ tick: 1100, tickLower: -100, tickUpper: 100 });
+  assert.ok(out > 0.09 && out < 0.12, `1000 ticks past should be ~10%, got ${out}`);
+}

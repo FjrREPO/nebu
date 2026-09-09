@@ -9,6 +9,7 @@ import {
   approveIfShort,
   bnbInto,
   bscClient,
+  dailyVolatility,
   InvalidParams,
   plainAmount,
   plainNumber,
@@ -131,13 +132,52 @@ async function loadPosition(id: bigint) {
 type Position = Awaited<ReturnType<typeof loadPosition>>;
 
 /** Same tick width as before, recentred on where the pool actually trades now. */
-export function recentre(position: Pick<Position, "tick" | "tickLower" | "tickUpper" | "spacing">) {
-  const halfWidth = Math.round((position.tickUpper - position.tickLower) / 2);
+/** A tick is a 0.01% step, so a fractional move is this many of them. */
+const ticksFor = (move: number) => Math.round(Math.log(1 + move) / Math.log(1.0001));
+
+/**
+ * How far either side of the price the new range should reach.
+ *
+ * The old answer was "whatever width it had before", which is only right by
+ * accident: a range is a bet on how far the pair wanders, and pairs differ by
+ * orders of magnitude in that. Two standard deviations of a day's movement
+ * covers the ordinary day and leaves the unusual one to the next recentre.
+ * With no measured history the previous width is still the best guess going.
+ */
+export function halfWidthTicks(
+  position: Pick<Position, "tickLower" | "tickUpper">,
+  daily: number | null,
+) {
+  const previous = Math.round((position.tickUpper - position.tickLower) / 2);
+  if (daily === null || !(daily > 0)) return previous;
+  return Math.max(1, ticksFor(2 * daily));
+}
+
+export function recentre(
+  position: Pick<Position, "tick" | "tickLower" | "tickUpper" | "spacing">,
+  daily: number | null = null,
+) {
+  const halfWidth = halfWidthTicks(position, daily);
   const centre = snapToSpacing(position.tick, position.spacing);
   return {
     tickLower: snapToSpacing(centre - halfWidth, position.spacing),
     tickUpper: snapToSpacing(centre + halfWidth, position.spacing),
   };
+}
+
+/**
+ * How far outside its range the price has actually gone, as a fraction.
+ *
+ * Leaving the range by a hair is not the same as leaving it behind, and the
+ * agent used to treat them identically — two swaps and a remint for a drift
+ * that would have come back on its own before the gas settled.
+ */
+export function driftPastRange(position: Pick<Position, "tick" | "tickLower" | "tickUpper">) {
+  const past =
+    position.tick > position.tickUpper
+      ? position.tick - position.tickUpper
+      : position.tickLower - position.tick;
+  return past <= 0 ? 0 : 1.0001 ** past - 1;
 }
 
 function describe(position: Position) {
@@ -195,6 +235,13 @@ async function openingScope(params: Record<string, string>): Promise<SessionScop
 }
 
 /** Half a position's width either side of spot, in ticks. */
+/**
+ * A drift smaller than this fraction of a day's movement is noise: the price
+ * is as likely to wander back inside as to keep going, and two swaps plus a
+ * remint is a lot to pay for a coin flip.
+ */
+const MEANINGFUL_DRIFT = 0.25;
+
 const DEFAULT_HALF_WIDTH = Math.round(Math.log(1.15) / Math.log(1.0001));
 
 /**
@@ -486,6 +533,11 @@ export const pancakeRebalancer: AgentPlugin = {
     if (inRange(position.tick, position.tickLower, position.tickUpper)) return null;
     if (position.liquidity === 0n) return null;
 
+    // How far this pair moves in a day decides both whether leaving the range
+    // means anything yet, and how wide the next one should be.
+    const daily = dailyVolatility(await poolSeries(position.pool, 48, position.token0));
+    if (daily !== null && driftPastRange(position) < daily * MEANINGFUL_DRIFT) return null;
+
     const owner = await bscClient.readContract({
       address: POSITION_MANAGER,
       abi: positionManagerAbi,
@@ -546,7 +598,7 @@ export const pancakeRebalancer: AgentPlugin = {
       ],
     });
 
-    const range = recentre(position);
+    const range = recentre(position, daily);
     const txs: AgentTx[] = [{ to: POSITION_MANAGER, data: exit }];
 
     for (const [token, amount] of [

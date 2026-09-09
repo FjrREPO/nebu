@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { cached, fallbackLogo } from "./market.ts";
 import { plainAmount, requireAddress, requireInt } from "./params.ts";
+import { dailyVolatility, daysToMove } from "./risk.ts";
 import { InvalidParams } from "./types.ts";
 
 const pool = "0x36696169c63e42cd08ce11f5deebbcebae652050";
@@ -58,3 +59,25 @@ await assert.rejects(
     throw new Error("429");
   }),
 );
+
+// Volatility: a series that walks a steady 1% an hour has a daily figure of
+// about 1% * sqrt(24), and a flat series has no deviation to measure.
+{
+  const walk = (steps: number[]) => steps.map((v, i) => ({ t: i * 3600, v }));
+  const alternating = walk([100, 101, 100, 101, 100, 101, 100, 101, 100, 101]);
+  const vol = dailyVolatility(alternating);
+  assert.ok(vol !== null && vol > 0.02 && vol < 0.08, `alternating 1% gave ${vol}`);
+
+  assert.equal(dailyVolatility(walk([100, 100, 100, 100, 100, 100, 100, 100])), 0);
+  // Too little history is unknown, which is not the same as "does not move".
+  assert.equal(dailyVolatility(walk([100, 101])), null);
+}
+
+// Distance and time: four times as long to travel twice as far.
+{
+  const near = daysToMove(0.05, 0.05);
+  const far = daysToMove(0.1, 0.05);
+  assert.equal(near, 1);
+  assert.equal(far, 4);
+  assert.equal(daysToMove(0.05, 0), null);
+}
