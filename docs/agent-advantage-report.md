@@ -182,7 +182,8 @@ What changes:
 
 The claim that an agent can act on its own inside limits you set is only worth
 as much as the transactions behind it. Run on BNB Smart Chain testnet from
-`0x38d6CDC918f0f37f59a9f770987e1216B27987CC`:
+`0x38d6CDC918f0f37f59a9f770987e1216B27987CC` — the lifecycle is identical on
+either chain, and the deployed marketplace grants on mainnet:
 
 | Step | Transaction |
 |---|---|

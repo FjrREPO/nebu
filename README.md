@@ -1,94 +1,85 @@
 # nebu
 
-**https://nebu.ifajar.dev**
+**[nebu.ifajar.dev](https://nebu.ifajar.dev)** — an agent marketplace for BNB Smart Chain.
 
-An agent marketplace for BNB Smart Chain. You deposit BNB; an agent takes it
-from there.
+Hire an agent. Pay it, set its limits, and fire it whenever you want. It just
+happens to manage your BNB positions 24/7.
 
-Four agents ship with it, one for each thing people actually worry about: an LP
-range that has drifted out and stopped earning, a price that keeps oscillating,
-a deposit sitting on the worse of two lending rates, and a loan drifting toward
-liquidation. Each one reads mainnet live and hands you the exact transactions
-that fix what it is watching.
+![The landing page](docs/screenshots/landing.webp)
 
-Nothing here is mocked. Every number on every card is a contract read made when
-the page rendered.
+Every number on the site is read from the chain when the page renders. Nothing
+is seeded, cached from a fixture, or rounded up for the demo.
 
-## The four
+## The four agents
 
 | Agent | Watches | Does |
 |---|---|---|
-| **PancakeSwap V3 Rebalancer** | your position's range against the pool's live tick | exits, collects, and remints centred on the current price |
+| **PancakeSwap V3 Rebalancer** | your position's range against the live pool tick | exits, collects fees, remints centred on today's price |
 | **PancakeSwap Grid Trader** | pool price against your balance of both tokens | swaps back toward the ratio the ladder wants |
 | **Lending Yield Router** | Aave V3 and Venus supply rates, side by side | moves the deposit when the spread clears your floor |
 | **Aave Health Guard** | your health factor, collateral and debt | repays your largest debt just enough to lift it back |
 
-Rates are worked out, not copied off a dashboard. Aave publishes a per-second
-ray, Venus a per-block rate, and both get compounded to a real APY — with the
-block time measured from chain rather than hardcoded, because BSC has changed
-it three times.
+![The agent registry](docs/screenshots/agents.webp)
 
-## Hiring one is just a deposit
+Rates are derived, not copied. Aave publishes a per-second ray and Venus a
+per-block rate; both are compounded to a real APY, with the block time measured
+from chain rather than hardcoded — BSC has changed it three times.
 
-You send BNB. That is the whole configuration.
+Each agent page shows what it decided from, what it may do, and what it has
+earned. Fees earned come from fee growth rather than `tokensOwed`, which only
+moves when a position is touched and reads zero on anything left alone.
 
-Each agent already runs a screen, so it can pick its own venue and tell you
-why:
+![An agent's detail page](docs/screenshots/agent-detail.webp)
 
-```
-rebalancer  Watching position #7380654, the newest of 12 this wallet holds
-grid        FORM/USDT 0.25% moved 39.2% in 48h, so the ladder spans that
-            either side of spot
-yield       FDUSD pays 8.47% on Aave V3, the best of 8 assets listed on both
-health      Loan is at 1.26, under the 1.5 floor.
-```
+## Hiring one is a deposit
 
-From a bare BNB balance, the yield router wraps, swaps into the best-paying
-asset, approves and supplies — five transactions. The rebalancer buys both
-sides and mints a range around spot. The health guard does nothing at all, and
-says so: it defends a loan you already have, and a deposit cannot create one.
+You send BNB. The agent converts it, approves what it needs and takes the
+position — you never hold the other token yourself.
 
-Routing lives in `packages/core/src/router.ts`. It picks the deepest V3 pool
-across the fee tiers, quotes straight off `sqrtPriceX96` so decimals never
-enter the arithmetic, and keeps 0.003 BNB back for gas. Every step after a swap
-is sized off the swap's *floor* rather than its quote — the floor is what is
-actually guaranteed to be there when the next call runs.
+Agents work from one wallet, unlocked by a passkey on your device rather than a
+seed phrase. You fund it, they draw their limits from what it holds, and nothing
+in the app can reach the wallet you funded it from.
 
-## Signing, or not
+![The agent wallet](docs/screenshots/wallet.webp)
 
-`plan()` hands you the transactions and your wallet signs them. Nothing is
-delegated unless you ask for it.
+`plan()` hands you the transactions and your wallet signs them. Or grant a
+scoped [Altana](https://docs.altana.network) session and the agent transacts on
+its own, inside limits you set: which contracts it may call, how much of which
+token per day, when it expires. Every agent derives that scope from the same
+params it plans with, so the grant cannot drift from the calls it makes. The
+account contract enforces it, and revoking takes one transaction.
 
-If you do ask, grant a scoped [Altana](https://docs.altana.network) session and
-the agent transacts on its own inside limits you set — which contracts it may
-call, how much of which token it may move per day, and when the whole thing
-expires. Every agent derives that scope from the same params `plan()` uses, so
-the grant can never drift from the calls the agent actually makes. The account
-contract enforces it: anything outside the grant reverts, and revoking is one
-transaction that takes effect immediately.
+Two things worth knowing if you build on this. Native value is a separate
+permission from any token allowance — a session granted without it reverts with
+`NoSpendPermissions` the first time it wraps BNB. And a session has to live on
+the chain the calldata names: a call to an address with no code succeeds rather
+than reverting, so a mismatch spends gas and reports success while doing
+nothing. The panel refuses when the two disagree.
 
-One detail worth knowing if you build on this: native value is a separate
-permission from any token allowance. A session granted without it reverts with
-`NoSpendPermissions` the first time it tries to wrap BNB.
-
-Sessions are granted on BNB Smart Chain, because that is where the agents'
-calldata points. The two have to agree: a call to an address with no code
-succeeds rather than reverting, so pointing a session at a chain the contracts
-are not on spends gas and reports success while doing nothing. The panel
-refuses when they differ. Build with `NEXT_PUBLIC_SESSION_NETWORK=testnet`
-only alongside plugins that name testnet addresses.
-
-To watch the whole lifecycle happen:
+To watch the whole lifecycle on testnet, where a grant costs almost nothing:
 
 ```bash
 NEBU_ADMIN_KEY=0x... pnpm --filter @nebu/session demo
 ```
 
-It grants, reads the key back out of the on-chain KeyStore, has the session
-sign with no admin signature, revokes, and reads the KeyStore again. The
-transactions from a real run are in
-[the advantage report](docs/agent-advantage-report.md), alongside three tasks
-timed against doing them by hand.
+It grants, reads the key back out of the on-chain KeyStore, signs with no admin
+signature, revokes, and reads the KeyStore again.
+
+## Where the numbers come from
+
+The leaderboard is the screen the agents pick from: PancakeSwap V3 pools past a
+floor of $250k deposited, $100k traded a day, a swap every three minutes and a
+week old, plus live supply rates on both lending venues.
+
+![The leaderboard](docs/screenshots/leaderboard.webp)
+
+A high fee APR is not free money, and the page says so — the busiest pools move
+enough that a supplier loses more to price drift than the fees pay back.
+
+The status page proves the feeds and contracts are answering, and asks each
+agent to answer for itself.
+
+![The status page](docs/screenshots/status.webp)
 
 ## Running it
 
@@ -103,11 +94,11 @@ The runner takes one address, asks every agent what it would do with what is in
 that wallet, and reports. Give it `NEBU_SESSION` and `NEBU_SESSION_KEY` and it
 signs instead.
 
-Set `BSC_RPC_URL` to a private endpoint for anything past a demo; the default
-is a fallback list of public dataseeds batched through Multicall3.
+Set `BSC_RPC_URL` to a private endpoint for anything past a demo; the default is
+a fallback list of public dataseeds batched through Multicall3.
 
-`pnpm build`, `pnpm typecheck` and `pnpm test` run across the workspace.
-Biome formats and lints, enforced on commit by husky.
+`pnpm build`, `pnpm typecheck` and `pnpm test` run across the workspace. Biome
+formats and lints, enforced on commit by husky.
 
 ## Layout
 
@@ -143,7 +134,7 @@ first failure.
 
 ## API
 
-Live on the deployment, so another team's runner can use this registry without
+Live on the deployment, so another runner can use this registry without
 importing it:
 
 ```
@@ -156,5 +147,8 @@ GET /api/agents/:id/plan?…            the transactions, or null
 ```
 
 Bad params come back 400, chain trouble 502, CORS is open. A `null` from
-`/auto` is an answer rather than a failure — it means the agent found nothing
-to work with on that wallet.
+`/auto` is an answer rather than a failure — the agent found nothing to work
+with on that wallet.
+
+See [`docs/agent-advantage-report.md`](docs/agent-advantage-report.md) for three
+tasks measured against doing them by hand.
