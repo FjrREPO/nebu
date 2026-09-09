@@ -281,18 +281,12 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                   <p className="font-manrope text-white text-[13px] leading-[18px] mt-[4px]">
                     {auto.reason}
                   </p>
-                  {/* You send BNB and it holds something else. Say so. */}
+                  {/* Both caveats matter; neither needs a paragraph. */}
                   {scope && scope.spend.length > 0 && (
                     <p className="font-manrope text-white/50 text-[11px] leading-[15px] mt-[6px]">
-                      You only ever send BNB. It converts and holds{" "}
-                      {scope.spend.map((entry) => entry.symbol).join(" and ")} for you.
-                    </p>
-                  )}
-                  {/* A fee APR is what the fees came to, not what you keep. */}
-                  {/fee apr/i.test(auto.reason) && (
-                    <p className="font-manrope text-white/50 text-[11px] leading-[15px] mt-[6px]">
-                      That rate is what the pool's fees came to, not what you would keep — a busy
-                      pool moves enough that price drift can cost more than the fees pay back.
+                      You only send BNB — it converts itself.
+                      {/fee apr/i.test(auto.reason) &&
+                        " Fee APR is what the pool earned, not what you keep."}
                     </p>
                   )}
                 </div>
