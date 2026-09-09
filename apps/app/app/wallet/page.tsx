@@ -36,8 +36,13 @@ export default function WalletPage() {
           One wallet serves every agent you hire. You fund it, the agents work from it, and you can
           empty it or walk away at any time — nothing here can reach the wallet you funded it from.
         </Muted>
-        <AgentWalletPanel />
-        <PortfolioPanel agents={agentMeta()} />
+        {/* Side by side where there is room: funding it on the left, what it
+            holds on the right, rather than a mile of column with half a screen
+            of nothing beside it. */}
+        <div className="grid gap-[24px] lg:grid-cols-2 lg:items-start">
+          <AgentWalletPanel />
+          <PortfolioPanel agents={agentMeta()} />
+        </div>
       </div>
     </div>
   );

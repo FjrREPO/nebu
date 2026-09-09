@@ -72,9 +72,11 @@ export function AgentWalletPanel() {
         style={{ animationDelay: "400ms" }}
       >
         <span className={legend}>
-          {yours.address
-            ? `The agent's wallet · for ${short(yours.address)}`
-            : "The agent's wallet"}
+          The agent's wallet
+          {yours.address && (
+            // An address is not a word, and upper-casing one turns 0x into 0X.
+            <span className="normal-case"> · for {short(yours.address)}</span>
+          )}
         </span>
 
         {!yours.address ? (

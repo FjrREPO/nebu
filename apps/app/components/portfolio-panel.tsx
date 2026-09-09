@@ -172,39 +172,48 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
       )}
 
       <div className="border border-white/15 divide-y divide-white/10">
-        {(positions ?? []).map((position, index) => (
-          <div
-            key={position.meta.id}
-            className="flex flex-wrap items-baseline gap-x-[12px] gap-y-[4px] px-[16px] py-[13px]"
-          >
-            <span
-              className="size-[9px] shrink-0 translate-y-[1px]"
-              style={{
-                background: position.bnb > 0 ? TINTS[index % TINTS.length] : "rgba(255,255,255,.2)",
-              }}
-            />
-            <span className="font-manrope text-white text-[13px] leading-[17px]">
-              {position.meta.name}
-            </span>
-            <span className="ml-auto font-manrope text-white text-[13px]">
-              {position.pending ? "…" : position.bnb > 0 ? bnb(position.bnb) : "—"}
-            </span>
-            <span className="w-[40px] text-right font-manrope text-white/50 text-[11px]">
-              {position.bnb > 0 ? share(position.bnb, total) : ""}
-            </span>
-            {position.items.length > 0 && (
-              <span className="w-full flex items-center gap-[8px] font-manrope text-white/45 text-[11px] leading-[15px]">
-                <TokenMarks srcs={position.items.map((item) => fallbackLogo(item.token))} />
-                {position.items
-                  .map(
-                    (item) =>
-                      `${item.amount.toLocaleString("en-US", { maximumSignificantDigits: 6 })} ${item.symbol}`,
-                  )
-                  .join(" + ")}
+        {settled && held.length === 0 && (
+          <p className="px-[16px] py-[13px] font-manrope text-white/45 text-[12px] leading-[16px]">
+            Nothing at work yet. Hire an agent and what it holds turns up here.
+          </p>
+        )}
+        {/* An agent holding nothing is not a position, it is a row of dashes. */}
+        {(positions ?? [])
+          .filter((position) => position.pending || position.bnb > 0)
+          .map((position, index) => (
+            <div
+              key={position.meta.id}
+              className="flex flex-wrap items-baseline gap-x-[12px] gap-y-[4px] px-[16px] py-[13px]"
+            >
+              <span
+                className="size-[9px] shrink-0 translate-y-[1px]"
+                style={{
+                  background:
+                    position.bnb > 0 ? TINTS[index % TINTS.length] : "rgba(255,255,255,.2)",
+                }}
+              />
+              <span className="font-manrope text-white text-[13px] leading-[17px]">
+                {position.meta.name}
               </span>
-            )}
-          </div>
-        ))}
+              <span className="ml-auto font-manrope text-white text-[13px]">
+                {position.pending ? "…" : position.bnb > 0 ? bnb(position.bnb) : "—"}
+              </span>
+              <span className="w-[40px] text-right font-manrope text-white/50 text-[11px]">
+                {position.bnb > 0 ? share(position.bnb, total) : ""}
+              </span>
+              {position.items.length > 0 && (
+                <span className="w-full flex items-center gap-[8px] font-manrope text-white/45 text-[11px] leading-[15px]">
+                  <TokenMarks srcs={position.items.map((item) => fallbackLogo(item.token))} />
+                  {position.items
+                    .map(
+                      (item) =>
+                        `${item.amount.toLocaleString("en-US", { maximumSignificantDigits: 6 })} ${item.symbol}`,
+                    )
+                    .join(" + ")}
+                </span>
+              )}
+            </div>
+          ))}
 
         <div className="flex items-baseline gap-x-[12px] px-[16px] py-[13px]">
           <span className="size-[9px] shrink-0 translate-y-[1px]" style={{ background: CASH }} />
