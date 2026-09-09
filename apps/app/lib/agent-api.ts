@@ -15,10 +15,11 @@ export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
 /** bigint does not survive JSON; the wallet parses the value back. */
 export type WireTx = { to: `0x${string}`; data: `0x${string}`; value: string };
 
-async function call<T>(path: string): Promise<ApiResult<T>> {
+async function call<T>(path: string, cache: RequestCache = "default"): Promise<ApiResult<T>> {
   try {
-    // A plan is built for this moment, so no cache may answer for it.
-    const response = await fetch(path, { cache: "no-store" });
+    // The route says how long each answer keeps; only a plan refuses to be
+    // cached, and it asks for that itself.
+    const response = await fetch(path, { cache });
     const body = await response.json().catch(() => null);
     if (!response.ok) {
       return { ok: false, error: body?.error ?? `the agent service answered ${response.status}` };
@@ -47,8 +48,10 @@ export async function buildPlan(
   id: string,
   params: Record<string, string>,
 ): Promise<ApiResult<{ reason: string; txs: WireTx[] } | null>> {
+  // A plan is built for this moment, so no cache may answer for it.
   const result = await call<{ action: { reason: string; txs: WireTx[] } | null }>(
     `/api/agents/${id}/plan?${query(params)}`,
+    "no-store",
   );
   return result.ok ? { ok: true, data: result.data.action } : result;
 }

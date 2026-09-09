@@ -5,7 +5,17 @@ import { type NextRequest, NextResponse } from "next/server";
 export const revalidate = 60;
 
 const CORS = { "access-control-allow-origin": "*" };
-const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: CORS });
+/**
+ * A minute, which is what every page here already shows.
+ *
+ * Without a cache header the browser re-runs the whole registry on every visit,
+ * and the desk asks eight of these at once — so a second look at the same page
+ * cost as much as the first. A plan is the exception: it is the transaction
+ * somebody is about to sign, and it is built for that moment.
+ */
+const FRESH_FOR = "public, s-maxage=60, stale-while-revalidate=300";
+const json = (body: unknown, status = 200, cache = FRESH_FOR) =>
+  NextResponse.json(body, { status, headers: { ...CORS, "cache-control": cache } });
 
 const ACTIONS = ["status", "auto", "insights", "scope", "plan", "outlook"] as const;
 type Action = (typeof ACTIONS)[number];
@@ -25,11 +35,15 @@ export async function GET(
 ) {
   const { id, action } = await context.params;
   if (!ACTIONS.includes(action as Action)) {
-    return json({ error: `unknown action, expected one of ${ACTIONS.join(", ")}` }, 404);
+    return json(
+      { error: `unknown action, expected one of ${ACTIONS.join(", ")}` },
+      404,
+      "no-store",
+    );
   }
 
   const plugin = findPlugin(id);
-  if (!plugin) return json({ error: "unknown agent" }, 404);
+  if (!plugin) return json({ error: "unknown agent" }, 404, "no-store");
 
   const query = Object.fromEntries(request.nextUrl.searchParams);
 
@@ -49,17 +63,22 @@ export async function GET(
     if (action === "scope") return json(await plugin.scope(query));
 
     const planned = await plugin.plan(query);
-    if (!planned) return json({ action: null, reason: "nothing to do right now" });
-    return json({
-      action: {
-        reason: planned.reason,
-        // bigint does not survive JSON, and a tx value has to arrive intact.
-        txs: planned.txs.map((tx) => ({ ...tx, value: (tx.value ?? 0n).toString() })),
+    if (!planned) return json({ action: null, reason: "nothing to do right now" }, 200, "no-store");
+    return json(
+      {
+        action: {
+          reason: planned.reason,
+          // bigint does not survive JSON, and a tx value has to arrive intact.
+          txs: planned.txs.map((tx) => ({ ...tx, value: (tx.value ?? 0n).toString() })),
+        },
       },
-    });
+      200,
+      "no-store",
+    );
   } catch (err) {
     const message = (err as Error).message.split("\n")[0];
     // Bad params are the caller's fault; anything else means a read failed.
-    return json({ error: message }, err instanceof InvalidParams ? 400 : 502);
+    // Neither is worth remembering for a minute.
+    return json({ error: message }, err instanceof InvalidParams ? 400 : 502, "no-store");
   }
 }

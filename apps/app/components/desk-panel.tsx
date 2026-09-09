@@ -83,7 +83,7 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
 
   return (
     <div className="space-y-[28px]">
-      <div className="grid grid-cols-2 md:grid-cols-4 border border-white/15 divide-x divide-white/10 anim-fade-up">
+      <div className="grid grid-cols-2 md:grid-cols-4 border border-white/15 divide-x divide-y md:divide-y-0 divide-white/10 anim-fade-up">
         {[
           // Say when the number is a stand-in. A wallet holding nothing that
           // reads "1 BNB" is the page telling someone they have money.
@@ -92,9 +92,10 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
             total > 0 ? `${total.toFixed(4)} BNB` : `${PREVIEW_BNB} BNB`,
           ],
           ["Agents in the split", String(funded.length)],
-          // Annualising today's fees is how every rate on this site is quoted,
-          // and a pool paying 400% today is a young pool, not a promise.
-          ["Blended return · today's rates", rows ? apr(blended) : "—"],
+          // The caveat about what these rates are lives in the footnote with
+          // the other rules; in a tile label it wrapped and threw the row out
+          // of line on a phone.
+          ["Blended return", rows ? apr(blended) : "—"],
           ["Working", rows ? pct(funded.reduce((sum, entry) => sum + entry.share, 0)) : "—"],
         ].map(([label, value]) => (
           <div key={label} className="px-[16px] py-[14px]">
@@ -191,7 +192,8 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
 
       <p className="font-manrope text-white/40 text-[11px] leading-[16px] max-w-[640px]">
         Cover comes off the top, the rest is split by return against how much the thing moves, and
-        anything too small to cover its own gas goes back to the others.{" "}
+        anything too small to cover its own gas goes back to the others. Rates are today's,
+        annualised — a pool paying 400% today is a young pool, not a promise.{" "}
         {hired.length === 0 && "Hire two or more and the split becomes theirs alone."}
       </p>
     </div>
