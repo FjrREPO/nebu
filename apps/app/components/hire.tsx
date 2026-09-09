@@ -37,6 +37,13 @@ type Grant = {
 
 const storageKey = (id: string) => `nebu2.grant.${id}`;
 
+/**
+ * What the agent holds back for gas. Mirrors GAS_RESERVE_WEI in @nebu/core,
+ * copied rather than imported so the browser bundle does not drag in the chain
+ * client for one number.
+ */
+const GAS_RESERVE = 3_000_000_000_000_000n; // 0.003 BNB
+
 /** A cap read aloud, not typed into a box: enough figures to mean something. */
 const plainCap = (value: string) => {
   const amount = Number(value);
@@ -84,13 +91,15 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
    */
   const wrongChain = agent.chainId !== CONFIG.chainId;
   /**
-   * Not "has no BNB" but "has nothing it can actually deploy": the agent keeps
-   * a little back for gas, so a dust balance still buys nothing and every cap
-   * comes out zero. The scope already knows — if it can spend nothing, asking
-   * someone to hire it is asking them to grant a session that cannot move.
+   * Not "has no BNB" but "has nothing it can act with". Below the gas reserve
+   * there is nothing to deploy and nothing to pay for deploying it.
+   *
+   * Zero spend caps are not the test: a rebalance of a position that already
+   * exists needs no token allowance at all, because it remints from the
+   * liquidity it just pulled out — reading that as "unfunded" told a ready
+   * agent to go and get more BNB.
    */
-  const nothingToSpend = scope?.spend.every((entry) => Number(entry.suggested) === 0) ?? false;
-  const unfunded = wallet.address !== null && ((wallet.balance ?? 0n) === 0n || nothingToSpend);
+  const unfunded = wallet.address !== null && (wallet.balance ?? 0n) <= GAS_RESERVE;
 
   useEffect(() => {
     try {
