@@ -36,9 +36,9 @@ moves when a position is touched and reads zero on anything left alone.
 You send BNB. The agent converts it, approves what it needs and takes the
 position — you never hold the other token yourself.
 
-Agents work from one wallet, unlocked by a passkey on your device rather than a
-seed phrase. You fund it, they draw their limits from what it holds, and nothing
-in the app can reach the wallet you funded it from.
+Agents work from a wallet of their own — one per wallet you connect, unlocked by
+a passkey rather than a seed phrase. You fund it, they draw their limits from
+what it holds, and nothing in the app can reach the wallet you funded it from.
 
 ![The agent wallet](docs/screenshots/wallet.webp)
 
