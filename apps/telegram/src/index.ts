@@ -259,6 +259,9 @@ async function poll() {
         offset = update.update_id + 1;
         const message = update.message;
         if (!message?.text) continue;
+        // The command and who asked, so the log says whether a quiet bot is
+        // failing or simply not being talked to. Never the rest of the text.
+        console.log(`${message.chat.id} ${message.text.trim().split(/\s+/)[0]}`);
         // One slow chain read must not hold up everyone else's messages.
         void handle(message.chat.id, message.text).catch((err) =>
           console.error(`handle: ${(err as Error).message.split("\n")[0]}`),
