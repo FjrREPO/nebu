@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { fallbackLogo } from "./market.ts";
+import { cached, fallbackLogo } from "./market.ts";
 import { plainAmount, requireAddress, requireInt } from "./params.ts";
 import { InvalidParams } from "./types.ts";
 
@@ -31,3 +31,30 @@ assert.equal(
 assert.equal(fallbackLogo("not-an-address"), undefined);
 
 console.log("ok");
+
+// A refused refresh must hand back the last thing that worked rather than
+// nothing — that difference is a chart staying on screen or vanishing.
+{
+  let attempt = 0;
+  const flaky = () =>
+    cached(
+      "flaky",
+      async () => {
+        attempt += 1;
+        if (attempt === 2) throw new Error("429");
+        return `answer ${attempt}`;
+      },
+      0,
+    );
+
+  assert.equal(await flaky(), "answer 1");
+  assert.equal(await flaky(), "answer 1", "a refusal falls back to the last good value");
+  assert.equal(await flaky(), "answer 3", "and the next call still retries");
+}
+
+// With nothing cached yet there is nothing to fall back to, so it still throws.
+await assert.rejects(
+  cached("never-worked", async () => {
+    throw new Error("429");
+  }),
+);

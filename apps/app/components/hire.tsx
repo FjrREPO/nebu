@@ -288,9 +288,33 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                       {scope.spend.map((entry) => entry.symbol).join(" and ")} for you.
                     </p>
                   )}
+                  {/* A fee APR is what the fees came to, not what you keep. */}
+                  {/fee apr/i.test(auto.reason) && (
+                    <p className="font-manrope text-white/50 text-[11px] leading-[15px] mt-[6px]">
+                      That rate is what the pool's fees came to, not what you would keep — a busy
+                      pool moves enough that price drift can cost more than the fees pay back.
+                    </p>
+                  )}
                 </div>
 
-                {scope && scope.spend.length > 0 && (
+                {/*
+                  Before a deposit every cap is zero, and boxes labelled with
+                  tokens you do not hold read as "you need these" — the opposite
+                  of the truth, which is that BNB is all you ever send.
+                */}
+                {unfunded && (
+                  <div className="border border-[#AFDDFF]/30 p-[14px] space-y-[10px]">
+                    <p className="font-manrope text-white text-[13px] leading-[18px]">
+                      Send BNB to the agent wallet and it does the rest — the swap, the approval and
+                      the position are its job, not yours.
+                    </p>
+                    <Link href="/wallet" className={`${primary} block text-center`}>
+                      Add BNB to the agent wallet
+                    </Link>
+                  </div>
+                )}
+
+                {scope && scope.spend.length > 0 && !unfunded && (
                   <div className="space-y-[10px]">
                     <span className={legend}>Daily cap</span>
                     <p className="font-manrope text-white/40 text-[11px] leading-[15px]">
@@ -322,26 +346,22 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                   </div>
                 )}
 
-                <button
-                  type="button"
-                  disabled={busy || !scope || unfunded || wrongChain}
-                  onClick={hire}
-                  className={primary}
-                >
-                  {phase === "granting" ? "Hiring…" : "Hire agent"}
-                </button>
+                {!unfunded && (
+                  <button
+                    type="button"
+                    disabled={busy || !scope || wrongChain}
+                    onClick={hire}
+                    className={primary}
+                  >
+                    {phase === "granting" ? "Hiring…" : "Hire agent"}
+                  </button>
+                )}
                 {wrongChain && (
                   <p className="font-manrope text-[#ff8a8a] text-[11px] leading-[15px]">
                     This agent works on BNB Smart Chain, and hiring is currently set to BNB testnet.
                     Its transactions name contracts that do not exist there, so it would report
                     success and do nothing. Set NEXT_PUBLIC_SESSION_NETWORK=mainnet to hire it for
                     real.
-                  </p>
-                )}
-                {unfunded && (
-                  <p className="font-manrope text-[#ff8a8a] text-[11px] leading-[15px]">
-                    Send it some BNB first. Its limits are worked out from what it holds, so hiring
-                    an empty wallet would cap it at nothing.
                   </p>
                 )}
 

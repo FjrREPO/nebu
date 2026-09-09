@@ -16,14 +16,35 @@ const POOL_LOOKUP_CACHE_MS = 60 * 60_000;
 // Caching the promise, not the value, means four agents rendering at once
 // share one request instead of racing to make four.
 const cache = new Map<string, { at: number; value: Promise<unknown> }>();
+/**
+ * The last value that actually resolved for a key.
+ *
+ * Without this, a refused refresh threw away the answer we already had: the
+ * cache entry was deleted, the caller got nothing, and a card that had been
+ * showing a chart for an hour would suddenly read "no history in window" until
+ * some later refresh happened to succeed. Candles from ten minutes ago are a
+ * better chart than no chart, and the feed refusing us says nothing at all
+ * about the market.
+ */
+const settled = new Map<string, unknown>();
 
-function cached<T>(key: string, load: () => Promise<T>, ttl = CACHE_MS): Promise<T> {
+export function cached<T>(key: string, load: () => Promise<T>, ttl = CACHE_MS): Promise<T> {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < ttl) return hit.value as Promise<T>;
-  const value = load();
+
+  const value = load()
+    .then((result) => {
+      settled.set(key, result);
+      return result;
+    })
+    .catch((err) => {
+      // A failure must not be cached for five minutes, so the next caller retries.
+      cache.delete(key);
+      if (settled.has(key)) return settled.get(key) as T;
+      throw err;
+    });
+
   cache.set(key, { at: Date.now(), value });
-  // A failure must not be cached for five minutes.
-  value.catch(() => cache.delete(key));
   return value;
 }
 
@@ -43,13 +64,14 @@ const GAP_MS = 2_100;
  * refused — a card reading "no history" on a site whose entire claim is live
  * data is worth half a minute of waiting.
  *
- * Everything else should not be. Retries hold the single-flight queue, so a
- * long ladder does not cost one slow call, it costs that ladder times every
+ * Everything else gets a shorter one. Retries hold the single-flight queue, so
+ * a long ladder does not cost one slow call, it costs that ladder times every
  * call behind it — which turned the headless runner into something that looked
- * hung. Off the build, give up quickly and let the caller show what it has.
+ * hung. Two tries is enough to ride out an ordinary refusal now that a refused
+ * refresh falls back to the last good value instead of losing it.
  */
 const BUILDING = process.env.NEXT_PHASE === "phase-production-build";
-const BACKOFF_MS = BUILDING ? [3_000, 8_000, 20_000] : [1_500];
+const BACKOFF_MS = BUILDING ? [3_000, 8_000, 20_000] : [2_000, 6_000];
 let queue: Promise<unknown> = Promise.resolve();
 
 function enqueue<T>(work: () => Promise<T>): Promise<T> {
