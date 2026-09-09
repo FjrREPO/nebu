@@ -48,7 +48,11 @@ async function loadAccount(params: Record<string, string>) {
   const minHealthFactor = params.minHealthFactor
     ? requireNumber(params, "minHealthFactor")
     : DEFAULT_MIN_HF;
+  // Above 1 or the floor is below liquidation; below 10 because the field's
+  // own example is 1.5, and typing 15 for 1.5 would quietly turn "top the loan
+  // up" into "repay all of it".
   if (minHealthFactor <= 1) throw new InvalidParams("minHealthFactor must be above 1");
+  if (minHealthFactor > 10) throw new InvalidParams("minHealthFactor must be 10 or less");
 
   const [collateral, debt, , threshold, , healthFactor] = await userAccountData(wallet);
   return {
@@ -348,6 +352,7 @@ export const healthMonitor: AgentPlugin = {
       account.minHealthFactor,
     );
     const price = Number(formatUnits(debt.price, BASE_DECIMALS));
+    const owed = Number(formatUnits(debt.balance, debt.decimals));
     return {
       calls: [
         { to: AAVE_POOL, label: "Aave V3 pool" },
@@ -358,8 +363,9 @@ export const healthMonitor: AgentPlugin = {
           token: debt.asset,
           symbol: debt.symbol,
           decimals: debt.decimals,
-          // Cap at the repayment that restores the floor, not the whole debt.
-          suggested: plainNumber(price > 0 ? repayBase / price : 0),
+          // The repayment that restores the floor, and never more than is
+          // owed — a session should be the narrowest grant that still works.
+          suggested: plainNumber(price > 0 ? Math.min(repayBase / price, owed) : 0),
         },
       ],
     };
@@ -415,7 +421,10 @@ export const healthMonitor: AgentPlugin = {
     });
 
     return {
-      reason: `Repay ${plainAmount(repayTokens)} ${debt.symbol} (about $${repayBase.toFixed(2)}) to lift the health factor from ${account.healthFactor.toFixed(2)} back to ${account.minHealthFactor}.`,
+      // repayBase is what the floor asks for; repayTokens is what the wallet
+      // actually owes and will pay. Quoting the first next to the second
+      // described 974 USDT as $1,776 — the same stablecoin, twice, differently.
+      reason: `Repay ${plainAmount(repayTokens)} ${debt.symbol} (about $${(repayTokens * price).toFixed(2)}) to lift the health factor from ${account.healthFactor.toFixed(2)} back to ${account.minHealthFactor}.`,
       txs,
     };
   },

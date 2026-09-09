@@ -39,9 +39,17 @@ async function loadMarket(params: Record<string, string>) {
   const minGainBps = params.minGainBps ? requireInt(params, "minGainBps") : DEFAULT_MIN_GAIN_BPS;
   if (minGainBps < 0) throw new InvalidParams("minGainBps cannot be negative");
 
-  const [symbol, decimals, reserve, vToken] = await Promise.all([
-    bscClient.readContract({ address: asset, abi: erc20Abi, functionName: "symbol" }),
-    bscClient.readContract({ address: asset, abi: erc20Abi, functionName: "decimals" }),
+  // An address that is not a token answers "0x" to both of these, which
+  // surfaced as a 502 quoting a viem error. Handing us the wrong address is
+  // the caller's mistake, not the chain having a bad day — and the guard has
+  // to cover both reads, since Promise.all rejects on whichever loses.
+  const [[symbol, decimals], reserve, vToken] = await Promise.all([
+    Promise.all([
+      bscClient.readContract({ address: asset, abi: erc20Abi, functionName: "symbol" }),
+      bscClient.readContract({ address: asset, abi: erc20Abi, functionName: "decimals" }),
+    ]).catch(() => {
+      throw new InvalidParams(`${asset} is not a token on BNB Smart Chain`);
+    }),
     reserveData(asset).catch(() => null),
     venusMarketFor(asset),
   ]);
