@@ -1,3 +1,4 @@
+import { type AutoParams, allocate, type DeskAgent, MIN_TICKET, spendableBnb } from "@nebu/core";
 import { plugins } from "@nebu/plugins";
 import {
   restoreSession,
@@ -5,6 +6,7 @@ import {
   type SerializedSession,
   type SessionNetwork,
 } from "@nebu/session";
+import { formatEther } from "viem";
 
 /**
  * The headless side of the marketplace: point it at a wallet and it asks every
@@ -45,14 +47,61 @@ const CHAIN_OF: Record<SessionNetwork, number> = { mainnet: 56, testnet: 97 };
 
 const signing = signer();
 
+/**
+ * How the wallet is meant to be split, so the runner works a desk rather than
+ * a queue.
+ *
+ * Without this the first agent to be asked takes whatever is in the account and
+ * the rest find it empty — which is the race the desk exists to settle, and it
+ * would be odd for the site to show a split the runner ignores. Agents holding
+ * cover are never skipped: a repayment matters most on the day it is needed.
+ */
+async function shares(picked: Map<string, AutoParams>) {
+  const entries: DeskAgent[] = [];
+  for (const plugin of plugins) {
+    const auto = picked.get(plugin.id);
+    if (!auto || !plugin.outlook) continue;
+    const outlook = await plugin.outlook(auto.params).catch(() => null);
+    if (outlook) entries.push({ id: plugin.id, outlook });
+  }
+  const purse = Number(formatEther(await spendableBnb(wallet as `0x${string}`).catch(() => 0n)));
+  const split = allocate(entries, purse);
+  return {
+    purse,
+    reserves: new Set(entries.filter((e) => e.outlook.kind === "reserve").map((e) => e.id)),
+    byId: new Map(split.map((entry) => [entry.id, entry])),
+  };
+}
+
 async function tick() {
   console.log(`\n--- ${new Date().toISOString()} · ${wallet} ---`);
 
+  // Ask everyone what they would do before letting anyone do it.
+  const picked = new Map<string, AutoParams>();
+  for (const plugin of plugins) {
+    const auto = await plugin.autoParams(wallet as `0x${string}`).catch(() => null);
+    if (auto) picked.set(plugin.id, auto);
+  }
+  const desk = await shares(picked);
+  console.log(
+    `desk: ${desk.purse.toFixed(4)} BNB across ${[...desk.byId.values()].filter((e) => e.amount > 0).length} agent(s)`,
+  );
+
   for (const plugin of plugins) {
     try {
-      const auto = await plugin.autoParams(wallet as `0x${string}`);
+      const auto = picked.get(plugin.id);
       if (!auto) {
         console.log(`[${plugin.id}] nothing to work with`);
+        continue;
+      }
+
+      // The split decides who gets fresh BNB. It has no say over an agent
+      // maintaining a position it already holds — skipping the rebalancer
+      // because the account is fully deployed would leave a range to drift out
+      // of the market for want of money it was not asking for.
+      const share = desk.byId.get(plugin.id);
+      if (desk.purse >= MIN_TICKET && share?.amount === 0 && !desk.reserves.has(plugin.id)) {
+        console.log(`[${plugin.id}] not funded by the desk — ${share.note}`);
         continue;
       }
 

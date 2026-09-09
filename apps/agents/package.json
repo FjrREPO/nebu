@@ -13,7 +13,8 @@
     "@nebu/plugins": "workspace:*",
     "@nebu/plugin-lending": "workspace:*",
     "@nebu/plugin-pancakeswap": "workspace:*",
-    "@nebu/session": "workspace:*"
+    "@nebu/session": "workspace:*",
+    "viem": "^2.40.0"
   },
   "devDependencies": {
     "tsx": "^4.20.6",

@@ -123,7 +123,8 @@ NEBU_WALLET=0x... pnpm --filter @nebu/agents start   # the headless runner
 
 The runner takes one address, asks every agent what it would do with what is in
 that wallet, and reports. Give it `NEBU_SESSION` and `NEBU_SESSION_KEY` and it
-signs instead.
+signs instead. It works the desk rather than a queue: an agent the split does
+not fund is skipped and says why, and an agent holding cover is never skipped.
 
 ```bash
 TELEGRAM_BOT_TOKEN=... pnpm --filter @nebu/telegram start   # the bot

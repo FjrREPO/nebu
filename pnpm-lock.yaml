@@ -35,6 +35,9 @@ importers:
       '@nebu/session':
         specifier: workspace:*
         version: link:../../packages/session
+      viem:
+        specifier: ^2.40.0
+        version: 2.56.3(typescript@5.9.3)(zod@4.5.4)
     devDependencies:
       '@types/node':
         specifier: ^24.9.2
