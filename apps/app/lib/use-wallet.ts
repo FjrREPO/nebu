@@ -33,6 +33,14 @@ export type WalletState = {
  * One frozen value for "no wallet". useSyncExternalStore compares snapshots by
  * identity, so a fresh object literal here is an infinite render loop.
  */
+/**
+ * A site cannot make an extension forget it — the permission lives in the
+ * wallet, and asking for accounts again just returns them. So "disconnect"
+ * has to be remembered here, or restoreWallet hands the account straight
+ * back on the next render and the button looks broken.
+ */
+const DISMISSED = "nebu2.wallet.dismissed";
+
 const DISCONNECTED: WalletState = Object.freeze({ address: null, chainId: null, balance: null });
 
 let state: WalletState = DISCONNECTED;
@@ -59,6 +67,11 @@ async function refresh(address: `0x${string}` | null) {
 }
 
 export async function connectWallet() {
+  try {
+    localStorage.removeItem(DISMISSED);
+  } catch {
+    // Nothing to clear if storage will not answer.
+  }
   const injected = provider();
   if (!injected)
     throw new Error("No wallet extension found. Install MetaMask, Rabby or Binance Wallet.");
@@ -70,6 +83,11 @@ export async function connectWallet() {
 }
 
 export function disconnectWallet() {
+  try {
+    localStorage.setItem(DISMISSED, "1");
+  } catch {
+    // Blocked storage costs the memory, not the disconnect.
+  }
   emit(DISCONNECTED);
 }
 
@@ -86,6 +104,13 @@ export async function switchToChain() {
 export async function restoreWallet() {
   const injected = provider();
   if (!injected || state.address) return;
+  // Reconnecting someone who just disconnected is not a restore, it is an
+  // argument. Connecting again is what clears this.
+  try {
+    if (localStorage.getItem(DISMISSED)) return;
+  } catch {
+    // Unreadable storage means no record of a disconnect, so carry on.
+  }
   const [address] = await createWalletClient({ chain: CHAIN, transport: custom(injected) })
     .getAddresses()
     .catch(() => []);
