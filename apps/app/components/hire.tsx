@@ -303,23 +303,14 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                   of the truth, which is that BNB is all you ever send.
                 */}
                 {unfunded && (
-                  <div className="border border-[#AFDDFF]/30 p-[14px] space-y-[10px]">
-                    <p className="font-manrope text-white text-[13px] leading-[18px]">
-                      Send BNB to the agent wallet and it does the rest — the swap, the approval and
-                      the position are its job, not yours.
-                    </p>
-                    <Link href="/wallet" className={`${primary} block text-center`}>
-                      Add BNB to the agent wallet
-                    </Link>
-                  </div>
+                  <Link href="/wallet" className={`${primary} block text-center`}>
+                    Add BNB to hire it
+                  </Link>
                 )}
 
                 {scope && scope.spend.length > 0 && !unfunded && (
                   <div className="space-y-[10px]">
                     <span className={legend}>Daily cap</span>
-                    <p className="font-manrope text-white/40 text-[11px] leading-[15px]">
-                      The most it may move in a day, worked out from what it holds.
-                    </p>
                     {scope.spend.map((entry) => (
                       <label key={entry.token} className="block">
                         <span className={legend}>{entry.symbol}</span>
@@ -379,8 +370,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                 )}
 
                 <p className="font-manrope text-white/50 text-[11px] leading-[14px]">
-                  It may only call {scope?.calls.length ?? "…"} contracts, only up to these caps,
-                  and only until it expires. Revoking takes one transaction.
+                  {scope?.calls.length ?? "…"} contracts, your caps, until it expires. Revoking
+                  takes one transaction.
                 </p>
               </>
             ) : (
