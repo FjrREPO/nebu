@@ -23,6 +23,7 @@ import {
   useAgentWallet,
 } from "@/lib/agent-wallet";
 import type { AgentMeta } from "@/lib/agents";
+import { grantKey, hiredAgents, legacyGrantKey } from "@/lib/hires";
 import { TESTNET } from "@/lib/site";
 import { short } from "@/lib/use-wallet";
 import { WalletMark } from "./ui";
@@ -35,15 +36,8 @@ type Grant = {
   transactionHash?: string;
 };
 
-/**
- * A hire belongs to the agent wallet that made it, not to the browser. Two
- * connected wallets on one laptop have two agent wallets, and each has to see
- * its own hires — sharing one key showed the second wallet a session it could
- * not have signed for.
- */
-const storageKey = (id: string, agentWallet: `0x${string}`) =>
-  `nebu2.grant.${id}.${agentWallet.toLowerCase()}`;
-const legacyKey = (id: string) => `nebu2.grant.${id}`;
+const storageKey = grantKey;
+const legacyKey = legacyGrantKey;
 
 const CHAIN_OF: Record<SessionNetwork, number> = { mainnet: 56, testnet: 97 };
 
@@ -269,6 +263,13 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     }
   }
 
+  // Hiring a second agent turns two hires into one wallet with a split, which
+  // is worth saying at the moment it happens rather than in a menu.
+  const [alsoHired, setAlsoHired] = useState(0);
+  useEffect(() => {
+    setAlsoHired(hiredAgents(wallet.address).length);
+  }, [wallet.address]);
+
   const session = grant ? restoreSession(grant.stored, grant.sessionKey) : null;
   const expired = session ? isExpired(session) : false;
 
@@ -303,6 +304,15 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
               {grant.transactionHash}
             </a>
           )}
+          {alsoHired > 1 && (
+            <Link
+              href="/desk"
+              className="block font-manrope text-[#AFDDFF] text-[12px] leading-[16px] hover:text-white transition-colors"
+            >
+              {alsoHired} agents share this wallet — see the split
+            </Link>
+          )}
+
           <div className="flex gap-[8px]">
             <button
               type="button"

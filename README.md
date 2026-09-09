@@ -65,6 +65,37 @@ NEBU_ADMIN_KEY=0x... pnpm --filter @nebu/session demo
 It grants, reads the key back out of the on-chain KeyStore, signs with no admin
 signature, revokes, and reads the KeyStore again.
 
+## Hire two and they share the wallet
+
+One agent spends what it likes. Two spending from the same account is a race —
+whoever runs first takes the BNB and the second finds it empty. The desk decides
+the split instead.
+
+Each agent answers one extra question: what it expects of capital, and how much
+the thing behind that moves in a day. The rebalancer reports its pool's fee APR,
+the grid works out what its rungs earn from how often the price crosses one, the
+router reports what the better lender pays, and the health guard asks for cover
+rather than capital — the repayment that would restore its floor, priced against
+the odds of the collateral ever touching the liquidation line inside a year.
+
+Cover comes off the top and is capped. The rest goes by return over movement. An
+agent far behind the leader sits out rather than being funded for the sake of
+spreading, a ticket too small to cover its gas goes back to the others, and if
+nothing pays for its risk the money stays in the wallet.
+
+![The desk](docs/screenshots/desk.webp)
+
+## A sandbox, where the coins are free
+
+The same app runs on BNB testnet at
+[testnet.nebu.ifajar.dev](https://testnet.nebu.ifajar.dev), with a faucet page
+that hands you the agent wallet's address and waits for the drip.
+
+Hiring is real there — the key, the caps and the expiry are Altana permissions
+on chain 97 — and running is not, because the pools and lending markets a plan
+names only exist on mainnet. The panel says which is which rather than refusing
+the whole thing.
+
 ## Where the numbers come from
 
 The leaderboard is the screen the agents pick from: PancakeSwap V3 pools past a

@@ -13,6 +13,7 @@ import { formatEther } from "viem";
 import { agentAuto, agentOutlook } from "@/lib/agent-api";
 import { useAgentWallet } from "@/lib/agent-wallet";
 import type { AgentMeta } from "@/lib/agents";
+import { hiredAgents } from "@/lib/hires";
 
 /** What each agent's slice looks like, in order, so the bar and the rows agree. */
 const TINTS = ["#AFDDFF", "#7EC0EA", "#5AA0CE", "#3F7FAA"];
@@ -20,19 +21,6 @@ const TINTS = ["#AFDDFF", "#7EC0EA", "#5AA0CE", "#3F7FAA"];
 const legend = "font-manrope text-white/50 text-[11px] leading-[14px] uppercase tracking-wide";
 const pct = (share: number) => `${(share * 100).toFixed(share >= 0.1 ? 0 : 1)}%`;
 const apr = (value: number) => `${(value * 100).toFixed(value >= 1 ? 0 : 1)}%`;
-
-/** Which agents this wallet has actually hired, from the grants it stored. */
-function hiredIds(agentWallet: string | null): string[] {
-  if (!agentWallet) return [];
-  try {
-    const tail = `.${agentWallet.toLowerCase()}`;
-    return Object.keys(localStorage)
-      .filter((key) => key.startsWith("nebu2.grant.") && key.endsWith(tail))
-      .map((key) => key.slice("nebu2.grant.".length, -tail.length));
-  } catch {
-    return [];
-  }
-}
 
 type Row = { meta: AgentMeta; outlook: AgentOutlook | null; hired: boolean };
 
@@ -44,7 +32,7 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [hired, setHired] = useState<string[]>([]);
 
-  useEffect(() => setHired(hiredIds(wallet.address)), [wallet.address]);
+  useEffect(() => setHired(hiredAgents(wallet.address)), [wallet.address]);
 
   const load = useCallback(async () => {
     const owner = wallet.address;
@@ -58,7 +46,7 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
         return {
           meta,
           outlook: outlook.ok ? outlook.data : null,
-          hired: hiredIds(owner).includes(meta.id),
+          hired: hiredAgents(owner).includes(meta.id),
         };
       }),
     );

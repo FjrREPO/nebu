@@ -50,13 +50,14 @@ export const MAX_SHARE = 0.6;
 /** Insurance protects the desk; it must not become the desk. */
 export const RESERVE_CAP = 0.5;
 /**
- * How far behind the best agent one can be and still get money.
+ * The smallest slice worth calling a position.
  *
- * Spreading capital is worth something; spreading it into an agent scoring a
- * thousandth of the leader is not diversifying, it is paying gas to hold a
- * losing position. Anything under this fraction of the best score sits out.
+ * Spreading capital is worth something; a slice this side of a rounding error
+ * is not diversifying, it is paying gas to hold something that cannot move the
+ * result. Judged before the share cap, so an agent nobody rates does not
+ * inherit a third of the desk simply for being the only one under the cap.
  */
-export const MIN_EDGE = 0.15;
+export const MIN_SHARE = 0.03;
 /**
  * Nothing is riskless. Without a floor, a stablecoin's near-zero volatility
  * divides into a score of thousands and takes everything.
@@ -141,10 +142,8 @@ export function allocate(agents: DeskAgent[], total: number): Allocation[] {
   const investable = total - held.reduce((sum, amount) => sum + amount, 0);
 
   const scores = agents.map((agent, index) => (held[index] > 0 ? 0 : score(agent.outlook)));
-  // Only the agents actually in the running compete. Without this the share cap
-  // would push capital into whatever came last, however far behind it is.
-  const best = Math.max(...scores);
-  const behind = scores.map((value) => value > 0 && value < best * MIN_EDGE);
+  const rated = scores.reduce((sum, value) => sum + value, 0);
+  const behind = scores.map((value) => value > 0 && value / rated < MIN_SHARE);
   const weights = scores.map((value, index) => (behind[index] ? 0 : value));
   let shares = capped(weights);
 
@@ -171,11 +170,14 @@ export function allocate(agents: DeskAgent[], total: number): Allocation[] {
             ? "held back as cover, trimmed to keep the desk working"
             : "held back as cover"
           : agent.outlook.reason
-        : behind[index]
-          ? "sitting out — too far behind the rest to be worth the gas"
-          : score(agent.outlook) > 0
-            ? "its share would not cover the gas to place it"
-            : "nothing worth funding here today",
+        : agent.outlook.kind === "reserve"
+          ? // Cover nobody needs is the agent doing its job, not sitting out.
+            agent.outlook.reason
+          : behind[index]
+            ? "sitting out — its slice would be too small to be a position"
+            : score(agent.outlook) > 0
+              ? "its share would not cover the gas to place it"
+              : "nothing worth funding here today",
     };
   });
 }

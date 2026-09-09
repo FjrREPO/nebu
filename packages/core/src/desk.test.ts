@@ -63,7 +63,7 @@ const sum = (values: number[]) => values.reduce((total, value) => total + value,
 {
   const split = allocate([earner("big", 1, 0.02), earner("dust", 0.0005, 0.4)], 0.05);
   assert.equal(split[1].amount, 0, "the outclassed agent gets nothing");
-  assert.ok(split[1].note.includes("behind"), "and says why");
+  assert.ok(split[1].note.includes("too small"), "and says why");
   assert.equal(split[0].amount, 0.05, "the capital it freed is used");
 }
 
@@ -83,6 +83,22 @@ const sum = (values: number[]) => values.reduce((total, value) => total + value,
   const split = allocate([earner("a", 0.5, 0.04)], 0);
   assert.equal(split[0].amount, 0);
   assert.ok(split[0].note.length > 0);
+}
+
+// A leader worth ten of the others still leaves them a real position: the cap
+// spreads what it cannot take, and it spreads it by how well they scored.
+{
+  const split = allocate(
+    [earner("pool", 0.26, 0.005), earner("lender", 0.085, 0.03), earner("grid", 0.014, 0.005)],
+    1,
+  );
+  assert.ok(Math.abs(split[0].share - 0.6) < 1e-6, "the leader is held at the cap");
+  assert.ok(split[1].amount > 0 && split[2].amount > 0, "and the rest are still funded");
+  assert.ok(split[1].amount > split[2].amount, "in the order they scored");
+  assert.ok(
+    Math.abs(split.reduce((sum, entry) => sum + entry.share, 0) - 1) < 1e-6,
+    "with nothing left idle",
+  );
 }
 
 // The headline number is the split, not the best agent on it.
