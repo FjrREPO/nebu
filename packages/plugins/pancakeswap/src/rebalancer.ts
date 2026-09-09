@@ -348,9 +348,18 @@ export const pancakeRebalancer: AgentPlugin = {
         {
           label: "Best fee APR",
           value: best ? `${(best.feeApr * 100).toFixed(1)}%` : "—",
-          hint: best ? `${best.pair} ${best.feePercent}%` : undefined,
+          // A number this size needs the caveat attached to it, not two
+          // sections down the page where it can be read without.
+          hint: best
+            ? `${best.pair} ${best.feePercent}% · fees only, before price drift`
+            : undefined,
         },
-        { label: "Pools in scope", value: String(shortlisted.length), hint: "of 60 scanned" },
+        {
+          label: "Pools in scope",
+          value: String(shortlisted.length),
+          // Was "of 60 scanned", a constant sitting where a count belongs.
+          hint: `of ${pools.length} scanned`,
+        },
         {
           label: "Your position",
           value: position.liquidity === 0n ? "Closed" : live ? "In range" : "Out of range",
