@@ -47,6 +47,10 @@ function NavItem({
   );
 }
 
+/** Every chip in the bar is the same box, so the row reads as one row. */
+const chipBox =
+  "flex h-[30px] items-center gap-[7px] border border-white/15 px-[10px] hover:border-white/40 transition-colors";
+
 const menuItem =
   "flex w-full items-center gap-[10px] px-[14px] py-[11px] font-manrope text-white/80 text-[13px] leading-[15.6px] hover:bg-white/[0.06] hover:text-white transition-colors";
 
@@ -57,11 +61,7 @@ function WalletMenu({ address, balance }: { address: `0x${string}`; balance: big
 
   return (
     <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-[8px] border border-white/20 px-[10px] py-[5px] hover:border-white/50 transition-colors"
-      >
+      <button type="button" onClick={() => setOpen(!open)} className={chipBox}>
         <WalletMark address={address} />
         <span className="font-manrope text-white text-[13px] leading-[15.6px]">
           {short(address)}
@@ -182,11 +182,7 @@ export function Nav() {
             style={{ animationDelay: "600ms" }}
           >
             {/* The agents' own wallet, one for all of them, always findable. */}
-            <Link
-              href="/wallet"
-              title="The wallet your agents work from"
-              className="flex items-center gap-[7px] border border-white/15 px-[9px] py-[4px] hover:border-white/40 transition-colors"
-            >
+            <Link href="/wallet" title="The wallet your agents work from" className={chipBox}>
               {agentWallet.known ? (
                 <WalletMark address={agentWallet.known} size={15} />
               ) : (
@@ -217,12 +213,15 @@ export function Nav() {
                 type="button"
                 onClick={switchToChain}
                 title={`Wrong network — switch to ${CHAIN.name}`}
-                className="grid size-[26px] place-items-center rounded-full ring-1 ring-[#ff8a8a] hover:ring-white transition-colors"
+                className="flex size-[30px] items-center justify-center border border-[#ff8a8a]/60 hover:border-[#ff8a8a] transition-colors"
               >
                 <ChainMark className="size-[18px] opacity-60" />
               </button>
             ) : (
-              <span title={CHAIN.name} className="grid size-[26px] place-items-center">
+              <span
+                title={CHAIN.name}
+                className="flex size-[30px] items-center justify-center border border-white/15"
+              >
                 <ChainMark className="size-[18px]" />
               </span>
             )}
