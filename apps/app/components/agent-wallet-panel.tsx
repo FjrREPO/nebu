@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatEther, parseEther } from "viem";
 import {
   EXPLORER,
   formatBnb,
@@ -12,15 +13,23 @@ import {
   useAgentWallet,
 } from "@/lib/agent-wallet";
 import { connectWallet, short, useWallet } from "@/lib/use-wallet";
-import { WalletMark } from "./ui";
+import { ChainMark, WalletMark } from "./ui";
 
-const field =
-  "w-full bg-transparent border border-white/15 px-[12px] py-[9px] font-manrope text-white text-[13px] leading-[15.6px] outline-none focus:border-[#AFDDFF]/60 transition-colors";
 const legend = "font-manrope text-white/50 text-[11px] leading-[14px] uppercase tracking-wide";
 const primary =
   "bg-[#AFDDFF] px-[16px] py-[11px] font-manrope text-black text-[13px] uppercase tracking-wide hover:bg-[#c8e8ff] disabled:opacity-40 transition-colors";
 const ghost =
   "border border-white/30 px-[16px] py-[10px] font-manrope text-white text-[13px] uppercase tracking-wide hover:border-white disabled:opacity-40 transition-colors";
+
+/** Sending every last wei would leave nothing to pay for sending it. */
+const GAS_RESERVE = parseEther("0.002");
+
+const ChainMarkRow = () => (
+  <span className="flex items-center gap-[7px]">
+    <ChainMark className="size-[16px]" />
+    BNB Smart Chain
+  </span>
+);
 
 export function AgentWalletPanel() {
   const agent = useAgentWallet();
@@ -30,6 +39,14 @@ export function AgentWalletPanel() {
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const busy = phase !== "idle";
+
+  let amountWei = 0n;
+  try {
+    amountWei = deposit ? parseEther(deposit) : 0n;
+  } catch {
+    // Half-typed numbers are not an error, they are just not a deposit yet.
+  }
+  const valid = amountWei > 0n && amountWei <= (yours.balance ?? 0n);
 
   const run = async (next: typeof phase, work: () => Promise<unknown>) => {
     setPhase(next);
@@ -102,35 +119,72 @@ export function AgentWalletPanel() {
       </div>
 
       {agent.address && (
-        <div
-          className="border border-white/15 p-[20px] space-y-[12px] anim-fade-up"
-          style={{ animationDelay: "520ms" }}
-        >
-          <span className={legend}>
-            {yours.address ? `Deposit BNB from ${short(yours.address)}` : "Deposit BNB"}
-          </span>
-          {yours.address ? (
-            <div className="flex gap-[10px]">
-              <input
-                className={field}
-                value={deposit}
-                inputMode="decimal"
-                onChange={(event) => setDeposit(event.target.value)}
-              />
+        <div className="space-y-[16px] anim-fade-up" style={{ animationDelay: "520ms" }}>
+          {/* The amount is the point, so it gets the size. */}
+          <div className="border border-white/15 p-[20px]">
+            <div className="flex items-start justify-between gap-3">
+              <span className={legend}>Deposit BNB</span>
+              <ChainMark className="size-[20px]" />
+            </div>
+
+            <input
+              className="mt-[10px] w-full bg-transparent font-graphik text-white text-[42px] leading-[1.05] outline-none placeholder:text-white/25"
+              value={deposit}
+              inputMode="decimal"
+              placeholder="0.00"
+              aria-label="Amount of BNB to deposit"
+              onChange={(event) => setDeposit(event.target.value.replace(/[^0-9.]/g, ""))}
+            />
+
+            <div className="mt-[14px] flex items-center justify-between gap-3">
+              <span className="font-manrope text-white/40 text-[12px]">
+                {yours.address ? `You hold ${formatBnb(yours.balance)}` : "Wallet not connected"}
+              </span>
               <button
                 type="button"
-                disabled={busy}
+                disabled={!yours.balance || yours.balance <= GAS_RESERVE}
                 onClick={() =>
-                  run("funding", async () => {
-                    const hash = await fundAgentWallet(deposit);
-                    setNote(`Sent · ${hash}`);
-                  })
+                  setDeposit(formatEther((yours.balance ?? 0n) - GAS_RESERVE).slice(0, 12))
                 }
-                className={primary}
+                className="border border-white/20 px-[12px] py-[5px] font-manrope text-white/70 text-[11px] uppercase tracking-wide hover:border-white/50 hover:text-white disabled:opacity-30 transition-colors"
               >
-                {phase === "funding" ? "Sending…" : "Send"}
+                Max
               </button>
             </div>
+          </div>
+
+          {/* What the deposit actually changes, before it is made. */}
+          <div className="border border-white/15 divide-y divide-white/5">
+            {[
+              ["Network", <ChainMarkRow key="n" />],
+              ["The agent holds now", formatBnb(agent.balance)],
+              ["After this deposit", formatBnb((agent.balance ?? 0n) + amountWei)],
+            ].map(([label, value]) => (
+              <div
+                key={String(label)}
+                className="flex items-center justify-between gap-3 px-[16px] py-[12px]"
+              >
+                <span className="font-manrope text-white/50 text-[12px]">{label}</span>
+                <span className="font-manrope text-white text-[13px]">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          {yours.address ? (
+            <button
+              type="button"
+              disabled={busy || !valid}
+              onClick={() =>
+                run("funding", async () => {
+                  const hash = await fundAgentWallet(deposit);
+                  setNote(`Sent · ${hash}`);
+                  setDeposit("");
+                })
+              }
+              className={`${primary} w-full`}
+            >
+              {phase === "funding" ? "Sending…" : valid ? `Send ${deposit} BNB` : "Enter an amount"}
+            </button>
           ) : (
             <button
               type="button"
@@ -141,6 +195,7 @@ export function AgentWalletPanel() {
               Connect your wallet to fund it
             </button>
           )}
+
           <p className="font-manrope text-white/40 text-[11px] leading-[15px]">
             An agent can only be hired once this has a balance — its spending limits are worked out
             from what it holds.
