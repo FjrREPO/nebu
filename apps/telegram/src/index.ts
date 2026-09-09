@@ -144,7 +144,7 @@ async function deskMessage(wallet: `0x${string}`) {
     .sort((a, b) => b.amount - a.amount)
     .map(
       (entry) =>
-        `${entry.amount > 0 ? `<b>${pct(entry.share)}</b> · ${entry.amount} BNB` : "<b>—</b>"} · ${esc(
+        `${entry.amount > 0 ? `<b>${pct(entry.share)}</b> · ${entry.amount.toFixed(4)} BNB` : "<b>—</b>"} · ${esc(
           named.get(entry.id) ?? entry.id,
         )}\n<i>${esc(entry.note)}</i>`,
     );
@@ -255,6 +255,9 @@ async function sweep() {
           delete entry.said[row.plugin.id];
           continue;
         }
+        // Somebody who said /unwatch while this was reading should not get one
+        // last message about it.
+        if (!watches.includes(entry)) break;
         const said = line(row.status);
         if (entry.said[row.plugin.id] === said) continue;
         entry.said[row.plugin.id] = said;
@@ -270,6 +273,9 @@ async function sweep() {
   remember();
 }
 
+/** Chats with a command still running, so one person cannot queue a hundred. */
+const busy = new Set<number>();
+
 async function poll() {
   let offset = 0;
   for (;;) {
@@ -277,8 +283,18 @@ async function poll() {
       const body = (await (
         await fetch(`${api}/getUpdates?timeout=50&offset=${offset}`)
       ).json()) as {
+        ok?: boolean;
+        description?: string;
         result?: { update_id: number; message?: { chat: { id: number }; text?: string } }[];
       };
+      // A refusal — most often a second copy of the bot polling the same token
+      // — answers instantly, and looping straight back into it is a busy wait
+      // against Telegram rather than a bot.
+      if (body.ok === false) {
+        console.error(`getUpdates: ${body.description ?? "refused"}`);
+        await new Promise((resolve) => setTimeout(resolve, 5_000));
+        continue;
+      }
       for (const update of body.result ?? []) {
         offset = update.update_id + 1;
         const message = update.message;
@@ -286,10 +302,17 @@ async function poll() {
         // The command and who asked, so the log says whether a quiet bot is
         // failing or simply not being talked to. Never the rest of the text.
         console.log(`${message.chat.id} ${message.text.trim().split(/\s+/)[0]}`);
+        // Every command is a dozen chain reads, so one person holding the
+        // button down would otherwise queue them all against everyone else.
+        if (busy.has(message.chat.id)) {
+          void send(message.chat.id, "Still working on the last one.");
+          continue;
+        }
+        busy.add(message.chat.id);
         // One slow chain read must not hold up everyone else's messages.
-        void handle(message.chat.id, message.text).catch((err) =>
-          console.error(`handle: ${(err as Error).message.split("\n")[0]}`),
-        );
+        void handle(message.chat.id, message.text)
+          .catch((err) => console.error(`handle: ${(err as Error).message.split("\n")[0]}`))
+          .finally(() => busy.delete(message.chat.id));
       }
     } catch (err) {
       // Telegram drops long polls, networks blink. Neither ends the bot.

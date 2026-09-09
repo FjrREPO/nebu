@@ -75,8 +75,19 @@ const round = (bnb: number) => Math.round(bnb * 1e6) / 1e6;
  */
 function score(outlook: AgentOutlook) {
   if (outlook.kind === "reserve") return 0;
-  const apr = Math.max(0, outlook.apr);
-  return apr / Math.max(outlook.risk ?? UNKNOWN_RISK, FLOOR_RISK);
+  // A number that is not a number is one agent's problem. Left alone it
+  // becomes everyone's: the weights sum to NaN, the sum is not greater than
+  // zero, and a desk of four working agents allocates nothing.
+  if (!Number.isFinite(outlook.apr)) return 0;
+  const risk = Number.isFinite(outlook.risk) ? (outlook.risk as number) : UNKNOWN_RISK;
+  return Math.max(0, outlook.apr) / Math.max(risk, FLOOR_RISK);
+}
+
+/** What a reserve may hold back: a real, positive number of BNB or nothing. */
+function cover(outlook: AgentOutlook) {
+  if (outlook.kind !== "reserve") return 0;
+  const needs = outlook.needs ?? 0;
+  return Number.isFinite(needs) ? Math.max(0, needs) : 0;
 }
 
 /**
@@ -130,15 +141,9 @@ export function allocate(agents: DeskAgent[], total: number): Allocation[] {
 
   // Reserves come off the top, cut back pro-rata if together they ask for more
   // than the desk is willing to leave idle.
-  const asked = agents.reduce(
-    (sum, agent) =>
-      agent.outlook.kind === "reserve" ? sum + Math.max(0, agent.outlook.needs ?? 0) : sum,
-    0,
-  );
+  const asked = agents.reduce((sum, agent) => sum + cover(agent.outlook), 0);
   const trim = asked > total * RESERVE_CAP ? (total * RESERVE_CAP) / asked : 1;
-  const held = agents.map((agent) =>
-    agent.outlook.kind === "reserve" ? Math.max(0, agent.outlook.needs ?? 0) * trim : 0,
-  );
+  const held = agents.map((agent) => cover(agent.outlook) * trim);
   const investable = total - held.reduce((sum, amount) => sum + amount, 0);
 
   const scores = agents.map((agent, index) => (held[index] > 0 ? 0 : score(agent.outlook)));

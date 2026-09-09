@@ -34,27 +34,38 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
 
   useEffect(() => setHired(hiredAgents(wallet.address)), [wallet.address]);
 
-  const load = useCallback(async () => {
-    const owner = wallet.address;
-    const loaded = await Promise.all(
-      agents.map(async (meta): Promise<Row> => {
-        // With a funded wallet an agent picks its own venue; without one, the
-        // marketplace's example is still a live position worth pricing.
-        const chosen = owner ? await agentAuto(meta.id, owner) : null;
-        const params = chosen?.ok && chosen.data ? chosen.data.params : meta.example;
-        const outlook = await agentOutlook(meta.id, params as Record<string, string>);
-        return {
-          meta,
-          outlook: outlook.ok ? outlook.data : null,
-          hired: hiredAgents(owner).includes(meta.id),
-        };
-      }),
-    );
-    setRows(loaded);
-  }, [agents, wallet.address]);
+  const load = useCallback(
+    async (alive: () => boolean) => {
+      const owner = wallet.address;
+      const loaded = await Promise.all(
+        agents.map(async (meta): Promise<Row> => {
+          // With a funded wallet an agent picks its own venue; without one, the
+          // marketplace's example is still a live position worth pricing.
+          const chosen = owner ? await agentAuto(meta.id, owner) : null;
+          const params = chosen?.ok && chosen.data ? chosen.data.params : meta.example;
+          const outlook = await agentOutlook(meta.id, params as Record<string, string>);
+          return {
+            meta,
+            outlook: outlook.ok ? outlook.data : null,
+            hired: hiredAgents(owner).includes(meta.id),
+          };
+        }),
+      );
+      // Reading four agents takes long enough for someone to switch wallets in
+      // the middle of it. The answer that comes back is then about a wallet
+      // nobody is looking at any more.
+      if (alive()) setRows(loaded);
+    },
+    [agents, wallet.address],
+  );
 
   useEffect(() => {
-    void load();
+    let current = true;
+    setRows(null);
+    void load(() => current);
+    return () => {
+      current = false;
+    };
   }, [load]);
 
   const total = wallet.balance ? Number(formatEther(wallet.balance)) : 0;
@@ -81,7 +92,9 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
             total > 0 ? `${total.toFixed(4)} BNB` : `${PREVIEW_BNB} BNB`,
           ],
           ["Agents in the split", String(funded.length)],
-          ["Blended return", rows ? apr(blended) : "—"],
+          // Annualising today's fees is how every rate on this site is quoted,
+          // and a pool paying 400% today is a young pool, not a promise.
+          ["Blended return · today's rates", rows ? apr(blended) : "—"],
           ["Working", rows ? pct(funded.reduce((sum, entry) => sum + entry.share, 0)) : "—"],
         ].map(([label, value]) => (
           <div key={label} className="px-[16px] py-[14px]">

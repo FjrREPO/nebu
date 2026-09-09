@@ -101,6 +101,31 @@ const sum = (values: number[]) => values.reduce((total, value) => total + value,
   );
 }
 
+// One agent reporting a number that is not a number must cost that agent its
+// share and nobody else theirs. Unguarded, the weights sum to NaN and a desk of
+// working agents allocates nothing at all.
+for (const broken of [Number.NaN, Number.POSITIVE_INFINITY]) {
+  const split = allocate([earner("bad", broken, 0.02), earner("good", 0.3, 0.02)], 1);
+  assert.equal(split[0].amount, 0, `apr ${broken} is not a bid`);
+  assert.equal(split[1].amount, 1, "and the rest of the desk carries on");
+
+  const risky = allocate([earner("bad", 0.3, broken), earner("good", 0.3, 0.02)], 1);
+  assert.ok(risky[0].amount > 0 && risky[1].amount > 0, `risk ${broken} falls back to a default`);
+
+  const cover = allocate(
+    [
+      {
+        id: "guard",
+        outlook: { apr: 0.05, risk: 0.02, kind: "reserve", needs: broken, reason: "" },
+      },
+      earner("good", 0.3, 0.02),
+    ],
+    1,
+  );
+  assert.equal(cover[0].amount, 0, `cover of ${broken} is held at nothing`);
+  assert.equal(cover[1].amount, 1, "rather than swallowing the desk");
+}
+
 // The headline number is the split, not the best agent on it.
 {
   const agents = [earner("a", 0.6, 0.04), earner("b", 0.2, 0.04)];

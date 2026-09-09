@@ -130,6 +130,10 @@ function remember(owner: `0x${string}`, address: `0x${string}`, signer: PasskeyS
 export async function refreshAgentBalance(address = state.address) {
   if (!address) return;
   const balance = await reader.getBalance({ address }).catch(() => null);
+  // Connecting a different wallet while this was in flight would otherwise
+  // stamp one agent wallet's balance onto another one's screen — which is the
+  // exact confusion scoping these wallets was meant to end.
+  if (state.address !== address) return;
   emit({ ...state, balance });
 }
 
