@@ -374,9 +374,11 @@ export const healthMonitor: AgentPlugin = {
     // happens to sit — deriving it from the current health factor would make a
     // comfortable loan permanently "at risk". It does depend on what is posted:
     // the same 1.5 is slack on BTCB and thin on something that moves 15% a day.
-    const collateral = await largestCollateral(wallet).catch(() => null);
+    // The same resolver loadAccount uses, so the agent's stated floor and the
+    // one it enforces cannot come out different.
+    const { floor, measured } = await defaultFloor(wallet);
+    const collateral = measured ? await largestCollateral(wallet).catch(() => null) : null;
     const daily = collateral ? dailyVolatility(await tokenSeries(collateral.asset, 48)) : null;
-    const floor = floorFor(daily);
 
     const room = dropToLiquidation(current);
     const days = daily ? daysToMove(room, daily) : null;
@@ -387,10 +389,9 @@ export const healthMonitor: AgentPlugin = {
 
     return {
       params: { wallet, minHealthFactor: String(floor) },
-      reason:
-        current >= floor
-          ? `Loan is at ${current.toFixed(2)}, above the ${floor} floor.${runway}`
-          : `Loan is at ${current.toFixed(2)}, under the ${floor} floor.${runway}`,
+      reason: `Loan is at ${current.toFixed(2)}, ${current >= floor ? "above" : "under"} the ${floor} floor${
+        measured ? "" : " (default — this collateral's movement could not be measured)"
+      }.${runway}`,
     };
   },
 
