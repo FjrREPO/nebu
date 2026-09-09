@@ -110,12 +110,23 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
   const histories = held.map((position) => position.history).filter((points) => points.length > 1);
   const combined =
     histories.length === held.length && histories.length > 0 ? combine(histories) : [];
+  // With something to measure against, the interesting line is the difference,
+  // not the total: what the market has done to you since you funded this.
+  // Without one it is just what the wallet is worth.
   const series: AgentSeries | null =
     combined.length > 1
       ? {
-          label: "What the wallet holds, priced back over two days",
+          label:
+            deposited > 0
+              ? `Profit and loss · against the ${bnb(deposited)} you sent`
+              : "What the wallet holds, priced back over two days",
           unit: " BNB",
-          points: combined.map((point) => ({ t: point.t, v: point.v + free })),
+          points: combined.map((point) => ({
+            t: point.t,
+            v: point.v + free - (deposited > 0 ? deposited : 0),
+          })),
+          // Break-even, so the line has something to be above or below.
+          ...(deposited > 0 ? { band: { from: 0, to: 0 } } : {}),
         }
       : null;
 

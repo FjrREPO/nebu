@@ -183,16 +183,28 @@ export function DetailChart({ series, height = 260 }: { series: AgentSeries; hei
               </linearGradient>
             </defs>
 
-            {series.band && (
-              <rect
-                x={MARGIN.left}
-                width={plotW}
-                y={Math.min(yFor(series.band.to), yFor(series.band.from))}
-                height={Math.abs(yFor(series.band.from) - yFor(series.band.to))}
-                fill={ACCENT}
-                opacity="0.06"
-              />
-            )}
+            {/* A band with no height is a level, not a range: break-even on a
+                profit chart, drawn as the line it is. */}
+            {series.band &&
+              (series.band.from === series.band.to ? (
+                <line
+                  x1={MARGIN.left}
+                  x2={MARGIN.left + plotW}
+                  y1={yFor(series.band.from)}
+                  y2={yFor(series.band.from)}
+                  stroke="rgba(255,255,255,0.28)"
+                  strokeDasharray="3 3"
+                />
+              ) : (
+                <rect
+                  x={MARGIN.left}
+                  width={plotW}
+                  y={Math.min(yFor(series.band.to), yFor(series.band.from))}
+                  height={Math.abs(yFor(series.band.from) - yFor(series.band.to))}
+                  fill={ACCENT}
+                  opacity="0.06"
+                />
+              ))}
 
             {niceTicks(min, Math.max(...values)).map((tick) => (
               <g key={tick}>

@@ -7,23 +7,37 @@
  * up or down since you funded it, and the page says where the number comes
  * from rather than calling it a cost basis.
  */
+export type Deposit = { at: number; bnb: number };
+
 const key = (agentWallet: string) => `nebu2.deposits.${agentWallet.toLowerCase()}`;
 
 export function recordDeposit(agentWallet: string, bnb: number) {
   if (!(bnb > 0)) return;
   try {
-    localStorage.setItem(key(agentWallet), String(depositedInto(agentWallet) + bnb));
+    const kept = [...depositsInto(agentWallet), { at: Date.now(), bnb }];
+    localStorage.setItem(key(agentWallet), JSON.stringify(kept));
   } catch {
     // Blocked storage costs the record, not the deposit.
   }
 }
 
-export function depositedInto(agentWallet: string | null): number {
-  if (!agentWallet) return 0;
+export function depositsInto(agentWallet: string | null): Deposit[] {
+  if (!agentWallet) return [];
   try {
-    const raw = Number(localStorage.getItem(key(agentWallet)));
-    return Number.isFinite(raw) && raw > 0 ? raw : 0;
+    const raw = localStorage.getItem(key(agentWallet));
+    if (!raw) return [];
+    // The first version of this kept one running total and no dates. It is
+    // still a deposit; it just does not know when it happened.
+    if (!raw.startsWith("[")) {
+      const total = Number(raw);
+      return Number.isFinite(total) && total > 0 ? [{ at: 0, bnb: total }] : [];
+    }
+    const kept = JSON.parse(raw) as Deposit[];
+    return Array.isArray(kept) ? kept.filter((entry) => entry.bnb > 0) : [];
   } catch {
-    return 0;
+    return [];
   }
 }
+
+export const depositedInto = (agentWallet: string | null) =>
+  depositsInto(agentWallet).reduce((sum, entry) => sum + entry.bnb, 0);
