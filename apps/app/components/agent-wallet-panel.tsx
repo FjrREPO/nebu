@@ -13,6 +13,7 @@ import {
   startFreshAgentWallet,
   useAgentWallet,
 } from "@/lib/agent-wallet";
+import { TESTNET, TWIN } from "@/lib/site";
 import { connectWallet, short, useWallet } from "@/lib/use-wallet";
 import { ChainMark, WalletMark } from "./ui";
 
@@ -271,8 +272,12 @@ export function AgentWalletPanel() {
       )}
       {error && <p className="font-manrope text-[#ff9d9d] text-[12px] leading-[17px]">{error}</p>}
 
+      {/* The one line that already said which chain, now says where the other one is. */}
       <p className="font-manrope text-white/40 text-[11px] leading-[15px]">
-        Running against BNB {NETWORK === "mainnet" ? "mainnet" : "testnet"}.
+        Running against BNB {NETWORK === "mainnet" ? "mainnet" : "testnet"} ·{" "}
+        <a href={TWIN} className="text-[#AFDDFF]/70 hover:text-[#AFDDFF] transition-colors">
+          {TESTNET ? "the real one is here" : "try it free on testnet"}
+        </a>
       </p>
     </div>
   );

@@ -13,6 +13,10 @@ RUN pnpm install --frozen-lockfile
 # plugins that name testnet addresses, or the calldata lands nowhere.
 ARG NEXT_PUBLIC_SESSION_NETWORK=mainnet
 ENV NEXT_PUBLIC_SESSION_NETWORK=$NEXT_PUBLIC_SESSION_NETWORK
+# Canonical URLs, the sitemap and the link across to the other deployment all
+# read this, so the testnet twin has to be told which one it is.
+ARG NEXT_PUBLIC_SITE_URL=https://nebu.ifajar.dev
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN pnpm --filter @nebu/app build
 
 # Standalone ships its own minimal node_modules, so the runner stays small.

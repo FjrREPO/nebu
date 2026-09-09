@@ -23,6 +23,7 @@ import {
   useAgentWallet,
 } from "@/lib/agent-wallet";
 import type { AgentMeta } from "@/lib/agents";
+import { TESTNET } from "@/lib/site";
 import { short } from "@/lib/use-wallet";
 import { WalletMark } from "./ui";
 
@@ -107,6 +108,17 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
    */
   const sessionChain = CHAIN_OF[grant?.network ?? NETWORK];
   const wrongChain = agent.chainId !== sessionChain;
+  /**
+   * The sandbox cuts one thing out, and says which.
+   *
+   * On testnet a hire is real — the key is registered on chain, the caps are
+   * enforced by the account contract, revoking is a transaction — while a run
+   * is not, because the pools and lending markets the plans name only exist on
+   * mainnet. So hiring stays on and Run stays off, rather than the whole panel
+   * refusing on a chain mismatch that is the point of the build.
+   */
+  const sandbox = TESTNET && wrongChain;
+  const canHire = !wrongChain || sandbox;
   /**
    * Not "has no BNB" but "has nothing it can act with". Below the gas reserve
    * there is nothing to deploy and nothing to pay for deploying it.
@@ -270,11 +282,13 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
       {grant && session ? (
         <div className="mt-[16px] space-y-[14px]">
           <p className="font-manrope text-white text-[13px] leading-[18px]">
-            {wrongChain
-              ? `This session is on BNB ${grant.network}, but the agent works on chain ${agent.chainId}. Revoke it and hire again.`
-              : expired
-                ? "Its time is up. Hire it again to keep it working."
-                : `Working until ${expiresAt(session).toISOString().slice(0, 10)}, within the limits you set.`}
+            {sandbox
+              ? "Hired, on testnet. The key, the caps and the expiry are real; running is off, since the contracts it would call are on mainnet."
+              : wrongChain
+                ? `This session is on BNB ${grant.network}, but the agent works on chain ${agent.chainId}. Revoke it and hire again.`
+                : expired
+                  ? "Its time is up. Hire it again to keep it working."
+                  : `Working until ${expiresAt(session).toISOString().slice(0, 10)}, within the limits you set.`}
           </p>
           {auto && (
             <p className="font-manrope text-white/50 text-[11px] leading-[15px]">{auto.reason}</p>
@@ -376,14 +390,20 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                 {!unfunded && (
                   <button
                     type="button"
-                    disabled={busy || !scope || wrongChain}
+                    disabled={busy || !scope || !canHire}
                     onClick={hire}
                     className={primary}
                   >
                     {phase === "granting" ? "Hiring…" : "Hire agent"}
                   </button>
                 )}
-                {wrongChain && (
+                {sandbox && (
+                  <p className="font-manrope text-white/50 text-[11px] leading-[15px]">
+                    Testnet: the hire is real, the work is not. It cannot run until it is hired on
+                    mainnet, where the pools are.
+                  </p>
+                )}
+                {wrongChain && !sandbox && (
                   <p className="font-manrope text-[#ff8a8a] text-[11px] leading-[15px]">
                     This agent works on chain {agent.chainId}, and hiring is set to BNB {NETWORK}.
                     Its transactions name contracts that are not there.

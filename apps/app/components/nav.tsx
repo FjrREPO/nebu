@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { formatBnb as formatAgentBnb, signOut, useAgentWallet } from "@/lib/agent-wallet";
+import { TESTNET } from "@/lib/site";
 import { CHAIN, connectWallet, formatBnb, short, switchToChain, useWallet } from "@/lib/use-wallet";
 import { ChainMark, WalletMark } from "./ui";
 
@@ -12,7 +13,9 @@ const PAGES = [
   { number: "01", label: "AGENTS", href: "/agents" },
   { number: "02", label: "LEADERBOARD", href: "/leaderboard" },
   { number: "03", label: "STATUS", href: "/status" },
-] as const;
+  // Only the sandbox has coins to give away.
+  ...(TESTNET ? [{ number: "04", label: "FAUCET", href: "/faucet" }] : []),
+];
 
 function NavItem({
   number,
@@ -212,9 +215,15 @@ export function Nav() {
             ) : (
               <span
                 title={CHAIN.name}
-                className="flex size-[30px] items-center justify-center border border-white/15"
+                className={`flex h-[30px] items-center justify-center gap-[7px] border border-white/15 ${TESTNET ? "px-[10px]" : "w-[30px]"}`}
               >
                 <ChainMark className="size-[18px]" />
+                {/* Two deployments, one design: the word is how you tell them apart. */}
+                {TESTNET && (
+                  <span className="font-manrope text-[#AFDDFF] text-[11px] uppercase tracking-wide">
+                    Testnet
+                  </span>
+                )}
               </span>
             )}
           </div>
