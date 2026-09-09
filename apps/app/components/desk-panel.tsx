@@ -148,7 +148,8 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
                   </span>
                 )}
                 <span className="ml-auto font-graphik text-white text-[18px] leading-[22px]">
-                  {rows === null || !entry?.amount ? "—" : `${entry.amount} BNB`}
+                  {/* Four places is what a wallet shows; six is what the maths kept. */}
+                  {rows === null || !entry?.amount ? "—" : `${entry.amount.toFixed(4)} BNB`}
                 </span>
                 <span className="w-[52px] text-right font-manrope text-white/50 text-[12px]">
                   {rows === null || !entry?.amount ? "" : pct(entry.share)}
