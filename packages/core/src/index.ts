@@ -3,6 +3,7 @@ export * from "./chain.ts";
 export * from "./desk.ts";
 export * from "./market.ts";
 export * from "./params.ts";
+export * from "./portfolio.ts";
 export * from "./risk.ts";
 export * from "./router.ts";
 export * from "./types.ts";

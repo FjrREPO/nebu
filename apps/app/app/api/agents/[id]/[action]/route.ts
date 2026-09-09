@@ -17,7 +17,16 @@ const FRESH_FOR = "public, s-maxage=60, stale-while-revalidate=300";
 const json = (body: unknown, status = 200, cache = FRESH_FOR) =>
   NextResponse.json(body, { status, headers: { ...CORS, "cache-control": cache } });
 
-const ACTIONS = ["status", "auto", "insights", "scope", "plan", "outlook", "deployed"] as const;
+const ACTIONS = [
+  "status",
+  "auto",
+  "insights",
+  "scope",
+  "plan",
+  "outlook",
+  "deployed",
+  "holdings",
+] as const;
 type Action = (typeof ACTIONS)[number];
 
 const isAddress = (value: string | null): value is `0x${string}` =>
@@ -61,6 +70,9 @@ export async function GET(
     // A number in BNB, 0 for an agent holding nothing, null when it cannot
     // price what it holds.
     if (action === "deployed") return json(plugin.deployed ? await plugin.deployed(query) : null);
+    if (action === "holdings") {
+      return json(plugin.holdings ? await plugin.holdings(query) : { items: [], history: [] });
+    }
     if (action === "status") return json(await plugin.status(query));
     if (action === "insights") return json(await plugin.insights(query));
     if (action === "scope") return json(await plugin.scope(query));

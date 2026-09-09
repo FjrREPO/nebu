@@ -1,5 +1,6 @@
 import {
   type AgentAction,
+  type AgentHoldings,
   type AgentInsights,
   type AgentOutlook,
   type AgentPlugin,
@@ -9,9 +10,9 @@ import {
   type AutoParams,
   approveIfShort,
   bnbInto,
-  bnbValue,
   bscClient,
   dailyVolatility,
+  holdingsOf,
   InvalidParams,
   plainAmount,
   plainNumber,
@@ -24,6 +25,7 @@ import {
   SMART_ROUTER,
   spendableBnb,
   tokenLogos,
+  totalBnb,
   volatilityFromDailyMove,
   WBNB,
 } from "@nebu/core";
@@ -554,9 +556,9 @@ export const pancakeRebalancer: AgentPlugin = {
     };
   },
 
-  /** The position's two sides, priced in BNB. Nothing yet opened is nothing. */
-  async deployed(params): Promise<number | null> {
-    if (!params.tokenId) return 0;
+  /** The two sides of the position, in whole tokens. */
+  async holdings(params): Promise<AgentHoldings> {
+    if (!params.tokenId) return { items: [], history: [] };
     const position = await loadPosition(tokenId(params));
     const { amount0, amount1 } = positionAmounts({
       liquidity: position.liquidity,
@@ -566,11 +568,16 @@ export const pancakeRebalancer: AgentPlugin = {
       decimals0: position.meta0.decimals,
       decimals1: position.meta1.decimals,
     });
-    const [side0, side1] = await Promise.all([
-      bnbValue(position.token0, amount0),
-      bnbValue(position.token1, amount1),
+    return holdingsOf([
+      { token: position.token0, symbol: position.meta0.symbol, amount: amount0 },
+      { token: position.token1, symbol: position.meta1.symbol, amount: amount1 },
     ]);
-    return side0 === null || side1 === null ? null : side0 + side1;
+  },
+
+  /** The position's two sides, priced in BNB. Nothing yet opened is nothing. */
+  async deployed(params): Promise<number | null> {
+    if (!params.tokenId) return 0;
+    return totalBnb((await pancakeRebalancer.holdings?.(params))?.items ?? []);
   },
 
   async scope(params): Promise<SessionScope> {

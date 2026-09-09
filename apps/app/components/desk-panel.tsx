@@ -58,13 +58,14 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
           // With a funded wallet an agent picks its own venue; without one, the
           // marketplace's example is still a live position worth pricing.
           const chosen = owner ? await agentAuto(meta.id, owner) : null;
-          const params = (chosen?.ok && chosen.data ? chosen.data.params : meta.example) as Record<
-            string,
-            string
-          >;
+          const picked = chosen?.ok ? chosen.data : null;
+          const params = (picked ? picked.params : meta.example) as Record<string, string>;
           const [outlook, held] = await Promise.all([
             agentOutlook(meta.id, params),
-            agentDeployed(meta.id, params),
+            // "At work" is about your wallet. Asking it of the marketplace's
+            // example answers with a stranger's balance, and the example for a
+            // grid is whatever that wallet happens to hold of the pair.
+            picked ? agentDeployed(meta.id, params) : Promise.resolve(null),
           ]);
           // Reading four agents takes long enough for someone to switch wallets
           // in the middle of it. The answer is then about a wallet nobody is
@@ -77,7 +78,7 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
                   ? {
                       ...row,
                       outlook: outlook.ok ? outlook.data : null,
-                      held: held.ok ? held.data : null,
+                      held: held?.ok ? held.data : null,
                       hired: hiredAgents(owner).includes(meta.id),
                       pending: false,
                     }

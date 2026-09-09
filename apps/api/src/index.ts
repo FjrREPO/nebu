@@ -86,6 +86,19 @@ app.get("/agents/:id/deployed", async (c) => {
   }
 });
 
+app.get("/agents/:id/holdings", async (c) => {
+  const plugin = findPlugin(c.req.param("id"));
+  if (!plugin) return c.json({ error: "unknown agent" }, 404);
+
+  try {
+    return c.json(
+      plugin.holdings ? await plugin.holdings(c.req.query()) : { items: [], history: [] },
+    );
+  } catch (err) {
+    return fail(c, err);
+  }
+});
+
 app.get("/agents/:id/insights", async (c) => {
   const plugin = findPlugin(c.req.param("id"));
   if (!plugin) return c.json({ error: "unknown agent" }, 404);

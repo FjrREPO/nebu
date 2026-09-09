@@ -20,6 +20,7 @@ import {
   parseEther,
 } from "viem";
 import { bsc, bscTestnet } from "viem/chains";
+import { recordDeposit } from "./deposits";
 import {
   connectWallet,
   disconnectWallet,
@@ -278,6 +279,9 @@ export async function fundAgentWallet(amountBnb: string) {
     value: parseEther(amountBnb || "0"),
   });
   await reader.waitForTransactionReceipt({ hash }).catch(() => null);
+  // Remembered here because it is the only place the app sees money going in,
+  // and without it the portfolio has value but no idea what it cost.
+  recordDeposit(target.address, Number(amountBnb));
   await refreshAgentBalance(target.address);
   return hash;
 }

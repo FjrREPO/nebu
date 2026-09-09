@@ -1,5 +1,6 @@
 import {
   type AgentAction,
+  type AgentHoldings,
   type AgentInsights,
   type AgentOutlook,
   type AgentPlugin,
@@ -489,6 +490,10 @@ export const healthMonitor: AgentPlugin = {
    */
   async deployed(): Promise<number> {
     return 0;
+  },
+
+  async holdings(): Promise<AgentHoldings> {
+    return { items: [], history: [] };
   },
 
   async scope(params): Promise<SessionScope> {

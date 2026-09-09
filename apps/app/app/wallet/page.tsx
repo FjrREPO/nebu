@@ -1,5 +1,7 @@
 import { AgentWalletPanel } from "@/components/agent-wallet-panel";
+import { PortfolioPanel } from "@/components/portfolio-panel";
 import { GridLines, Muted } from "@/components/ui";
+import { agentMeta } from "@/lib/agents";
 
 export const metadata = {
   title: "Agent wallet",
@@ -35,6 +37,7 @@ export default function WalletPage() {
           empty it or walk away at any time — nothing here can reach the wallet you funded it from.
         </Muted>
         <AgentWalletPanel />
+        <PortfolioPanel agents={agentMeta()} />
       </div>
     </div>
   );

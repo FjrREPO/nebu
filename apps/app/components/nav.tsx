@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { formatBnb as formatAgentBnb, signOut, useAgentWallet } from "@/lib/agent-wallet";
-import { TESTNET } from "@/lib/site";
+import { TESTNET, TWIN } from "@/lib/site";
 import { CHAIN, connectWallet, formatBnb, short, switchToChain, useWallet } from "@/lib/use-wallet";
 import { ChainMark, WalletMark } from "./ui";
 
@@ -203,6 +203,18 @@ export function Nav() {
               </button>
             )}
 
+            {/* The other build, one click away: the sandbox from the real site
+                and the real site from the sandbox. */}
+            <Link
+              href={TWIN}
+              title={
+                TESTNET ? "The live site, on BNB mainnet" : "The same app on BNB testnet, free"
+              }
+              className="flex h-[30px] items-center border border-white/15 px-[10px] font-manrope text-white/70 text-[11px] uppercase tracking-wide hover:border-white/40 hover:text-white transition-colors whitespace-nowrap"
+            >
+              {TESTNET ? "Mainnet" : "Try testnet"}
+            </Link>
+
             {/* The chain is a logo, not a word — and a wrong one is a button. */}
             {wrongChain ? (
               <button
@@ -303,6 +315,20 @@ export function Nav() {
             </span>
             <span className="font-manrope text-[#AFDDFF] text-[13px]">
               {agentWallet.address ? formatAgentBnb(agentWallet.balance) : "set up"}
+            </span>
+          </Link>
+
+          <Link
+            href={TWIN}
+            onClick={() => setMenuOpen(false)}
+            className={`mt-[10px] flex items-center justify-between border border-white/15 px-[14px] py-[12px] transition-all duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`}
+            style={{ transitionDelay: menuOpen ? `${170 + PAGES.length * 75}ms` : "0ms" }}
+          >
+            <span className="font-manrope text-white text-[14px]">
+              {TESTNET ? "The live site" : "The sandbox"}
+            </span>
+            <span className="font-manrope text-[#AFDDFF] text-[13px] uppercase tracking-wide">
+              {TESTNET ? "Mainnet" : "Testnet"}
             </span>
           </Link>
 

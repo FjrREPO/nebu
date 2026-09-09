@@ -1,5 +1,6 @@
 import {
   type AgentAction,
+  type AgentHoldings,
   type AgentInsights,
   type AgentOutlook,
   type AgentPlugin,
@@ -10,9 +11,9 @@ import {
   alignDaily,
   apyHistory,
   bnbInto,
-  bnbValue,
   bscClient,
   dailyVolatility,
+  holdingsOf,
   InvalidParams,
   marketId,
   plainAmount,
@@ -27,6 +28,7 @@ import {
   tokenLink,
   tokenLogos,
   tokenSeries,
+  totalBnb,
   WBNB,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
@@ -410,11 +412,15 @@ export const yieldOptimizer: AgentPlugin = {
     };
   },
 
-  /** Whatever is already lent out, wherever it sits, priced in BNB. */
-  async deployed(params): Promise<number | null> {
+  /** Whatever is already lent out, wherever it sits. */
+  async holdings(params): Promise<AgentHoldings> {
     const market = await loadMarket(params);
     const supplied = market.venues.reduce((sum, venue) => sum + venue.supplied, 0);
-    return bnbValue(market.asset, supplied);
+    return holdingsOf([{ token: market.asset, symbol: market.symbol, amount: supplied }]);
+  },
+
+  async deployed(params): Promise<number | null> {
+    return totalBnb((await yieldOptimizer.holdings?.(params))?.items ?? []);
   },
 
   async scope(params): Promise<SessionScope> {

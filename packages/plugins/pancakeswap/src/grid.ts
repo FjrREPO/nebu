@@ -1,5 +1,6 @@
 import {
   type AgentAction,
+  type AgentHoldings,
   type AgentInsights,
   type AgentOutlook,
   type AgentPlugin,
@@ -7,9 +8,9 @@ import {
   type AgentStatus,
   type AutoParams,
   bnbInto,
-  bnbValue,
   bscClient,
   dailyVolatility,
+  holdingsOf,
   InvalidParams,
   plainAmount,
   plainNumber,
@@ -21,6 +22,7 @@ import {
   type SessionScope,
   spendableBnb,
   tokenLogos,
+  totalBnb,
   volatilityFromDailyMove,
   WBNB,
 } from "@nebu/core";
@@ -387,14 +389,18 @@ export const pancakeGrid: AgentPlugin = {
     };
   },
 
-  /** Both sides of the ladder's inventory, priced in BNB. */
-  async deployed(params): Promise<number | null> {
+  /** The ladder's inventory: what the wallet holds of each side. */
+  async holdings(params): Promise<AgentHoldings> {
     const market = await loadMarket(params);
-    const [side0, side1] = await Promise.all([
-      bnbValue(market.meta0.address, market.base),
-      bnbValue(market.meta1.address, market.quote),
+    return holdingsOf([
+      { token: market.meta0.address, symbol: market.meta0.symbol, amount: market.base },
+      { token: market.meta1.address, symbol: market.meta1.symbol, amount: market.quote },
     ]);
-    return side0 === null || side1 === null ? null : side0 + side1;
+  },
+
+  /** Both sides of that inventory, priced in BNB. */
+  async deployed(params): Promise<number | null> {
+    return totalBnb((await pancakeGrid.holdings?.(params))?.items ?? []);
   },
 
   async scope(params): Promise<SessionScope> {

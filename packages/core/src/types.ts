@@ -129,6 +129,25 @@ export type AgentSeries = {
   logos?: string[];
 };
 
+/** One thing an agent is holding, valued in BNB. */
+export type Holding = {
+  token: string;
+  symbol: string;
+  amount: number;
+  /** Worth in BNB, or null when the feed will not price it. */
+  bnb: number | null;
+};
+
+export type AgentHoldings = {
+  items: Holding[];
+  /**
+   * What today's holding was worth in BNB, hour by hour, over the last two
+   * days. Not a record of the account — the amounts are today's — but it is
+   * what the market did to them, which is the part nobody stores.
+   */
+  history: SeriesPoint[];
+};
+
 /** Everything the agent detail page shows beyond a headline. */
 export type AgentInsights = {
   stats: StatTile[];
@@ -180,6 +199,12 @@ export interface AgentPlugin {
    * agent holds nothing — and null means it cannot price what it holds.
    */
   deployed?(params: AgentParams): Promise<number | null>;
+  /**
+   * The actual things this agent is holding, so a wallet can show a portfolio
+   * rather than a number: which tokens, how many, what they are worth, and
+   * what that same holding was worth over the last two days.
+   */
+  holdings?(params: AgentParams): Promise<AgentHoldings>;
 }
 
 /** The caller sent bad params — a 400, not a broken agent. */

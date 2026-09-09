@@ -1,4 +1,4 @@
-import type { AgentOutlook, AutoParams, SessionScope } from "@nebu/core";
+import type { AgentHoldings, AgentOutlook, AutoParams, SessionScope } from "@nebu/core";
 
 /**
  * The panel talks to the agents over the same HTTP API everyone else uses.
@@ -43,6 +43,10 @@ export const agentOutlook = (id: string, params: Record<string, string>) =>
 /** What the agent already has at work, in BNB. */
 export const agentDeployed = (id: string, params: Record<string, string>) =>
   call<number | null>(`/api/agents/${id}/deployed?${query(params)}`);
+
+/** What the agent is holding, priced now and over the last two days. */
+export const agentHoldings = (id: string, params: Record<string, string>) =>
+  call<AgentHoldings>(`/api/agents/${id}/holdings?${query(params)}`);
 
 /** The narrowest session that still lets the agent do its job. */
 export const agentScope = (id: string, params: Record<string, string>) =>
