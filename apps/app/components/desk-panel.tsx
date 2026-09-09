@@ -74,7 +74,12 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
     <div className="space-y-[28px]">
       <div className="grid grid-cols-2 md:grid-cols-4 border border-white/15 divide-x divide-white/10 anim-fade-up">
         {[
-          ["Capital", total > 0 ? `${total.toFixed(4)} BNB` : `${PREVIEW_BNB} BNB`],
+          // Say when the number is a stand-in. A wallet holding nothing that
+          // reads "1 BNB" is the page telling someone they have money.
+          [
+            total > 0 ? "Capital" : "Capital · example",
+            total > 0 ? `${total.toFixed(4)} BNB` : `${PREVIEW_BNB} BNB`,
+          ],
           ["Agents in the split", String(funded.length)],
           ["Blended return", rows ? apr(blended) : "—"],
           ["Working", rows ? pct(funded.reduce((sum, entry) => sum + entry.share, 0)) : "—"],
