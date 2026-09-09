@@ -37,6 +37,13 @@ type Grant = {
 
 const storageKey = (id: string) => `nebu2.grant.${id}`;
 
+/** A cap read aloud, not typed into a box: enough figures to mean something. */
+const plainCap = (value: string) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount === 0) return "0";
+  return amount.toLocaleString("en-US", { maximumSignificantDigits: 4 });
+};
+
 const field =
   "w-full bg-transparent border border-white/15 px-[12px] py-[9px] font-manrope text-white text-[13px] leading-[15.6px] outline-none focus:border-[#AFDDFF]/60 transition-colors";
 const legend = "font-manrope text-white/50 text-[11px] leading-[14px] uppercase tracking-wide";
@@ -76,9 +83,16 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
    * report a transaction while nothing happened. Refuse instead.
    */
   const wrongChain = agent.chainId !== CONFIG.chainId;
-  // Limits are worked out from what the agent holds, so hiring an empty wallet
-  // grants a session capped at zero — it would sit there unable to act.
-  const unfunded = wallet.address !== null && (wallet.balance ?? 0n) === 0n;
+  /**
+   * Not "has no BNB" but "has nothing it can actually deploy": the agent keeps
+   * a little back for gas, so a dust balance still buys nothing and every cap
+   * comes out zero. The scope already knows — if it can spend nothing, asking
+   * someone to hire it is asking them to grant a session that cannot move.
+   */
+  const unfunded =
+    wallet.address !== null &&
+    ((wallet.balance ?? 0n) === 0n ||
+      (scope !== null && scope.spend.every((entry) => Number(entry.suggested) === 0)));
 
   useEffect(() => {
     try {
@@ -303,32 +317,24 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                 )}
 
                 {scope && scope.spend.length > 0 && !unfunded && (
-                  <div className="space-y-[10px]">
-                    <span className={legend}>Daily cap</span>
-                    {scope.spend.map((entry) => (
-                      <label key={entry.token} className="block">
-                        <span className={legend}>{entry.symbol}</span>
-                        <input
-                          className={`${field} mt-[5px]`}
-                          value={limits[entry.token.toLowerCase()] ?? ""}
-                          onChange={(event) =>
-                            setLimits({
-                              ...limits,
-                              [entry.token.toLowerCase()]: event.target.value,
-                            })
-                          }
-                        />
-                      </label>
-                    ))}
-                    <label className="block">
-                      <span className={legend}>Stops working after</span>
-                      <input
-                        className={`${field} mt-[5px]`}
-                        value={days}
-                        onChange={(event) => setDays(event.target.value)}
-                      />
-                    </label>
-                  </div>
+                  <p className="font-manrope text-white/50 text-[11px] leading-[15px]">
+                    It may move up to{" "}
+                    {scope.spend
+                      .map((entry) => `${plainCap(entry.suggested)} ${entry.symbol}`)
+                      .join(" and ")}{" "}
+                    a day, sized from the BNB it holds. Change them under "show what it chose".
+                  </p>
+                )}
+
+                {!unfunded && (
+                  <label className="block">
+                    <span className={legend}>Stops working after</span>
+                    <input
+                      className={`${field} mt-[5px]`}
+                      value={days}
+                      onChange={(event) => setDays(event.target.value)}
+                    />
+                  </label>
                 )}
 
                 {!unfunded && (
@@ -358,9 +364,26 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                   {advanced ? "Hide" : "Show"} what it chose
                 </button>
                 {advanced && (
-                  <pre className="font-manrope text-white/50 text-[11px] leading-[16px] whitespace-pre-wrap break-all">
-                    {JSON.stringify(auto.params, null, 2)}
-                  </pre>
+                  <div className="space-y-[10px]">
+                    {scope?.spend.map((entry) => (
+                      <label key={entry.token} className="block">
+                        <span className={legend}>{entry.symbol} a day</span>
+                        <input
+                          className={`${field} mt-[5px]`}
+                          value={limits[entry.token.toLowerCase()] ?? ""}
+                          onChange={(event) =>
+                            setLimits({
+                              ...limits,
+                              [entry.token.toLowerCase()]: event.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                    ))}
+                    <pre className="font-manrope text-white/50 text-[11px] leading-[16px] whitespace-pre-wrap break-all">
+                      {JSON.stringify(auto.params, null, 2)}
+                    </pre>
+                  </div>
                 )}
 
                 <p className="font-manrope text-white/50 text-[11px] leading-[14px]">
