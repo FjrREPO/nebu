@@ -14,14 +14,23 @@ const areaPath = (pts: XY[], height: number) => {
   return last ? `${linePath(pts)}L${last.x},${height}L${pts[0].x},${height}Z` : "";
 };
 
+/**
+ * A series that never moved has no shape to show, and every point normalises
+ * to zero — which used to put the line flat along the floor, reading as a
+ * value that had collapsed rather than one that held steady. Flat sits in the
+ * middle instead.
+ */
+const place = (value: number, min: number, span: number) =>
+  span === 0 ? 0.5 : 1 - (value - min) / span;
+
 function scale(values: number[], width: number, height: number, padTop = 8, x0 = 0) {
   if (values.length < 2) return [];
   const min = Math.min(...values);
-  const span = Math.max(...values) - min || Math.abs(min) * 0.02 || 1;
+  const span = Math.max(...values) - min;
   const step = width / (values.length - 1);
   return values.map((v, i) => ({
     x: +(x0 + i * step).toFixed(2),
-    y: +(padTop + (1 - (v - min) / span) * (height - padTop)).toFixed(2),
+    y: +(padTop + place(v, min, span) * (height - padTop)).toFixed(2),
   }));
 }
 
@@ -131,8 +140,8 @@ export function DetailChart({ series, height = 260 }: { series: AgentSeries; hei
   const plotH = height - MARGIN.top - MARGIN.bottom;
 
   const min = Math.min(...values);
-  const span = Math.max(...values) - min || Math.abs(min) * 0.02 || 1;
-  const yFor = (value: number) => MARGIN.top + (1 - (value - min) / span) * plotH;
+  const span = Math.max(...values) - min;
+  const yFor = (value: number) => MARGIN.top + place(value, min, span) * plotH;
   const pts = scale(values, plotW, plotH + MARGIN.top, MARGIN.top, MARGIN.left);
 
   const active = hover === null ? null : series.points[hover];

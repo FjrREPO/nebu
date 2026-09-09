@@ -305,41 +305,22 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                   <p className="font-manrope text-white text-[13px] leading-[18px] mt-[4px]">
                     {auto.reason}
                   </p>
-                  {/* Both caveats matter; neither needs a paragraph. */}
-                  {scope && scope.spend.length > 0 && (
-                    <p className="font-manrope text-white/50 text-[11px] leading-[15px] mt-[6px]">
-                      You only send BNB — it converts itself.
-                      {/fee apr/i.test(auto.reason) &&
-                        " Fee APR is what the pool earned, not what you keep."}
-                    </p>
-                  )}
                 </div>
-
-                {/*
-                  Before a deposit every cap is zero, and boxes labelled with
-                  tokens you do not hold read as "you need these" — the opposite
-                  of the truth, which is that BNB is all you ever send.
-                */}
-                {unfunded && (
-                  <>
-                    <p className="font-manrope text-white/50 text-[11px] leading-[15px]">
-                      It keeps 0.003 BNB back for gas, so it needs {formatBnb(shortBy)} more before
-                      it can act — plus whatever it should put to work.
-                    </p>
-                    <Link href="/wallet" className={`${primary} block text-center`}>
-                      Add BNB to hire it
-                    </Link>
-                  </>
-                )}
 
                 {scope && scope.spend.length > 0 && !unfunded && (
                   <p className="font-manrope text-white/50 text-[11px] leading-[15px]">
                     {noAllowance
-                      ? "It needs no spending allowance — it works with the position it already holds."
-                      : `It may move up to ${scope.spend
+                      ? "No spending allowance needed — it works with the position it holds."
+                      : `Up to ${scope.spend
                           .map((entry) => `${plainCap(entry.suggested)} ${entry.symbol}`)
-                          .join(" and ")} a day, sized from the BNB it holds.`}
+                          .join(" and ")} a day.`}
                   </p>
+                )}
+
+                {unfunded && (
+                  <Link href="/wallet" className={`${primary} block text-center`}>
+                    Add {formatBnb(shortBy)} to hire it
+                  </Link>
                 )}
 
                 {!unfunded && (
@@ -410,8 +391,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
             ) : (
               <p className="font-manrope text-white/50 text-[11px] leading-[16px]">
                 {agent.category === "health"
-                  ? "This agent guards a loan you already have rather than deploying a deposit. Once this wallet borrows on Aave V3, it picks its own floor and defends it."
-                  : "It chooses where to put your money from live market data, and that source is busy right now. Try again in a minute."}
+                  ? "Nothing to defend yet — this wallet has no loan."
+                  : "The market data source is busy. Try again in a minute."}
               </p>
             ))}
         </div>
