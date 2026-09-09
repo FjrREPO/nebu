@@ -61,7 +61,13 @@ const send = (chat: number, html: string) =>
  * handful of addresses. ponytail: swap for a real store if this ever has users
  * in the thousands, which it will not.
  */
-type Watch = { chat: number; wallet: `0x${string}`; said: Record<string, string> };
+type Watch = {
+  chat: number;
+  wallet: `0x${string}`;
+  /** Off for a wallet that arrived from the site and only wants asking about. */
+  watching?: boolean;
+  said: Record<string, string>;
+};
 let watches: Watch[] = [];
 try {
   watches = JSON.parse(readFileSync(STORE, "utf8")) as Watch[];
@@ -128,7 +134,7 @@ async function deskMessage(wallet: `0x${string}`) {
     row.outlook ? [{ id: row.plugin.id, outlook: row.outlook }] : [],
   );
   if (entries.length === 0) {
-    return "None of the agents has a view on this wallet right now — the feeds may be busy. Try again in a minute.";
+    return "Feeds are busy. Try again in a minute.";
   }
 
   const total = Number(formatEther(spendable));
@@ -149,7 +155,7 @@ async function deskMessage(wallet: `0x${string}`) {
     "",
     ...lines,
     "",
-    `<a href="${SITE}/desk">The whole desk</a>`,
+    `<a href="${SITE}/desk">Open the desk</a>`,
   ].join("\n");
 }
 
@@ -164,31 +170,45 @@ async function walletMessage(wallet: `0x${string}`) {
 }
 
 const HELP = [
-  "<b>Nebu</b> — agents that manage BNB positions.",
+  "<b>Nebu</b>. Four agents, live on BNB Chain.",
   "",
-  "/agents — what the four agents see right now",
-  "/wallet &lt;address&gt; — what each would do with that wallet",
-  "/desk &lt;address&gt; — how the wallet splits between them",
-  "/watch &lt;address&gt; — tell me when one of them needs to act",
-  "/unwatch — stop",
+  "/agents  how they're doing",
+  "/wallet 0x…  what each would do with it",
+  "/desk 0x…  how it splits between them",
+  "/watch 0x…  ping you when one needs a hand",
+  "/unwatch  stop",
   "",
-  `Hiring and signing happen on <a href="${SITE}">the site</a>: the agent wallet is a passkey on your device, and this bot holds no keys.`,
+  `Hiring is on <a href="${SITE}">the site</a>. This bot can't sign anything.`,
 ].join("\n");
 
 async function handle(chat: number, text: string) {
   const [command = ""] = text.trim().split(/\s+/);
   const wallet = address(text);
 
-  if (command.startsWith("/start") || command.startsWith("/help")) return send(chat, HELP);
+  if (command.startsWith("/start") || command.startsWith("/help")) {
+    // The site links here with the agent wallet in the payload, so nobody has
+    // to copy an address into a chat to ask about their own money.
+    if (wallet) {
+      const kept = watches.find((entry) => entry.chat === chat);
+      if (kept) kept.wallet = wallet;
+      else watches.push({ chat, wallet, watching: false, said: {} });
+      remember();
+      await send(
+        chat,
+        `Got it, ${wallet.slice(0, 8)}…${wallet.slice(-4)}. /desk and /wallet work without the address now, and /watch turns on alerts.`,
+      );
+    }
+    return send(chat, HELP);
+  }
 
   if (command.startsWith("/agents")) return send(chat, await agentsMessage());
 
   if (command.startsWith("/desk") || command.startsWith("/wallet")) {
     const known = wallet ?? watches.find((entry) => entry.chat === chat)?.wallet;
     if (!known) {
-      return send(chat, `Give me an address: <code>${command} 0x…</code>`);
+      return send(chat, `Needs an address: <code>${command} 0x…</code>`);
     }
-    await send(chat, "Reading the chain…");
+    await send(chat, "One sec.");
     return send(
       chat,
       command.startsWith("/desk") ? await deskMessage(known) : await walletMessage(known),
@@ -199,17 +219,17 @@ async function handle(chat: number, text: string) {
     const before = watches.length;
     watches = watches.filter((entry) => entry.chat !== chat);
     remember();
-    return send(chat, before === watches.length ? "You were not watching anything." : "Stopped.");
+    return send(chat, before === watches.length ? "Nothing to stop." : "Done.");
   }
 
   if (command.startsWith("/watch")) {
-    if (!wallet) return send(chat, "Give me an address: <code>/watch 0x…</code>");
+    if (!wallet) return send(chat, "Needs an address: <code>/watch 0x…</code>");
     watches = watches.filter((entry) => entry.chat !== chat);
-    watches.push({ chat, wallet, said: {} });
+    watches.push({ chat, wallet, watching: true, said: {} });
     remember();
     return send(
       chat,
-      `Watching ${wallet.slice(0, 8)}…${wallet.slice(-4)}. I will say something when an agent has work to do — about every ${Math.round(WATCH_SECONDS / 60)} minutes, and only when the answer changes.`,
+      `Watching ${wallet.slice(0, 8)}…${wallet.slice(-4)}. You'll hear from me when something needs doing, not before.`,
     );
   }
 
@@ -224,6 +244,10 @@ async function handle(chat: number, text: string) {
  */
 async function sweep() {
   for (const entry of watches) {
+    // An address the site handed over is for asking about, not for alerts,
+    // until somebody says /watch. Older entries predate the flag and were all
+    // put there by /watch.
+    if (entry.watching === false) continue;
     try {
       const read = await readWallet(entry.wallet);
       for (const row of read) {
@@ -236,7 +260,7 @@ async function sweep() {
         entry.said[row.plugin.id] = said;
         await send(
           entry.chat,
-          `⚑ <b>${esc(row.plugin.name)}</b>\n${esc(said)}\n\n<a href="${SITE}/agents/${row.plugin.id}">Let it run</a>`,
+          `⚑ <b>${esc(row.plugin.name)}</b>\n${esc(said)}\n\n<a href="${SITE}/agents/${row.plugin.id}">Run it</a>`,
         );
       }
     } catch (err) {
@@ -289,12 +313,22 @@ if (dry) {
 
 await call("setMyCommands", {
   commands: [
-    { command: "agents", description: "what the agents see right now" },
-    { command: "wallet", description: "what each agent would do with a wallet" },
+    { command: "agents", description: "how the four are doing" },
+    { command: "wallet", description: "what each would do with a wallet" },
     { command: "desk", description: "how a wallet splits between them" },
-    { command: "watch", description: "get told when an agent needs to act" },
-    { command: "unwatch", description: "stop watching" },
+    { command: "watch", description: "ping you when one needs a hand" },
+    { command: "unwatch", description: "stop" },
   ],
+});
+// The profile people see before they press start.
+await call("setMyShortDescription", {
+  short_description: "Four agents working BNB positions. Ask them anything.",
+});
+await call("setMyDescription", {
+  description:
+    "Nebu runs agents on BNB Chain: PancakeSwap ranges and grids, lending rates, loan health. " +
+    "Ask what they see, what they would do with a wallet, or get a ping when one needs a hand. " +
+    "Hiring stays on nebu.ifajar.dev — the bot holds no keys.",
 });
 console.log(`nebu telegram: up, watching ${watches.length} wallet(s), site ${SITE}`);
 setInterval(() => void sweep(), WATCH_SECONDS * 1000);

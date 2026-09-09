@@ -14,3 +14,7 @@ export const TESTNET = process.env.NEXT_PUBLIC_SESSION_NETWORK === "testnet";
 
 /** The other deployment, for the links that point across. */
 export const TWIN = TESTNET ? "https://nebu.ifajar.dev" : "https://testnet.nebu.ifajar.dev";
+
+/** The bot, for the pages that hand it a wallet to watch. */
+export const BOT = "https://t.me/nebuagentbot";
+export const botWatch = (agentWallet: string) => `${BOT}?start=${agentWallet}`;

@@ -129,9 +129,12 @@ signs instead.
 TELEGRAM_BOT_TOKEN=... pnpm --filter @nebu/telegram start   # the bot
 ```
 
-The bot answers `/agents`, `/wallet 0x…` and `/desk 0x…` from the same registry,
-and `/watch 0x…` messages you when an agent has work to do. It holds no keys —
-hiring and signing stay on the site.
+It answers `/agents`, `/wallet 0x…` and `/desk 0x…` from the same registry, and
+`/watch 0x…` messages you when an agent has work to do. The wallet page links
+across with the address already in it, so nobody types one into a chat. It holds
+no keys — hiring and signing stay on the site.
+
+Running as [@nebuagentbot](https://t.me/nebuagentbot), open to anyone.
 
 Set `BSC_RPC_URL` to a private endpoint for anything past a demo; the default is
 a fallback list of public dataseeds batched through Multicall3.

@@ -13,7 +13,7 @@ import {
   startFreshAgentWallet,
   useAgentWallet,
 } from "@/lib/agent-wallet";
-import { TESTNET, TWIN } from "@/lib/site";
+import { botWatch, TESTNET, TWIN } from "@/lib/site";
 import { connectWallet, short, useWallet } from "@/lib/use-wallet";
 import { ChainMark, WalletMark } from "./ui";
 
@@ -106,6 +106,16 @@ export function AgentWalletPanel() {
               holds only what you send it, it is unlocked by a passkey rather than a seed phrase,
               and every agent you hire draws its limits from what is in here.
             </p>
+
+            {/* The address goes with the link, so nobody types it into a chat. */}
+            <a
+              href={botWatch(agent.address)}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-[14px] inline-flex items-center gap-[8px] border border-white/20 px-[12px] py-[7px] font-manrope text-white/70 text-[11px] uppercase tracking-wide hover:border-white/50 hover:text-white transition-colors"
+            >
+              Watch it in Telegram
+            </a>
           </>
         ) : (
           <p className="font-manrope text-white text-[13px] leading-[18px] mt-[10px]">

@@ -3,12 +3,15 @@
 The marketplace in a chat window. It imports the same registry the website
 does, so anything an agent can say there it can say here.
 
+Live as [@nebuagentbot](https://t.me/nebuagentbot), open to anyone.
+
 ```bash
 TELEGRAM_BOT_TOKEN=… pnpm --filter @nebu/telegram start
 ```
 
 | | |
 |---|---|
+| `/start 0x…` | remembers a wallet, which is how the site links here |
 | `/agents` | what the four agents see right now |
 | `/wallet 0x…` | what each of them would do with that wallet |
 | `/desk 0x…` | how the wallet splits between them |
