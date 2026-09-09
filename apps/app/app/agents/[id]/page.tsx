@@ -111,22 +111,31 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
 
           <div className="min-w-0 space-y-[40px]">
             {insights && (
-              <div className="grid grid-cols-2 md:grid-cols-4 border border-white/15">
-                {insights.stats.map((stat, index) => (
-                  <div
-                    key={stat.label}
-                    className="p-[18px] border-white/10 [&:not(:nth-child(4n))]:md:border-r [&:not(:nth-child(2n))]:border-r md:[&:not(:nth-child(2n))]:border-r-0 anim-fade-up"
-                    style={{ animationDelay: `${560 + index * 70}ms` }}
-                  >
-                    <span className="font-manrope text-white/50 text-[11px] leading-[14px] uppercase tracking-wide">
-                      {stat.label}
-                    </span>
-                    <p className="font-graphik text-white text-[22px] leading-[1.1] mt-[8px]">
-                      {stat.value}
-                    </p>
-                    {stat.hint && <Muted className="mt-[4px]">{stat.hint}</Muted>}
-                  </div>
-                ))}
+              <div className="space-y-[10px]">
+                {/* This page cannot know your wallet, so everything below is one
+                    live position the agent watches. The panel beside it is the
+                    one talking about yours, and the two name different pools
+                    often enough to look like a bug. */}
+                <span className="font-manrope text-white/40 text-[11px] leading-[14px] uppercase tracking-wide">
+                  A live example · your own is in the panel
+                </span>
+                <div className="grid grid-cols-2 md:grid-cols-4 border border-white/15">
+                  {insights.stats.map((stat, index) => (
+                    <div
+                      key={stat.label}
+                      className="p-[18px] border-white/10 [&:not(:nth-child(4n))]:md:border-r [&:not(:nth-child(2n))]:border-r md:[&:not(:nth-child(2n))]:border-r-0 anim-fade-up"
+                      style={{ animationDelay: `${560 + index * 70}ms` }}
+                    >
+                      <span className="font-manrope text-white/50 text-[11px] leading-[14px] uppercase tracking-wide">
+                        {stat.label}
+                      </span>
+                      <p className="font-graphik text-white text-[22px] leading-[1.1] mt-[8px]">
+                        {stat.value}
+                      </p>
+                      {stat.hint && <Muted className="mt-[4px]">{stat.hint}</Muted>}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
