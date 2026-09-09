@@ -436,10 +436,26 @@ export const pancakeRebalancer: AgentPlugin = {
       };
     }
 
+    // Out of range is not the same as worth acting on, and plan() knows it —
+    // a card claiming the agent wants to move while the agent intends to sit
+    // still is the page and the decision disagreeing again.
+    const drift = driftPastRange(position);
+    const daily = live
+      ? null
+      : dailyVolatility(await poolSeries(position.pool, 48, position.token0));
+    const worthMoving = daily === null || drift >= daily * MEANINGFUL_DRIFT;
+
     return {
-      headline: live ? "In range, earning fees" : "Out of range, earning nothing",
-      detail: describe(position),
-      actionable: !live,
+      headline: live
+        ? "In range, earning fees"
+        : worthMoving
+          ? "Out of range, earning nothing"
+          : "Just outside, holding",
+      detail:
+        live || worthMoving
+          ? describe(position)
+          : `${describe(position)} — ${(drift * 100).toFixed(1)}% past the edge, inside a day's normal movement`,
+      actionable: !live && worthMoving,
     };
   },
 
