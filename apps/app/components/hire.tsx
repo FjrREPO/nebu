@@ -100,6 +100,9 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
    * agent to go and get more BNB.
    */
   const unfunded = wallet.address !== null && (wallet.balance ?? 0n) <= GAS_RESERVE;
+  const shortBy = GAS_RESERVE - (wallet.balance ?? 0n);
+  /** No allowance needed is a fact worth stating; "up to 0" is not. */
+  const noAllowance = scope?.spend.every((entry) => Number(entry.suggested) === 0) ?? false;
 
   useEffect(() => {
     try {
@@ -318,18 +321,24 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                   of the truth, which is that BNB is all you ever send.
                 */}
                 {unfunded && (
-                  <Link href="/wallet" className={`${primary} block text-center`}>
-                    Add BNB to hire it
-                  </Link>
+                  <>
+                    <p className="font-manrope text-white/50 text-[11px] leading-[15px]">
+                      It keeps 0.003 BNB back for gas, so it needs {formatBnb(shortBy)} more before
+                      it can act — plus whatever it should put to work.
+                    </p>
+                    <Link href="/wallet" className={`${primary} block text-center`}>
+                      Add BNB to hire it
+                    </Link>
+                  </>
                 )}
 
                 {scope && scope.spend.length > 0 && !unfunded && (
                   <p className="font-manrope text-white/50 text-[11px] leading-[15px]">
-                    It may move up to{" "}
-                    {scope.spend
-                      .map((entry) => `${plainCap(entry.suggested)} ${entry.symbol}`)
-                      .join(" and ")}{" "}
-                    a day, sized from the BNB it holds. Change them under "show what it chose".
+                    {noAllowance
+                      ? "It needs no spending allowance — it works with the position it already holds."
+                      : `It may move up to ${scope.spend
+                          .map((entry) => `${plainCap(entry.suggested)} ${entry.symbol}`)
+                          .join(" and ")} a day, sized from the BNB it holds.`}
                   </p>
                 )}
 
