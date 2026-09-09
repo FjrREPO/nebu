@@ -160,7 +160,8 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
               <div style={{ width: `${(free / total) * 100}%`, background: CASH }} />
             </>
           ) : (
-            <div className="w-full bg-white/[0.04] animate-pulse" />
+            // Still reading is a pulse; nothing to show is just a line.
+            <div className={`w-full bg-white/[0.04] ${settled ? "" : "animate-pulse"}`} />
           )}
         </div>
       </div>
