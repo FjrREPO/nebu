@@ -89,10 +89,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
    * comes out zero. The scope already knows — if it can spend nothing, asking
    * someone to hire it is asking them to grant a session that cannot move.
    */
-  const unfunded =
-    wallet.address !== null &&
-    ((wallet.balance ?? 0n) === 0n ||
-      (scope !== null && scope.spend.every((entry) => Number(entry.suggested) === 0)));
+  const nothingToSpend = scope?.spend.every((entry) => Number(entry.suggested) === 0) ?? false;
+  const unfunded = wallet.address !== null && ((wallet.balance ?? 0n) === 0n || nothingToSpend);
 
   useEffect(() => {
     try {
