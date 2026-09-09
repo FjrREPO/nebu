@@ -462,6 +462,11 @@ export const healthMonitor: AgentPlugin = {
     // Ever reaching the line inside a year, not ending the year past it.
     const odds = touchOdds(days, 365);
 
+    // A loan under its floor that cannot be priced is not a loan needing
+    // nothing. Saying "no cover" there would have the desk invest money this
+    // agent is holding for a repayment.
+    if (repayBase > 0 && !(price && price > 0)) return null;
+
     return {
       apr: LIQUIDATION_PENALTY * odds,
       risk: daily,

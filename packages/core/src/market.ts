@@ -138,22 +138,60 @@ export function poolSeries(
   }).catch(() => []);
 }
 
-/** The deepest pool a token trades in, which is where its price is set. */
-export function tokenTopPool(token: string): Promise<string | null> {
+/**
+ * The deepest pool a token trades in and what that pool says the token is
+ * worth.
+ *
+ * One request answers both, and it is the request that survives a busy feed:
+ * the candle endpoint is throttled far harder than this one, so a price read
+ * from here works when a price read from a chart does not.
+ */
+function topPool(token: string) {
   return cached(
-    `token:${token}`,
+    `top:${token.toLowerCase()}`,
     async () => {
       const body = (await get(`/tokens/${token.toLowerCase()}/pools?page=1`)) as {
-        data?: { attributes?: { address?: string; reserve_in_usd?: string } }[];
+        data?: {
+          attributes?: {
+            address?: string;
+            reserve_in_usd?: string;
+            base_token_price_usd?: string;
+            quote_token_price_usd?: string;
+          };
+          relationships?: { base_token?: { data?: { id?: string } } };
+        }[];
       };
-      const best = (body.data ?? [])
-        .map((entry) => entry.attributes)
-        .filter((entry) => entry?.address)
-        .sort((a, b) => Number(b?.reserve_in_usd ?? 0) - Number(a?.reserve_in_usd ?? 0))[0];
-      return best?.address ?? null;
+      const best = (body.data ?? []).sort(
+        (a, b) =>
+          Number(b.attributes?.reserve_in_usd ?? 0) - Number(a.attributes?.reserve_in_usd ?? 0),
+      )[0];
+      if (!best?.attributes?.address) return null;
+
+      // Which side of the pair this token is on decides which of the two
+      // prices is its own. Reading the wrong one is how BNB came back at the
+      // price of ATC.
+      const base = best.relationships?.base_token?.data?.id ?? "";
+      const mine = base.toLowerCase().endsWith(token.toLowerCase())
+        ? best.attributes.base_token_price_usd
+        : best.attributes.quote_token_price_usd;
+      const usd = Number(mine);
+      return {
+        address: best.attributes.address,
+        usd: Number.isFinite(usd) && usd > 0 ? usd : null,
+      };
     },
     POOL_LOOKUP_CACHE_MS,
   ).catch(() => null);
+}
+
+/** The deepest pool a token trades in, which is where its price is set. */
+export async function tokenTopPool(token: string): Promise<string | null> {
+  return (await topPool(token))?.address ?? null;
+}
+
+/** What one of a token is worth in dollars, without asking for a chart. */
+export async function tokenUsd(token: string): Promise<number | null> {
+  return (await topPool(token))?.usd ?? null;
 }
 
 /**

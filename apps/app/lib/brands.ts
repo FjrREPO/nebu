@@ -22,7 +22,7 @@ const BRANDS: [RegExp, string | undefined][] = [
   [/venus/i, fallbackLogo(XVS)],
   [/geckoterminal/i, "https://www.geckoterminal.com/favicon.ico"],
   [/defillama|llama/i, "https://defillama.com/favicon.ico"],
-  [/wrapped bnb|wbnb|bnb smart chain|bnb chain/i, fallbackLogo(WBNB)],
+  [/wrapped bnb|wbnb|bnb smart chain|bnb chain|bnb price/i, fallbackLogo(WBNB)],
   // Altana publishes no icon file, so its mark is drawn here and inlined.
   [/altana/i, ALTANA],
   // The registry is us.
