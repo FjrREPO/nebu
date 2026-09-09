@@ -116,9 +116,18 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(storageKey(agent.id));
-      if (raw) setGrant(JSON.parse(raw) as Grant);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Grant;
+      // Whatever is in storage was written by some earlier version of this
+      // panel, and the shape has already changed twice. Rebuilding it here
+      // means a grant that cannot be rebuilt is dropped now, quietly, instead
+      // of throwing in the middle of a render and taking the page with it.
+      restoreSession(saved.stored, saved.sessionKey);
+      setGrant(saved);
     } catch {
-      // Blocked storage just means the grant does not survive a reload.
+      // Unreadable, blocked, or from a shape we no longer speak. Either way
+      // there is no session here, which is what the panel shows anyway.
+      localStorage.removeItem(storageKey(agent.id));
     }
   }, [agent.id]);
 
