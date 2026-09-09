@@ -74,11 +74,34 @@ export function floorFor(daily: number | null) {
 /** Aave marks the variable rate mode as 2 in repay(). */
 const VARIABLE_RATE = 2n;
 
+/**
+ * The floor this wallet's own collateral calls for, and whether that was
+ * measured or guessed.
+ *
+ * The difference matters more than it looks: without it the floor silently
+ * drops to the constant whenever the candle feed is busy, so the same loan
+ * reads 1.15 on one page load and 1.5 on the next. A safety threshold that
+ * moves with data availability is worse than one that never moves — at least
+ * say which one you are looking at.
+ */
+async function defaultFloor(wallet: `0x${string}`) {
+  const collateral = await largestCollateral(wallet).catch(() => null);
+  if (!collateral) return { floor: DEFAULT_MIN_HF, measured: false };
+  const daily = dailyVolatility(await tokenSeries(collateral.asset, 48));
+  return daily === null
+    ? { floor: DEFAULT_MIN_HF, measured: false }
+    : { floor: floorFor(daily), measured: true };
+}
+
 async function loadAccount(params: Record<string, string>) {
   const wallet = requireAddress(params, "wallet");
-  const minHealthFactor = params.minHealthFactor
-    ? requireNumber(params, "minHealthFactor")
-    : DEFAULT_MIN_HF;
+  // Unasked, the floor is the one this collateral deserves rather than a
+  // constant — the same answer autoParams gives, so a page cannot show one
+  // floor while the agent defends another.
+  const asked = params.minHealthFactor ? requireNumber(params, "minHealthFactor") : null;
+  const derived = asked === null ? await defaultFloor(wallet) : null;
+  const minHealthFactor = asked ?? derived?.floor ?? DEFAULT_MIN_HF;
+  const floorMeasured = asked !== null || (derived?.measured ?? false);
   // Above 1 or the floor is below liquidation; below 10 because the field's
   // own example is 1.5, and typing 15 for 1.5 would quietly turn "top the loan
   // up" into "repay all of it".
@@ -89,6 +112,7 @@ async function loadAccount(params: Record<string, string>) {
   return {
     wallet,
     minHealthFactor,
+    floorMeasured,
     collateralBase: Number(formatUnits(collateral, BASE_DECIMALS)),
     debtBase: Number(formatUnits(debt, BASE_DECIMALS)),
     thresholdBps: Number(threshold),
@@ -220,7 +244,7 @@ export const healthMonitor: AgentPlugin = {
     { key: "wallet", label: "Wallet", placeholder: "0x..." },
     { key: "minHealthFactor", label: "Minimum health factor", placeholder: "1.5" },
   ],
-  example: { wallet: "0x1e01000ba272c96013c913a6a6bC61722E24E9EB", minHealthFactor: "1.5" },
+  example: { wallet: "0x1e01000ba272c96013c913a6a6bC61722E24E9EB" },
   grants: [
     "Looks at what you have put up, what you owe, and how close that is to a forced sale",
     "Pays down your biggest loan for you, out of your own balance",
@@ -251,7 +275,7 @@ export const healthMonitor: AgentPlugin = {
         {
           label: "Health factor",
           value: account.debtBase === 0 ? "—" : account.healthFactor.toFixed(2),
-          hint: `floor ${account.minHealthFactor}`,
+          hint: `floor ${account.minHealthFactor}${account.floorMeasured ? "" : " · default"}`,
         },
         { label: "Collateral", value: `$${account.collateralBase.toFixed(2)}` },
         { label: "Debt", value: `$${account.debtBase.toFixed(2)}` },
