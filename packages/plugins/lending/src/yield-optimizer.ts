@@ -27,11 +27,17 @@ import {
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { AAVE_POOL, erc20Abi, liquidityRateToApy, poolAbi, reserveData } from "./aave.ts";
-import { bestApy, pct, spreadBps, yieldRadar } from "./radar.ts";
-import { bestMove, type Venue } from "./venue.ts";
+import { bestApy, pct, spreadBps, used, type VenueQuote, yieldRadar } from "./radar.ts";
+import { bestMove, CROWDED, type Venue } from "./venue.ts";
 import { supplyRateToApy, underlyingBalance, venusMarketFor, vTokenAbi } from "./venus.ts";
 
 const DEFAULT_MIN_GAIN_BPS = 25;
+
+/** How full the venue we are naming is, as a percentage, when it is known. */
+function crowding(quote: VenueQuote, venue: string) {
+  const usedHere = venue === "Aave V3" ? quote.aaveUsed : quote.venusUsed;
+  return usedHere !== null && usedHere >= CROWDED ? `${(usedHere * 100).toFixed(0)}%` : null;
+}
 
 async function loadMarket(params: Record<string, string>) {
   const asset = requireAddress(params, "asset");
@@ -69,10 +75,28 @@ async function loadMarket(params: Record<string, string>) {
       functionName: "balanceOf",
       args: [wallet],
     });
+    // What is lent out already decides how easily this comes back.
+    const [supply, debt] = await Promise.all([
+      bscClient
+        .readContract({
+          address: reserve.aTokenAddress,
+          abi: erc20Abi,
+          functionName: "totalSupply",
+        })
+        .catch(() => null),
+      bscClient
+        .readContract({
+          address: reserve.variableDebtTokenAddress,
+          abi: erc20Abi,
+          functionName: "totalSupply",
+        })
+        .catch(() => null),
+    ]);
     venues.push({
       protocol: "Aave V3",
       apy: liquidityRateToApy(reserve.currentLiquidityRate),
       supplied: Number(formatUnits(aTokenBalance, decimals)),
+      used: supply !== null && debt !== null ? used(debt, supply) : null,
     });
   }
 
@@ -95,10 +119,25 @@ async function loadMarket(params: Record<string, string>) {
         args: [wallet],
       }),
     ]);
+    const [cash, borrows, reserves] = await Promise.all([
+      bscClient
+        .readContract({ address: vToken, abi: vTokenAbi, functionName: "getCash" })
+        .catch(() => null),
+      bscClient
+        .readContract({ address: vToken, abi: vTokenAbi, functionName: "totalBorrows" })
+        .catch(() => null),
+      bscClient
+        .readContract({ address: vToken, abi: vTokenAbi, functionName: "totalReserves" })
+        .catch(() => null),
+    ]);
     venues.push({
       protocol: "Venus",
       apy: await supplyRateToApy(rate),
       supplied: Number(formatUnits(underlyingBalance(balance, exchangeRate), decimals)),
+      used:
+        cash !== null && borrows !== null && reserves !== null
+          ? used(borrows, cash + borrows - reserves)
+          : null,
     });
   }
 
@@ -298,7 +337,11 @@ export const yieldOptimizer: AgentPlugin = {
     const venue = (best.aaveApy ?? 0) >= (best.venusApy ?? 0) ? "Aave V3" : "Venus";
     return {
       params: { asset: best.asset, wallet, minGainBps: "25" },
-      reason: `${best.symbol} pays ${pct(bestApy(best))} on ${venue}, the best of ${radar.length} assets listed on both`,
+      // A rate that high is usually a market that full, and saying the first
+      // without the second is how someone ends up unable to get their money.
+      reason: `${best.symbol} pays ${pct(bestApy(best))} on ${venue}, the best of ${radar.length} assets listed on both${
+        crowding(best, venue) ? ` — though ${crowding(best, venue)} of it is lent out` : ""
+      }`,
     };
   },
 

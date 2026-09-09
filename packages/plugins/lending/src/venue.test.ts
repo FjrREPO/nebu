@@ -34,3 +34,22 @@ assert.equal(repayToReachHealth(1000, 100, 8000, 1.5), 0);
 // No debt at all never asks for a repayment.
 assert.equal(repayToReachHealth(1000, 0, 8000, 1.5), 0);
 console.log("ok");
+
+// A crowded destination has to pay more than a quiet one to be worth moving to.
+{
+  const from = { protocol: "Venus", apy: 0.02, supplied: 100, used: 0.4 };
+  const quiet = { protocol: "Aave V3", apy: 0.03, supplied: 0, used: 0.5 };
+  const crowded = { protocol: "Aave V3", apy: 0.03, supplied: 0, used: 0.95 };
+
+  assert.ok(bestMove([from, quiet], 25), "100bps into a quiet market is worth it");
+  assert.equal(bestMove([from, crowded], 25), null, "the same 100bps into a crowded one is not");
+
+  // Pay enough and it is worth it even so.
+  const paying = { protocol: "Aave V3", apy: 0.055, supplied: 0, used: 0.95 };
+  assert.ok(bestMove([from, paying], 25), "350bps clears the premium");
+
+  // Leaving a crowded market is never penalised — that is the way out.
+  const stuck = { protocol: "Aave V3", apy: 0.02, supplied: 100, used: 0.95 };
+  const wayOut = { protocol: "Venus", apy: 0.03, supplied: 0, used: 0.5 };
+  assert.ok(bestMove([stuck, wayOut], 25), "moving out of a crowded market is not penalised");
+}

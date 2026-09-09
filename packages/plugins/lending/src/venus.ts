@@ -36,6 +36,27 @@ export const vTokenAbi = [
     outputs: [{ type: "uint256" }],
   },
   {
+    name: "getCash",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "totalBorrows",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "totalReserves",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
     name: "exchangeRateStored",
     type: "function",
     stateMutability: "view",

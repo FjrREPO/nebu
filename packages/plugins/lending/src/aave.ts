@@ -143,6 +143,13 @@ export const erc20Abi = [
     inputs: [{ type: "address" }, { type: "uint256" }],
     outputs: [{ type: "bool" }],
   },
+  {
+    name: "totalSupply",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;
 
 export function reservesList() {
