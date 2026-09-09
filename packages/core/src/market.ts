@@ -84,6 +84,16 @@ function enqueue<T>(work: () => Promise<T>): Promise<T> {
   return next;
 }
 
+/**
+ * One request to the market feed, queued behind every other one and backed off
+ * when it is refused.
+ *
+ * Exported because the plugins reach for the same feed: anything that fetches
+ * it on its own gets throttled next to this queue rather than inside it, which
+ * is how a pool lookup ended up 429-ing while the board beside it was fine.
+ */
+export const marketGet = (path: string) => get(path);
+
 async function get(path: string) {
   return enqueue(async () => {
     for (let attempt = 0; ; attempt++) {

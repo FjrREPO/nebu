@@ -3,10 +3,9 @@
  * of the two numbers no contract exposes — 24h volume and swap counts — which
  * is what a fee APR is actually made of.
  */
-import { cached, fallbackLogo } from "@nebu/core";
+import { cached, fallbackLogo, marketGet } from "@nebu/core";
 
 const ENDPOINT = "https://api.geckoterminal.com/api/v2/networks/bsc/dexes";
-const POOL_ENDPOINT = "https://api.geckoterminal.com/api/v2/networks/bsc/pools";
 const CACHE_MS = 60_000;
 const PAGES = 3;
 
@@ -188,19 +187,17 @@ export async function livePools(dex = "pancakeswap-v3-bsc"): Promise<PoolRow[]> 
  */
 export async function poolByAddress(address: string): Promise<PoolRow | null> {
   return cached(`pool-row:${address.toLowerCase()}`, async () => {
-    const response = await fetch(
-      `${POOL_ENDPOINT}/${address.toLowerCase()}?include=base_token,quote_token`,
-      { headers: { accept: "application/json" }, signal: AbortSignal.timeout(12_000) },
-    );
-    // Throwing rather than returning null matters more than it looks: cached()
-    // keeps whatever resolves, so a single 429 answered with null would be
-    // remembered as "this pool has no data" for the next quarter of an hour.
-    // A rejection is dropped from the cache and retried, and the last good row
-    // stands in the meantime.
-    if (!response.ok) throw new Error(`geckoterminal answered ${response.status}`);
-    const body = (await response.json()) as { data?: GeckoPool; included?: GeckoToken[] };
+    // Through the shared queue, which spaces requests out and backs off when
+    // the feed refuses. Fetching it directly put this call next to that queue
+    // rather than inside it, and it was refused while the board beside it was
+    // fine. A refusal throws, which cached() drops and retries — answering
+    // null would have been remembered as "this pool has no data" for the next
+    // quarter of an hour.
+    const body = (await marketGet(
+      `/pools/${address.toLowerCase()}?include=base_token,quote_token`,
+    )) as { data?: GeckoPool; included?: GeckoToken[] };
     const pool = body.data;
-    if (!pool) throw new Error("geckoterminal returned no pool");
+    if (!pool) throw new Error("the feed returned no pool");
 
     const brief = (id: string): TokenBrief => {
       const token = (body.included ?? []).find((entry) => entry.id === id);
