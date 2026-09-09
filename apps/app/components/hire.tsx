@@ -34,7 +34,15 @@ type Grant = {
   transactionHash?: string;
 };
 
-const storageKey = (id: string) => `nebu2.grant.${id}`;
+/**
+ * A hire belongs to the agent wallet that made it, not to the browser. Two
+ * connected wallets on one laptop have two agent wallets, and each has to see
+ * its own hires — sharing one key showed the second wallet a session it could
+ * not have signed for.
+ */
+const storageKey = (id: string, agentWallet: `0x${string}`) =>
+  `nebu2.grant.${id}.${agentWallet.toLowerCase()}`;
+const legacyKey = (id: string) => `nebu2.grant.${id}`;
 
 const CHAIN_OF: Record<SessionNetwork, number> = { mainnet: 56, testnet: 97 };
 
@@ -114,9 +122,19 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
   const noAllowance = scope?.spend.every((entry) => Number(entry.suggested) === 0) ?? false;
 
   useEffect(() => {
+    const owner = wallet.address;
+    if (!owner) return setGrant(null);
     try {
-      const raw = localStorage.getItem(storageKey(agent.id));
-      if (!raw) return;
+      // Hires made before they were scoped move across, once, to whichever
+      // agent wallet actually made them.
+      const legacy = localStorage.getItem(legacyKey(agent.id));
+      if (legacy) {
+        localStorage.removeItem(legacyKey(agent.id));
+        const from = (JSON.parse(legacy) as Grant).walletAddress;
+        if (from) localStorage.setItem(storageKey(agent.id, from), legacy);
+      }
+      const raw = localStorage.getItem(storageKey(agent.id, owner));
+      if (!raw) return setGrant(null);
       const saved = JSON.parse(raw) as Grant;
       // Whatever is in storage was written by some earlier version of this
       // panel, and the shape has already changed twice. Rebuilding it here
@@ -127,9 +145,10 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
     } catch {
       // Unreadable, blocked, or from a shape we no longer speak. Either way
       // there is no session here, which is what the panel shows anyway.
-      localStorage.removeItem(storageKey(agent.id));
+      localStorage.removeItem(storageKey(agent.id, owner));
+      setGrant(null);
     }
-  }, [agent.id]);
+  }, [agent.id, wallet.address]);
 
   /** What this agent would do with the wallet it has been given. */
   const inspect = useCallback(
@@ -177,7 +196,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
         transactionHash: result.transactionHash,
       };
       try {
-        localStorage.setItem(storageKey(agent.id), JSON.stringify(next));
+        localStorage.setItem(storageKey(agent.id, opened.address), JSON.stringify(next));
       } catch {
         // Not fatal: the session still works for this page view.
       }
@@ -228,7 +247,7 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
         opened.signer,
         restoreSession(grant.stored, grant.sessionKey),
       );
-      localStorage.removeItem(storageKey(agent.id));
+      localStorage.removeItem(storageKey(agent.id, grant.walletAddress));
       setGrant(null);
       setNote("Revoked.");
     } catch (err) {
@@ -308,8 +327,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
           ) : (
             <>
               <p className="font-manrope text-white text-[13px] leading-[18px]">
-                Your agents work from one wallet, unlocked by this device. Set it up and send it
-                some BNB, then any agent here can be hired in two clicks.
+                Your agents work from a wallet of their own, one per wallet you connect. Set it up
+                and send it some BNB, then any agent here can be hired in two clicks.
               </p>
               <Link href="/wallet" className={`${primary} block text-center`}>
                 {wallet.known ? "Unlock the agent wallet" : "Set up the agent wallet"}

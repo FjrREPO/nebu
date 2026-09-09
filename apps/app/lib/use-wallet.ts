@@ -129,6 +129,15 @@ function wire() {
   injected.on("chainChanged", () => refresh(state.address));
 }
 
+/** The connected address right now, for code that cannot use the hook. */
+export const walletAddress = () => state.address;
+
+/** Notified whenever the connected wallet changes, including disconnects. */
+export function subscribeWallet(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 export function useWallet() {
   return useSyncExternalStore(
     (listener) => {

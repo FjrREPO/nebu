@@ -20,7 +20,13 @@ import {
   parseEther,
 } from "viem";
 import { bsc, bscTestnet } from "viem/chains";
-import { connectWallet, disconnectWallet, switchToChain } from "./use-wallet";
+import {
+  connectWallet,
+  disconnectWallet,
+  subscribeWallet,
+  switchToChain,
+  walletAddress,
+} from "./use-wallet";
 
 /**
  * The chain sessions are granted on. It has to match the chain the agents
@@ -71,7 +77,17 @@ const emit = (next: AgentWalletState) => {
   for (const listener of listeners) listener();
 };
 
+/**
+ * One agent wallet per connected wallet, not one per browser.
+ *
+ * Keyed on the address you connect with, because that is whose agent it is:
+ * two wallets on one laptop were sharing an agent wallet and its balance,
+ * which is nobody's idea of separate accounts. Nothing on chain ties them —
+ * the passkey alone controls the agent wallet — so this is about whose money
+ * is whose, and about not being able to open an agent you did not fund.
+ */
 const WALLET_KEY = "nebu2.wallet";
+const keyFor = (owner: `0x${string}`) => `${WALLET_KEY}.${owner.toLowerCase()}`;
 /**
  * Locked, not forgotten. The credential and the address stay exactly where
  * they were — this only says the session is over, so the wallet does not
@@ -81,9 +97,18 @@ const WALLET_KEY = "nebu2.wallet";
 const LOCKED_KEY = "nebu2.wallet.locked";
 type SavedWallet = { address: `0x${string}`; credential?: PasskeyCredential };
 
-function loadSaved(): SavedWallet | null {
+function loadSaved(owner: `0x${string}` | null): SavedWallet | null {
+  if (!owner) return null;
   try {
-    const raw = localStorage.getItem(WALLET_KEY);
+    // Anyone who made an agent wallet before it was scoped keeps it: the first
+    // wallet to connect after this adopts the unscoped one rather than being
+    // shown a "create" button next to money it already has.
+    const legacy = localStorage.getItem(WALLET_KEY);
+    if (legacy && !localStorage.getItem(keyFor(owner))) {
+      localStorage.setItem(keyFor(owner), legacy);
+      localStorage.removeItem(WALLET_KEY);
+    }
+    const raw = localStorage.getItem(keyFor(owner));
     if (!raw) return null;
     // The first version of this stored the bare address.
     if (raw.startsWith("0x")) return { address: raw as `0x${string}` };
@@ -94,9 +119,9 @@ function loadSaved(): SavedWallet | null {
   }
 }
 
-function remember(address: `0x${string}`, signer: PasskeySigner) {
+function remember(owner: `0x${string}`, address: `0x${string}`, signer: PasskeySigner) {
   try {
-    localStorage.setItem(WALLET_KEY, JSON.stringify({ address, credential: signer.credential }));
+    localStorage.setItem(keyFor(owner), JSON.stringify({ address, credential: signer.credential }));
   } catch {
     // Blocked storage costs the memory, not the wallet.
   }
@@ -108,17 +133,28 @@ export async function refreshAgentBalance(address = state.address) {
   emit({ ...state, balance });
 }
 
-let restored = false;
+/** Which connected wallet the current state belongs to. */
+let shownFor: `0x${string}` | null = null;
+
+/**
+ * Load whichever agent wallet belongs to the connected address.
+ *
+ * Called again whenever that address changes, because the answer changes with
+ * it: connecting a different wallet has to show a different agent, and
+ * disconnecting has to show none rather than leaving the last one on screen.
+ */
 function restore() {
-  if (restored) return;
-  restored = true;
-  const saved = loadSaved();
-  if (!saved) return;
+  const owner = walletAddress();
+  if (owner === shownFor) return;
+  shownFor = owner;
+
+  const saved = loadSaved(owner);
+  if (!saved) return emit(EMPTY);
+
   try {
     // Signed out last time: show that a wallet exists, but do not open it.
     if (localStorage.getItem(LOCKED_KEY)) {
-      emit({ known: saved.address, address: null, signer: null, balance: null });
-      return;
+      return emit({ known: saved.address, address: null, signer: null, balance: null });
     }
   } catch {
     // Unreadable storage means no record of a sign-out, so carry on.
@@ -131,9 +167,14 @@ function restore() {
   if (signer) void refreshAgentBalance(saved.address);
 }
 
+let watching = false;
 export function useAgentWallet() {
   return useSyncExternalStore(
     (listener) => {
+      if (!watching) {
+        watching = true;
+        subscribeWallet(restore);
+      }
       restore();
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -143,21 +184,43 @@ export function useAgentWallet() {
   );
 }
 
-/** The signer, opening the wallet first if this device has one to open. */
+/** Nothing can be opened until we know whose agent wallet to open. */
+export class NoOwner extends Error {
+  constructor() {
+    super("Connect your wallet first — an agent wallet belongs to the wallet that funds it.");
+  }
+}
+
+/** Take an opened wallet as this owner's, and stop treating it as signed out. */
+function adopt(owner: `0x${string}`, opened: { address: `0x${string}`; signer: PasskeySigner }) {
+  try {
+    localStorage.removeItem(LOCKED_KEY);
+  } catch {
+    // Nothing to clear if storage will not answer.
+  }
+  remember(owner, opened.address, opened.signer);
+  shownFor = owner;
+  emit({ known: opened.address, address: opened.address, signer: opened.signer, balance: null });
+  return refreshAgentBalance(opened.address).then(() => opened);
+}
+
+/** The signer, opening the connected wallet’s agent wallet if there is one. */
 export async function openAgentWallet(): Promise<{
   address: `0x${string}`;
   signer: PasskeySigner;
 }> {
   if (state.address && state.signer) return { address: state.address, signer: state.signer };
 
-  try {
-    localStorage.removeItem(LOCKED_KEY);
-  } catch {
-    // Nothing to clear if storage will not answer.
-  }
+  const owner = walletAddress();
+  if (!owner) throw new NoOwner();
 
-  const saved = loadSaved();
+  const saved = loadSaved(owner);
   if (saved?.credential) {
+    try {
+      localStorage.removeItem(LOCKED_KEY);
+    } catch {
+      // Nothing to clear if storage will not answer.
+    }
     const signer = signerFromPasskey(saved.credential);
     emit({ ...state, known: saved.address, address: saved.address, signer });
     await refreshAgentBalance(saved.address);
@@ -165,29 +228,32 @@ export async function openAgentWallet(): Promise<{
   }
 
   const client = createClient({ chains: [CONFIG] });
-  // Without a stored credential, ask the OS which passkey and read the wallet
-  // off the chain. Falling back to creating one would turn a cancelled prompt
-  // into a brand new address, stranding whatever the old one holds.
+  // A wallet we know the address of but hold no credential for is recovered,
+  // never recreated: falling back to creating one would turn a cancelled
+  // prompt into a brand new address, stranding whatever the old one holds.
+  // A wallet we have never seen gets its own, because a different address
+  // hiring agents is a different account, not the same one again.
   const opened = saved
     ? await client.recoverFromPasskey({ chainId: CONFIG.chainId })
-    : await client
-        .recoverFromPasskey({ chainId: CONFIG.chainId })
-        .catch(() => client.createPasskeyWallet({ name: "nebu" }));
+    : await client.createPasskeyWallet({ name: "nebu" });
 
-  remember(opened.address, opened.signer);
-  emit({ known: opened.address, address: opened.address, signer: opened.signer, balance: null });
-  await refreshAgentBalance(opened.address);
-  return { address: opened.address, signer: opened.signer };
+  return adopt(owner, opened);
+}
+
+/** Point this wallet at an agent wallet some passkey already controls. */
+export async function recoverAgentWallet() {
+  const owner = walletAddress();
+  if (!owner) throw new NoOwner();
+  const client = createClient({ chains: [CONFIG] });
+  return adopt(owner, await client.recoverFromPasskey({ chainId: CONFIG.chainId }));
 }
 
 /** Deliberately abandon the remembered wallet and make a new one. */
 export async function startFreshAgentWallet() {
+  const owner = walletAddress();
+  if (!owner) throw new NoOwner();
   const client = createClient({ chains: [CONFIG] });
-  const opened = await client.createPasskeyWallet({ name: "nebu" });
-  remember(opened.address, opened.signer);
-  emit({ known: opened.address, address: opened.address, signer: opened.signer, balance: null });
-  await refreshAgentBalance(opened.address);
-  return opened;
+  return adopt(owner, await client.createPasskeyWallet({ name: "nebu" }));
 }
 
 /** Top the agent wallet up from whatever extension wallet the user already has. */

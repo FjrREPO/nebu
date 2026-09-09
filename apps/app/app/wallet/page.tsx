@@ -4,7 +4,7 @@ import { GridLines, Muted } from "@/components/ui";
 export const metadata = {
   title: "Agent wallet",
   description:
-    "The wallet your Nebu agents work from: unlocked by this device rather than a seed phrase, funded by you, and holding only what you send it.",
+    "The wallet your Nebu agents work from: one per wallet you connect, unlocked by a passkey rather than a seed phrase, and holding only what you send it.",
   alternates: { canonical: "/wallet" },
 };
 

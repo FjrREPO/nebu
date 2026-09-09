@@ -8,6 +8,7 @@ import {
   fundAgentWallet,
   NETWORK,
   openAgentWallet,
+  recoverAgentWallet,
   refreshAgentBalance,
   startFreshAgentWallet,
   useAgentWallet,
@@ -35,7 +36,9 @@ export function AgentWalletPanel() {
   const agent = useAgentWallet();
   const yours = useWallet();
   const [deposit, setDeposit] = useState("0.05");
-  const [phase, setPhase] = useState<"idle" | "opening" | "funding" | "fresh">("idle");
+  const [phase, setPhase] = useState<"idle" | "opening" | "funding" | "fresh" | "recovering">(
+    "idle",
+  );
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const busy = phase !== "idle";
@@ -67,9 +70,18 @@ export function AgentWalletPanel() {
         className="border border-white/15 p-[20px] anim-fade-up"
         style={{ animationDelay: "400ms" }}
       >
-        <span className={legend}>The agent's wallet · unlocked by this device</span>
+        <span className={legend}>
+          {yours.address
+            ? `The agent's wallet · for ${short(yours.address)}`
+            : "The agent's wallet"}
+        </span>
 
-        {agent.address ? (
+        {!yours.address ? (
+          <p className="font-manrope text-white text-[13px] leading-[18px] mt-[10px]">
+            Each wallet gets its own agent wallet. Connect yours and we will open the one that
+            belongs to it — or make it, if this is the first time.
+          </p>
+        ) : agent.address ? (
           <>
             <div className="flex items-center gap-[12px] mt-[10px]">
               <WalletMark address={agent.address} size={30} />
@@ -89,31 +101,53 @@ export function AgentWalletPanel() {
             </div>
 
             <p className="font-manrope text-white/50 text-[11px] leading-[15px] mt-[14px]">
-              This is the wallet your agents work from. It holds only what you send it, it is
-              unlocked by this device rather than a seed phrase, and every agent you hire draws its
-              limits from what is in here.
+              This is the wallet your agents work from. It belongs to {short(yours.address)}, it
+              holds only what you send it, it is unlocked by a passkey rather than a seed phrase,
+              and every agent you hire draws its limits from what is in here.
             </p>
           </>
         ) : (
           <p className="font-manrope text-white text-[13px] leading-[18px] mt-[10px]">
             {agent.known
-              ? `This device made an agent wallet, ${short(agent.known)}. Unlock it to carry on.`
-              : "Your agents get their own wallet, unlocked by this device the way you unlock your phone. Create it, send it some BNB, and they take over from there."}
+              ? `This wallet already has an agent wallet, ${short(agent.known)}. Unlock it to carry on.`
+              : "Your agents get their own wallet, unlocked with a passkey the way you unlock your phone. Create it, send it some BNB, and they take over from there."}
           </p>
         )}
 
-        {!agent.address && (
+        {!yours.address ? (
           <button
             type="button"
             disabled={busy}
-            onClick={() => run("opening", openAgentWallet)}
+            onClick={() => run("opening", connectWallet)}
             className={`${primary} mt-[16px] w-full`}
           >
-            {phase === "opening"
-              ? "Opening…"
-              : agent.known
-                ? "Unlock agent wallet"
-                : "Create agent wallet"}
+            {phase === "opening" ? "Connecting…" : "Connect your wallet"}
+          </button>
+        ) : (
+          !agent.address && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => run("opening", openAgentWallet)}
+              className={`${primary} mt-[16px] w-full`}
+            >
+              {phase === "opening"
+                ? "Opening…"
+                : agent.known
+                  ? "Unlock agent wallet"
+                  : "Create agent wallet"}
+            </button>
+          )
+        )}
+
+        {yours.address && !agent.address && !agent.known && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => run("recovering", recoverAgentWallet)}
+            className="mt-[10px] font-manrope text-white/40 text-[11px] uppercase tracking-wide hover:text-white/70 transition-colors"
+          >
+            {phase === "recovering" ? "Looking…" : "Already have one? Recover it"}
           </button>
         )}
       </div>
