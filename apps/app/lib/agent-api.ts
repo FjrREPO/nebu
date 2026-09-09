@@ -1,4 +1,4 @@
-import type { AutoParams, SessionScope } from "@nebu/core";
+import type { AgentOutlook, AutoParams, SessionScope } from "@nebu/core";
 
 /**
  * The panel talks to the agents over the same HTTP API everyone else uses.
@@ -34,6 +34,10 @@ const query = (params: Record<string, string>) => new URLSearchParams(params).to
 /** What the agent picks for itself once it can see a funded wallet. */
 export const agentAuto = (id: string, wallet: string) =>
   call<AutoParams | null>(`/api/agents/${id}/auto?wallet=${wallet}`);
+
+/** What the agent expects of capital, for the desk to split a wallet by. */
+export const agentOutlook = (id: string, params: Record<string, string>) =>
+  call<AgentOutlook | null>(`/api/agents/${id}/outlook?${query(params)}`);
 
 /** The narrowest session that still lets the agent do its job. */
 export const agentScope = (id: string, params: Record<string, string>) =>

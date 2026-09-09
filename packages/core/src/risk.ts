@@ -49,3 +49,32 @@ export function daysToMove(distance: number, daily: number): number | null {
   if (!(daily > 0) || !(distance > 0)) return null;
   return (distance / daily) ** 2;
 }
+
+/**
+ * The standard normal, close enough for a warning light.
+ *
+ * Abramowitz & Stegun 26.2.17, mirrored for negatives — a few decimal places
+ * of accuracy, no dependency, and nothing here is a pricing model.
+ */
+function normalCdf(z: number) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const density = 0.3989422804014327 * Math.exp((-z * z) / 2);
+  const tail =
+    density *
+    t *
+    (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return z >= 0 ? 1 - tail : tail;
+}
+
+/**
+ * The odds a random walk touches something `days` of ordinary movement away,
+ * at some point inside `horizon` days.
+ *
+ * Not the odds of ending up there — of ever getting there, which is the one
+ * that matters when the barrier is a liquidation. Twice the chance of being
+ * past it at the end, by the reflection principle.
+ */
+export function touchOdds(days: number | null, horizon: number): number {
+  if (days === null || !(days > 0) || !(horizon > 0)) return 0;
+  return Math.min(1, 2 * normalCdf(-Math.sqrt(days / horizon)));
+}

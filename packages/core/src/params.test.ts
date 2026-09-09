@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { cached, fallbackLogo } from "./market.ts";
 import { plainAmount, requireAddress, requireInt } from "./params.ts";
-import { dailyVolatility, daysToMove } from "./risk.ts";
+import { dailyVolatility, daysToMove, touchOdds } from "./risk.ts";
 import { InvalidParams } from "./types.ts";
 
 const pool = "0x36696169c63e42cd08ce11f5deebbcebae652050";
@@ -81,3 +81,10 @@ await assert.rejects(
   assert.equal(far, 4);
   assert.equal(daysToMove(0.05, 0), null);
 }
+
+// Touching a barrier is not the same as ending past it: a line one expected
+// move away is reached about a third of the time, not half.
+assert.ok(Math.abs(touchOdds(365, 365) - 0.317) < 0.01);
+assert.ok(touchOdds(1, 365) > 0.9, "a line a day away is all but certain over a year");
+assert.ok(touchOdds(36_500, 365) < 0.02, "one a century away is not");
+assert.equal(touchOdds(null, 365), 0, "and an unknown distance is not a certainty");

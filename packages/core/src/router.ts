@@ -8,6 +8,7 @@
  */
 import { type Address, encodeFunctionData, type Hex } from "viem";
 import { bscClient } from "./chain.ts";
+import { tokenSeries } from "./market.ts";
 import type { AgentTx } from "./types.ts";
 
 export const WBNB: Address = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
@@ -76,6 +77,12 @@ const routerAbi = [
 ] as const;
 
 /** Native BNB the wallet can actually commit, once gas is set aside. */
+/** BNB in dollars, from the deepest pool it trades in. */
+export async function bnbUsd(): Promise<number | null> {
+  const last = (await tokenSeries(WBNB, 6)).at(-1)?.v;
+  return last && last > 0 ? last : null;
+}
+
 export async function spendableBnb(wallet: Address) {
   const balance = await bscClient.getBalance({ address: wallet });
   return balance > GAS_RESERVE_WEI ? balance - GAS_RESERVE_WEI : 0n;

@@ -101,6 +101,8 @@ export type SessionScope = {
   nativeSpend?: string;
 };
 
+import type { AgentOutlook } from "./desk.ts";
+
 /** One reading in an agent's history: unix seconds, and the value. */
 export type SeriesPoint = { t: number; v: number };
 
@@ -166,6 +168,12 @@ export interface AgentPlugin {
   autoParams(wallet: `0x${string}`): Promise<AutoParams | null>;
   /** The tx to run, or null when there is nothing to do. */
   plan(params: AgentParams): Promise<AgentAction | null>;
+  /**
+   * What this agent expects of the capital it is given, so a wallet running
+   * several of them can decide who gets what. Optional: an agent with no view
+   * today simply does not compete for the money.
+   */
+  outlook?(params: AgentParams): Promise<AgentOutlook | null>;
 }
 
 /** The caller sent bad params — a 400, not a broken agent. */

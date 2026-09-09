@@ -1,12 +1,14 @@
 import {
   type AgentAction,
   type AgentInsights,
+  type AgentOutlook,
   type AgentPlugin,
   type AgentSeries,
   type AgentStatus,
   type AutoParams,
   bnbInto,
   bscClient,
+  dailyVolatility,
   InvalidParams,
   plainAmount,
   plainNumber,
@@ -332,6 +334,45 @@ export const pancakeGrid: AgentPlugin = {
       logos: [market.meta0.address, market.meta1.address]
         .map((token) => icons.get(token.toLowerCase()))
         .filter((url) => url !== undefined),
+    };
+  },
+
+  /**
+   * What a ladder earns is the width of a rung, less the fee paid twice to
+   * cross it, times how often the price crosses one.
+   *
+   * A random walk crosses a level of width s about (σ/s)² times a day, and
+   * each fill only works one rung of the ladder — so the whole grid earns that
+   * divided by the number of rungs. It is an estimate of a market that never
+   * quite behaves, hence the ceiling on it.
+   */
+  async outlook(params): Promise<AgentOutlook | null> {
+    const { lower, upper, grids } = readGrid(params);
+    const pool = requireAddress(params, "pool");
+    const fee = await bscClient.readContract({ address: pool, abi: poolAbi, functionName: "fee" });
+    const risk = dailyVolatility(await poolSeries(pool, 48));
+    if (risk === null) return null;
+
+    const cell = (upper / lower) ** (1 / grids) - 1;
+    const net = cell - 2 * (Number(fee) / 1_000_000);
+    if (!(cell > 0) || net <= 0) {
+      return {
+        apr: 0,
+        risk,
+        kind: "return",
+        reason: `Rungs ${(cell * 100).toFixed(2)}% apart do not clear the ${(Number(fee) / 10_000).toFixed(2)}% fee twice`,
+      };
+    }
+
+    const fillsPerDay = (risk / cell) ** 2;
+    // ponytail: a random-walk estimate, capped — it says which ladder is
+    // better placed, not what next week pays.
+    const apr = Math.min(5, ((fillsPerDay * net) / grids) * 365);
+    return {
+      apr,
+      risk,
+      kind: "return",
+      reason: `${(cell * 100).toFixed(2)}% rungs, about ${fillsPerDay.toFixed(1)} fills a day at ${(risk * 100).toFixed(1)}% daily movement`,
     };
   },
 

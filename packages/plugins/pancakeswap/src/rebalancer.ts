@@ -1,6 +1,7 @@
 import {
   type AgentAction,
   type AgentInsights,
+  type AgentOutlook,
   type AgentPlugin,
   type AgentSeries,
   type AgentStatus,
@@ -38,7 +39,7 @@ import {
   tickToPrice,
   tokenMeta,
 } from "./pool.ts";
-import { compactUsd, livePools, shortlist } from "./pools.ts";
+import { compactUsd, livePools, poolByAddress, shortlist } from "./pools.ts";
 
 const DEADLINE_SECONDS = 20 * 60;
 
@@ -519,6 +520,31 @@ export const pancakeRebalancer: AgentPlugin = {
       logos: [position.token0, position.token1]
         .map((token) => icons.get(token.toLowerCase()))
         .filter((url) => url !== undefined),
+    };
+  },
+
+  /**
+   * Fees are the return, and the pool's own volatility is the risk — the same
+   * movement that pays the fees is what walks the price out of the range.
+   */
+  async outlook(params): Promise<AgentOutlook | null> {
+    const pool = params.tokenId
+      ? (await loadPosition(tokenId(params))).pool
+      : requireAddress(params, "pool");
+    const row =
+      (await livePools().catch(() => [])).find(
+        (entry) => entry.address.toLowerCase() === pool.toLowerCase(),
+      ) ?? (await poolByAddress(pool));
+    if (!row) return null;
+
+    const risk = dailyVolatility(await poolSeries(pool, 48));
+    return {
+      apr: row.feeApr,
+      risk,
+      kind: "return",
+      reason: `${row.pair} ${row.feePercent}% pays ${(row.feeApr * 100).toFixed(0)}% in fees${
+        risk === null ? "" : ` and moves ${(risk * 100).toFixed(1)}% a day`
+      }`,
     };
   },
 

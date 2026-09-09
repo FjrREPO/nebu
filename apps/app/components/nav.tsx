@@ -12,9 +12,10 @@ import { ChainMark, WalletMark } from "./ui";
 const PAGES = [
   { number: "01", label: "AGENTS", href: "/agents" },
   { number: "02", label: "LEADERBOARD", href: "/leaderboard" },
-  { number: "03", label: "STATUS", href: "/status" },
+  { number: "03", label: "DESK", href: "/desk" },
+  { number: "04", label: "STATUS", href: "/status" },
   // Only the sandbox has coins to give away.
-  ...(TESTNET ? [{ number: "04", label: "FAUCET", href: "/faucet" }] : []),
+  ...(TESTNET ? [{ number: "05", label: "FAUCET", href: "/faucet" }] : []),
 ];
 
 function NavItem({

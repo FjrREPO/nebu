@@ -1,11 +1,13 @@
 import {
   type AgentAction,
   type AgentInsights,
+  type AgentOutlook,
   type AgentPlugin,
   type AgentSeries,
   type AgentStatus,
   type AgentTx,
   type AutoParams,
+  bnbUsd,
   bscClient,
   dailyVolatility,
   daysToMove,
@@ -20,6 +22,7 @@ import {
   type SessionScope,
   tokenLogos,
   tokenSeries,
+  touchOdds,
 } from "@nebu/core";
 import {
   type Address,
@@ -71,6 +74,13 @@ export function floorFor(daily: number | null) {
   const floor = 1 / (1 - cushion);
   return Math.min(FLOOR_RANGE[1], Math.max(FLOOR_RANGE[0], Number(floor.toFixed(2))));
 }
+/**
+ * What a liquidation costs on top of the debt. Aave's bonus to the liquidator
+ * on BNB Chain sits around 5% depending on the collateral, and it is the
+ * number this agent exists to avoid paying.
+ */
+const LIQUIDATION_PENALTY = 0.05;
+
 /** Aave marks the variable rate mode as 2 in repay(). */
 const VARIABLE_RATE = 2n;
 
@@ -420,6 +430,51 @@ export const healthMonitor: AgentPlugin = {
         v: account.healthFactor * (point.v / now),
       })),
       band: { from: account.minHealthFactor, to: account.healthFactor * 2 },
+    };
+  },
+
+  /**
+   * This one does not want capital, it wants cover.
+   *
+   * What it asks for is the repayment that would put the loan back above its
+   * floor, in BNB, because that is the money that must be sitting there when
+   * the collateral falls rather than earning somewhere else. What it is worth
+   * is the liquidation penalty it avoids, weighted by how likely that fall is
+   * — a random walk covers ground with the square root of time, so a loan one
+   * ordinary day from the line is a different proposition to one a year away.
+   */
+  async outlook(params): Promise<AgentOutlook | null> {
+    const account = await loadAccount(params);
+    if (account.debtBase === 0) return null;
+
+    const repayBase = repayToReachHealth(
+      account.collateralBase,
+      account.debtBase,
+      account.thresholdBps,
+      account.minHealthFactor,
+    );
+    const [price, collateral] = await Promise.all([
+      bnbUsd(),
+      largestCollateral(account.wallet).catch(() => null),
+    ]);
+    const daily = collateral ? dailyVolatility(await tokenSeries(collateral.asset, 48)) : null;
+    const days = daily === null ? null : daysToMove(dropToLiquidation(account.healthFactor), daily);
+    // Ever reaching the line inside a year, not ending the year past it.
+    const odds = touchOdds(days, 365);
+
+    return {
+      apr: LIQUIDATION_PENALTY * odds,
+      risk: daily,
+      kind: "reserve",
+      needs: price && price > 0 ? repayBase / price : 0,
+      reason:
+        repayBase > 0
+          ? `Health factor ${account.healthFactor.toFixed(2)} is under its ${account.minHealthFactor} floor — $${repayBase.toFixed(0)} of cover`
+          : `Health factor ${account.healthFactor.toFixed(2)}, clear of the ${account.minHealthFactor} floor${
+              days === null
+                ? ""
+                : ` by about ${days < 1 ? "a day" : `${Math.round(days)} days`} of ordinary movement`
+            }`,
     };
   },
 

@@ -1,5 +1,6 @@
 export * from "./activity.ts";
 export * from "./chain.ts";
+export * from "./desk.ts";
 export * from "./market.ts";
 export * from "./params.ts";
 export * from "./risk.ts";

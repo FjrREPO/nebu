@@ -11,6 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: at("/agents"), lastModified: now, changeFrequency: "hourly", priority: 0.9 },
     { url: at("/leaderboard"), lastModified: now, changeFrequency: "hourly", priority: 0.8 },
     { url: at("/wallet"), lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: at("/desk"), lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     { url: at("/status"), lastModified: now, changeFrequency: "hourly", priority: 0.3 },
     ...(TESTNET
       ? [

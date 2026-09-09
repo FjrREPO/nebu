@@ -1,6 +1,7 @@
 import {
   type AgentAction,
   type AgentInsights,
+  type AgentOutlook,
   type AgentPlugin,
   type AgentSeries,
   type AgentStatus,
@@ -10,6 +11,7 @@ import {
   apyHistory,
   bnbInto,
   bscClient,
+  dailyVolatility,
   InvalidParams,
   marketId,
   plainAmount,
@@ -23,6 +25,7 @@ import {
   spendableBnb,
   tokenLink,
   tokenLogos,
+  tokenSeries,
   WBNB,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
@@ -379,6 +382,30 @@ export const yieldOptimizer: AgentPlugin = {
       unit: " bps",
       points: paired.map((day) => ({ t: day.t, v: Math.round((day.a - day.b) * 100) })),
       logos: [icons.get(asset.toLowerCase())].filter((url) => url !== undefined),
+    };
+  },
+
+  /**
+   * Interest is the return, and the asset's own movement is the risk: a
+   * stablecoin paying 6% and a volatile coin paying 6% are not the same trade,
+   * and the desk has to be told which is which.
+   */
+  async outlook(params): Promise<AgentOutlook | null> {
+    const market = await loadMarket(params);
+    const best = market.venues.reduce<Venue | null>(
+      (winner, venue) => (winner === null || venue.apy > winner.apy ? venue : winner),
+      null,
+    );
+    if (!best) return null;
+
+    const risk = dailyVolatility(await tokenSeries(market.asset, 48));
+    return {
+      apr: best.apy,
+      risk,
+      kind: "return",
+      reason: `${best.protocol} pays ${(best.apy * 100).toFixed(2)}% on ${market.symbol}${
+        risk === null ? "" : `, which moves ${(risk * 100).toFixed(2)}% a day`
+      }`,
     };
   },
 

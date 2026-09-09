@@ -7,7 +7,7 @@ export const revalidate = 60;
 const CORS = { "access-control-allow-origin": "*" };
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: CORS });
 
-const ACTIONS = ["status", "auto", "insights", "scope", "plan"] as const;
+const ACTIONS = ["status", "auto", "insights", "scope", "plan", "outlook"] as const;
 type Action = (typeof ACTIONS)[number];
 
 const isAddress = (value: string | null): value is `0x${string}` =>
@@ -41,6 +41,9 @@ export async function GET(
       return json(await plugin.autoParams(wallet));
     }
 
+    // Null is an answer here too: an agent with no view today does not compete
+    // for the wallet's money.
+    if (action === "outlook") return json(plugin.outlook ? await plugin.outlook(query) : null);
     if (action === "status") return json(await plugin.status(query));
     if (action === "insights") return json(await plugin.insights(query));
     if (action === "scope") return json(await plugin.scope(query));

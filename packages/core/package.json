@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/params.test.ts"
+    "test": "tsx src/params.test.ts && tsx src/desk.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

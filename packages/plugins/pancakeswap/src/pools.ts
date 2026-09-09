@@ -3,9 +3,10 @@
  * of the two numbers no contract exposes — 24h volume and swap counts — which
  * is what a fee APR is actually made of.
  */
-import { fallbackLogo } from "@nebu/core";
+import { cached, fallbackLogo } from "@nebu/core";
 
 const ENDPOINT = "https://api.geckoterminal.com/api/v2/networks/bsc/dexes";
+const POOL_ENDPOINT = "https://api.geckoterminal.com/api/v2/networks/bsc/pools";
 const CACHE_MS = 60_000;
 const PAGES = 3;
 
@@ -166,6 +167,57 @@ export async function livePools(dex = "pancakeswap-v3-bsc"): Promise<PoolRow[]> 
 
   cache = { at: Date.now(), rows };
   return rows;
+}
+
+/**
+ * One pool by address, for a position the top-of-the-board screen never sees.
+ *
+ * The screen is a shortlist; somebody's liquidity can sit in the two hundredth
+ * pool on BNB Chain and still be worth pricing. Without this an agent watching
+ * one of those has no view at all, which reads as "nothing to say" when the
+ * truth is "not on the list I happened to fetch".
+ */
+export async function poolByAddress(address: string): Promise<PoolRow | null> {
+  return cached(`pool-row:${address.toLowerCase()}`, async () => {
+    const response = await fetch(
+      `${POOL_ENDPOINT}/${address.toLowerCase()}?include=base_token,quote_token`,
+      { headers: { accept: "application/json" }, signal: AbortSignal.timeout(12_000) },
+    );
+    if (!response.ok) return null;
+    const body = (await response.json()) as { data?: GeckoPool; included?: GeckoToken[] };
+    const pool = body.data;
+    if (!pool) return null;
+
+    const brief = (id: string): TokenBrief => {
+      const token = (body.included ?? []).find((entry) => entry.id === id);
+      const at = token?.attributes;
+      return {
+        symbol: at?.symbol ?? "?",
+        logo: at?.image_url ?? (at?.address ? (fallbackLogo(at.address) ?? null) : null),
+      };
+    };
+    const { pair, feePercent } = parsePair(pool.attributes.name);
+    const tvlUsd = Number(pool.attributes.reserve_in_usd ?? 0);
+    const volume24hUsd = Number(pool.attributes.volume_usd.h24 ?? 0);
+    const hourly = pool.attributes.transactions.h1;
+    const created = pool.attributes.pool_created_at;
+    return {
+      address: pool.attributes.address,
+      pair,
+      base: brief(pool.relationships.base_token.data.id),
+      quote: brief(pool.relationships.quote_token.data.id),
+      feePercent,
+      tvlUsd,
+      volume24hUsd,
+      swapsPerHour: hourly ? hourly.buys + hourly.sells : 0,
+      feeApr: tvlUsd > 0 ? ((volume24hUsd * feePercent) / 100 / tvlUsd) * 365 : 0,
+      ageDays: created ? (Date.now() - Date.parse(created)) / 86_400_000 : 0,
+      spark: trend(
+        Number(pool.attributes.base_token_price_usd ?? 0),
+        pool.attributes.price_change_percentage ?? {},
+      ),
+    };
+  }).catch(() => null);
 }
 
 /** Pools the agent would actually work, best fee momentum first. */
