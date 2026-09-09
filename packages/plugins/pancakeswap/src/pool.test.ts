@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { formatPrice, inRange, priceToTick, snapToSpacing, tickToPrice } from "./pool.ts";
+import {
+  feesEarned,
+  formatPrice,
+  inRange,
+  priceToTick,
+  snapToSpacing,
+  tickToPrice,
+} from "./pool.ts";
 
 assert.equal(inRange(0, -100, 100), true);
 assert.equal(inRange(-100, -100, 100), true, "lower tick is inclusive");
@@ -27,3 +34,56 @@ assert.equal(formatPrice(0.000012345678), "0.000012346");
 assert.equal(formatPrice(0.9985012), "0.9985");
 assert.equal(formatPrice(1.0038), "1.0038");
 console.log("ok");
+
+// Fees earned: the position is in range, the pool has accrued 3 units of fee
+// growth per unit of liquidity inside, and the position last saw 1.
+{
+  const Q128 = 1n << 128n;
+  const earned = feesEarned({
+    liquidity: 1_000n,
+    tickCurrent: 0,
+    tickLower: -10,
+    tickUpper: 10,
+    feeGrowthGlobalX128: 3n * Q128,
+    feeGrowthOutsideLowerX128: 0n,
+    feeGrowthOutsideUpperX128: 0n,
+    feeGrowthInsideLastX128: 1n * Q128,
+    owed: 5n,
+  });
+  assert.equal(earned, 5n + 2_000n, "two units of growth on 1000 liquidity, plus what was owed");
+}
+
+// The counters are allowed to overflow, and the difference still has to work.
+{
+  const Q128 = 1n << 128n;
+  const Q256 = 1n << 256n;
+  const earned = feesEarned({
+    liquidity: 1n,
+    tickCurrent: 0,
+    tickLower: -10,
+    tickUpper: 10,
+    // Global has wrapped past the end; the position's last reading has not.
+    feeGrowthGlobalX128: 2n * Q128,
+    feeGrowthOutsideLowerX128: 0n,
+    feeGrowthOutsideUpperX128: 0n,
+    feeGrowthInsideLastX128: Q256 - Q128,
+    owed: 0n,
+  });
+  assert.equal(earned, 3n, "wrapping subtraction gives three units, not a vast one");
+}
+
+// Out of range below: everything the pool earned happened above the position.
+assert.equal(
+  feesEarned({
+    liquidity: 1_000n,
+    tickCurrent: -50,
+    tickLower: -10,
+    tickUpper: 10,
+    feeGrowthGlobalX128: 5n * (1n << 128n),
+    feeGrowthOutsideLowerX128: 5n * (1n << 128n),
+    feeGrowthOutsideUpperX128: 5n * (1n << 128n),
+    feeGrowthInsideLastX128: 0n,
+    owed: 0n,
+  }),
+  0n,
+);

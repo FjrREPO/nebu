@@ -55,6 +55,36 @@ export const poolAbi = [
     inputs: [],
     outputs: [{ type: "int24" }],
   },
+  {
+    name: "feeGrowthGlobal0X128",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "feeGrowthGlobal1X128",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    name: "ticks",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ type: "int24" }],
+    outputs: [
+      { name: "liquidityGross", type: "uint128" },
+      { name: "liquidityNet", type: "int128" },
+      { name: "feeGrowthOutside0X128", type: "uint256" },
+      { name: "feeGrowthOutside1X128", type: "uint256" },
+      { name: "tickCumulativeOutside", type: "int56" },
+      { name: "secondsPerLiquidityOutsideX128", type: "uint160" },
+      { name: "secondsOutside", type: "uint32" },
+      { name: "initialized", type: "bool" },
+    ],
+  },
 ] as const;
 
 export const positionManagerAbi = [

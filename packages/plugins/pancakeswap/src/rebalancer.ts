@@ -26,6 +26,7 @@ import {
 import { type Address, encodeFunctionData, formatUnits, maxUint128, parseAbiItem } from "viem";
 import { erc20Abi, POSITION_MANAGER, poolAbi, positionManagerAbi } from "./abi.ts";
 import {
+  feesEarned,
   formatPrice,
   inRange,
   poolAddress,
@@ -58,14 +59,56 @@ async function loadPosition(id: bigint) {
       throw new InvalidParams(`position #${id} does not exist`);
     });
 
-  const [, , token0, token1, fee, tickLower, tickUpper, liquidity] = position;
+  const [
+    ,
+    ,
+    token0,
+    token1,
+    fee,
+    tickLower,
+    tickUpper,
+    liquidity,
+    feeGrowthInside0Last,
+    feeGrowthInside1Last,
+    owed0,
+    owed1,
+  ] = position;
   const pool = await poolAddress(token0, token1, fee);
-  const [[, tick], spacing, meta0, meta1] = await Promise.all([
-    slot0(pool),
-    bscClient.readContract({ address: pool, abi: poolAbi, functionName: "tickSpacing" }),
-    tokenMeta(token0),
-    tokenMeta(token1),
-  ]);
+  const onPool = { address: pool, abi: poolAbi } as const;
+
+  const [[, tick], spacing, meta0, meta1, global0, global1, lowerTick, upperTick] =
+    await Promise.all([
+      slot0(pool),
+      bscClient.readContract({ ...onPool, functionName: "tickSpacing" }),
+      tokenMeta(token0),
+      tokenMeta(token1),
+      bscClient.readContract({ ...onPool, functionName: "feeGrowthGlobal0X128" }),
+      bscClient.readContract({ ...onPool, functionName: "feeGrowthGlobal1X128" }),
+      bscClient.readContract({ ...onPool, functionName: "ticks", args: [tickLower] }),
+      bscClient.readContract({ ...onPool, functionName: "ticks", args: [tickUpper] }),
+    ]);
+
+  // What the position has made and not yet taken out, one side at a time.
+  const earned = (
+    globalX128: bigint,
+    outsideLower: bigint,
+    outsideUpper: bigint,
+    insideLast: bigint,
+    owed: bigint,
+  ) =>
+    feesEarned({
+      liquidity,
+      tickCurrent: tick,
+      tickLower,
+      tickUpper,
+      feeGrowthGlobalX128: globalX128,
+      feeGrowthOutsideLowerX128: outsideLower,
+      feeGrowthOutsideUpperX128: outsideUpper,
+      feeGrowthInsideLastX128: insideLast,
+      owed,
+    });
+  const fees0 = earned(global0, lowerTick[2], upperTick[2], feeGrowthInside0Last, owed0);
+  const fees1 = earned(global1, lowerTick[3], upperTick[3], feeGrowthInside1Last, owed1);
 
   return {
     id,
@@ -80,6 +123,8 @@ async function loadPosition(id: bigint) {
     spacing,
     meta0,
     meta1,
+    fees0,
+    fees1,
   };
 }
 
@@ -264,7 +309,11 @@ export const pancakeRebalancer: AgentPlugin = {
           value: position.liquidity === 0n ? "Closed" : live ? "In range" : "Out of range",
           hint: `#${position.id}`,
         },
-        { label: "Chain", value: "BNB Smart Chain" },
+        {
+          label: "Fees earned",
+          value: `${formatUnits(position.fees0, position.meta0.decimals).slice(0, 9)} ${position.meta0.symbol}`,
+          hint: `+ ${formatUnits(position.fees1, position.meta1.decimals).slice(0, 9)} ${position.meta1.symbol}`,
+        },
       ],
       table: {
         title: "LP pools",

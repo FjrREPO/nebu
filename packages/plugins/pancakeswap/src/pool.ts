@@ -102,3 +102,42 @@ export async function positionsOf(manager: Address, owner: Address, limit = 12) 
   );
   return ids.map(String);
 }
+
+/**
+ * Fees a V3 position has earned and not yet taken out.
+ *
+ * `tokensOwed` on the position only moves when the position is touched, so on
+ * anything left alone it reads zero however much it has made. The real figure
+ * lives in fee growth: what the pool has accrued per unit of liquidity inside
+ * the position's range, minus what it had accrued when the position last
+ * looked. Subtraction here wraps on purpose — the contracts let these counters
+ * overflow and rely on the difference still being right.
+ */
+const Q128 = 1n << 128n;
+const Q256 = 1n << 256n;
+const wrapSub = (a: bigint, b: bigint) => (a - b + Q256) % Q256;
+
+export function feesEarned(input: {
+  liquidity: bigint;
+  tickCurrent: number;
+  tickLower: number;
+  tickUpper: number;
+  feeGrowthGlobalX128: bigint;
+  feeGrowthOutsideLowerX128: bigint;
+  feeGrowthOutsideUpperX128: bigint;
+  feeGrowthInsideLastX128: bigint;
+  owed: bigint;
+}) {
+  const below =
+    input.tickCurrent >= input.tickLower
+      ? input.feeGrowthOutsideLowerX128
+      : wrapSub(input.feeGrowthGlobalX128, input.feeGrowthOutsideLowerX128);
+  const above =
+    input.tickCurrent < input.tickUpper
+      ? input.feeGrowthOutsideUpperX128
+      : wrapSub(input.feeGrowthGlobalX128, input.feeGrowthOutsideUpperX128);
+
+  const inside = wrapSub(wrapSub(input.feeGrowthGlobalX128, below), above);
+  const gained = (input.liquidity * wrapSub(inside, input.feeGrowthInsideLastX128)) / Q128;
+  return input.owed + gained;
+}
