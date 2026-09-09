@@ -20,12 +20,13 @@ import {
   type SessionScope,
   spendableBnb,
   tokenLogos,
+  volatilityFromDailyMove,
   WBNB,
 } from "@nebu/core";
 import { encodeFunctionData, formatUnits, parseAbiItem, parseUnits } from "viem";
 import { erc20Abi, poolAbi, SMART_ROUTER, smartRouterAbi } from "./abi.ts";
 import { formatPrice, slot0, tickToPrice, tokenMeta } from "./pool.ts";
-import { livePools, shortlist } from "./pools.ts";
+import { livePools, poolByAddress, shortlist } from "./pools.ts";
 
 const SLIPPAGE = 0.01;
 
@@ -349,8 +350,17 @@ export const pancakeGrid: AgentPlugin = {
   async outlook(params): Promise<AgentOutlook | null> {
     const { lower, upper, grids } = readGrid(params);
     const pool = requireAddress(params, "pool");
-    const fee = await bscClient.readContract({ address: pool, abi: poolAbi, functionName: "fee" });
-    const risk = dailyVolatility(await poolSeries(pool, 48));
+    const [fee, candles, row] = await Promise.all([
+      bscClient.readContract({ address: pool, abi: poolAbi, functionName: "fee" }),
+      poolSeries(pool, 48),
+      poolByAddress(pool),
+    ]);
+    // The OHLCV endpoint is the throttled one. Without it the pool still
+    // reports how far it moved in a day, which is enough to say how often a
+    // rung gets crossed.
+    const risk =
+      dailyVolatility(candles) ??
+      (row?.change24h == null ? null : volatilityFromDailyMove(row.change24h));
     if (risk === null) return null;
 
     const cell = (upper / lower) ** (1 / grids) - 1;

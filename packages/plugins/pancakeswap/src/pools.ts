@@ -24,6 +24,8 @@ export type PoolRow = {
   swapsPerHour: number;
   /** Fees the pool paid out over 24h, annualised against its TVL. */
   feeApr: number;
+  /** How far the price moved in a day, as a percentage. Null when unreported. */
+  change24h: number | null;
   ageDays: number;
   /** The last day of price, comma-joined oldest first, for the row's trend line. */
   spark: string;
@@ -76,6 +78,12 @@ export function trend(priceUsd: number, changes: Record<string, string | null>) 
   // and hands back a negative price, which is not a thing. Nothing here is
   // worth drawing unless every point is a price.
   return points.every((point) => Number.isFinite(point) && point > 0) ? points.join(",") : "";
+}
+
+/** The day's move, when the feed reports one. */
+function day(changes: Record<string, string | null> | undefined) {
+  const move = Number(changes?.h24 ?? Number.NaN);
+  return Number.isFinite(move) ? move : null;
 }
 
 /** The fee tier only shows up in the pool's display name: "USDT / WBNB 0.05%". */
@@ -149,6 +157,7 @@ export async function livePools(dex = "pancakeswap-v3-bsc"): Promise<PoolRow[]> 
         volume24hUsd,
         swapsPerHour: hourly ? hourly.buys + hourly.sells : 0,
         feeApr: tvlUsd > 0 ? ((volume24hUsd * feePercent) / 100 / tvlUsd) * 365 : 0,
+        change24h: day(pool.attributes.price_change_percentage),
         ageDays: created ? (now - Date.parse(created)) / 86_400_000 : 0,
         spark: trend(
           Number(pool.attributes.base_token_price_usd ?? 0),
@@ -211,6 +220,7 @@ export async function poolByAddress(address: string): Promise<PoolRow | null> {
       volume24hUsd,
       swapsPerHour: hourly ? hourly.buys + hourly.sells : 0,
       feeApr: tvlUsd > 0 ? ((volume24hUsd * feePercent) / 100 / tvlUsd) * 365 : 0,
+      change24h: day(pool.attributes.price_change_percentage),
       ageDays: created ? (Date.now() - Date.parse(created)) / 86_400_000 : 0,
       spark: trend(
         Number(pool.attributes.base_token_price_usd ?? 0),

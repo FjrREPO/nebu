@@ -23,6 +23,7 @@ import {
   SMART_ROUTER,
   spendableBnb,
   tokenLogos,
+  volatilityFromDailyMove,
   WBNB,
 } from "@nebu/core";
 import { type Address, encodeFunctionData, formatUnits, maxUint128, parseAbiItem } from "viem";
@@ -537,7 +538,10 @@ export const pancakeRebalancer: AgentPlugin = {
       ) ?? (await poolByAddress(pool));
     if (!row) return null;
 
-    const risk = dailyVolatility(await poolSeries(pool, 48));
+    // Candles when the feed offers them, the day's move when it does not.
+    const risk =
+      dailyVolatility(await poolSeries(pool, 48)) ??
+      (row.change24h === null ? null : volatilityFromDailyMove(row.change24h));
     return {
       apr: row.feeApr,
       risk,

@@ -125,6 +125,14 @@ The runner takes one address, asks every agent what it would do with what is in
 that wallet, and reports. Give it `NEBU_SESSION` and `NEBU_SESSION_KEY` and it
 signs instead.
 
+```bash
+TELEGRAM_BOT_TOKEN=... pnpm --filter @nebu/telegram start   # the bot
+```
+
+The bot answers `/agents`, `/wallet 0x…` and `/desk 0x…` from the same registry,
+and `/watch 0x…` messages you when an agent has work to do. It holds no keys —
+hiring and signing stay on the site.
+
 Set `BSC_RPC_URL` to a private endpoint for anything past a demo; the default is
 a fallback list of public dataseeds batched through Multicall3.
 
@@ -138,6 +146,7 @@ apps/
   app       the marketplace — Next 16, Tailwind. Also serves the HTTP API.
   api       the same registry as a standalone Hono service
   agents    headless runner: give it a wallet, it works every agent
+  telegram  the same registry as a bot: status, the desk split, alerts
 packages/
   core      plugin contract, BSC client, routing, param validation
   session   Altana session keys: grant, run, revoke

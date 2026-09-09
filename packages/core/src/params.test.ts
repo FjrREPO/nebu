@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { cached, fallbackLogo } from "./market.ts";
 import { plainAmount, requireAddress, requireInt } from "./params.ts";
-import { dailyVolatility, daysToMove, touchOdds } from "./risk.ts";
+import { dailyVolatility, daysToMove, touchOdds, volatilityFromDailyMove } from "./risk.ts";
 import { InvalidParams } from "./types.ts";
 
 const pool = "0x36696169c63e42cd08ce11f5deebbcebae652050";
@@ -88,3 +88,9 @@ assert.ok(Math.abs(touchOdds(365, 365) - 0.317) < 0.01);
 assert.ok(touchOdds(1, 365) > 0.9, "a line a day away is all but certain over a year");
 assert.ok(touchOdds(36_500, 365) < 0.02, "one a century away is not");
 assert.equal(touchOdds(null, 365), 0, "and an unknown distance is not a certainty");
+
+// One day's move stands in for a series when the candle feed says no. A 4%
+// day is a touch more than 4% of volatility, and a fall counts like a rise.
+assert.ok(Math.abs(volatilityFromDailyMove(4) - 0.0501) < 0.0005);
+assert.equal(volatilityFromDailyMove(-4), volatilityFromDailyMove(4));
+assert.equal(volatilityFromDailyMove(0), 0);

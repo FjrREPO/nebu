@@ -51,6 +51,18 @@ export function daysToMove(distance: number, daily: number): number | null {
 }
 
 /**
+ * Daily volatility from a single day's move, for when candles are not on offer.
+ *
+ * GeckoTerminal rate-limits its OHLCV endpoint far harder than the rest, so the
+ * agents regularly know how far a pool moved in 24 hours and nothing more. For
+ * a zero-mean normal the average absolute move is σ√(2/π), so one such move is
+ * a usable estimate of σ once scaled back up. One sample is a poor estimator —
+ * it is the difference between a rough number and no number at all.
+ */
+export const volatilityFromDailyMove = (changePercent: number) =>
+  Math.abs(changePercent / 100) * Math.sqrt(Math.PI / 2);
+
+/**
  * The standard normal, close enough for a warning light.
  *
  * Abramowitz & Stegun 26.2.17, mirrored for negatives — a few decimal places

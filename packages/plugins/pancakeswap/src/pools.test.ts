@@ -10,6 +10,7 @@ const pool = (over: Partial<PoolRow>): PoolRow => ({
   tvlUsd: 1_000_000,
   volume24hUsd: 5_000_000,
   swapsPerHour: 100,
+  change24h: 0,
   feeApr: 0.9,
   ageDays: 30,
   spark: "",

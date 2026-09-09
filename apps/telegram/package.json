@@ -1,0 +1,23 @@
+{
+  "name": "@nebu/telegram",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nebu/core": "workspace:*",
+    "@nebu/plugins": "workspace:*",
+    "@nebu/plugin-lending": "workspace:*",
+    "@nebu/plugin-pancakeswap": "workspace:*",
+    "viem": "^2.40.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "@types/node": "^24.9.2"
+  }
+}
