@@ -70,7 +70,11 @@ export function trend(priceUsd: number, changes: Record<string, string | null>) 
     const move = Number(changes[window] ?? Number.NaN);
     return Number.isFinite(move) ? priceUsd / (1 + move / 100) : Number.NaN;
   });
-  return [...past, priceUsd].every(Number.isFinite) ? [...past, priceUsd].join(",") : "";
+  const points = [...past, priceUsd];
+  // Finite is not enough: a reported change past -100% divides by a negative
+  // and hands back a negative price, which is not a thing. Nothing here is
+  // worth drawing unless every point is a price.
+  return points.every((point) => Number.isFinite(point) && point > 0) ? points.join(",") : "";
 }
 
 /** The fee tier only shows up in the pool's display name: "USDT / WBNB 0.05%". */

@@ -53,3 +53,6 @@ console.log("ok");
 // A missing window, or no price at all, is a row with no line rather than a wrong one.
 assert.equal(trend(125, { h24: "25" }), "");
 assert.equal(trend(0, { h24: "25", h6: "0", h1: "0", m30: "0", m15: "0", m5: "0" }), "");
+// A change past -100% divides by a negative, and a negative price is not one.
+assert.equal(trend(100, { h24: "-100.5", h6: "0", h1: "0", m30: "0", m15: "0", m5: "0" }), "");
+assert.equal(trend(100, { h24: "-100", h6: "0", h1: "0", m30: "0", m15: "0", m5: "0" }), "");

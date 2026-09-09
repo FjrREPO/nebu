@@ -282,8 +282,11 @@ export const pancakeGrid: AgentPlugin = {
       params: {
         pool: best.address,
         wallet,
-        lowerPrice: plainNumber(spot * (1 - swing), 12),
-        upperPrice: plainNumber(spot * (1 + swing), 12),
+        // Twelve decimal places rounds anything under 5e-13 to "0", and the
+        // agent would then hand itself a range its own validation rejects.
+        // Significant figures keep a small price small instead of losing it.
+        lowerPrice: formatPrice(spot * (1 - swing)),
+        upperPrice: formatPrice(spot * (1 + swing)),
         grids: "10",
       },
       reason: measured
