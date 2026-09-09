@@ -233,6 +233,19 @@ export const healthMonitor: AgentPlugin = {
     const account = await loadAccount(params);
     const neighbours = await atRiskAccounts(account.wallet).catch(() => []);
 
+    // The same measurement the agent uses to pick its floor, so the page and
+    // the decision cannot disagree about how much room this loan has.
+    const collateralNow = await largestCollateral(account.wallet).catch(() => null);
+    const dailyNow = collateralNow
+      ? dailyVolatility(await tokenSeries(collateralNow.asset, 48))
+      : null;
+    const daysNow =
+      dailyNow && account.debtBase > 0
+        ? daysToMove(dropToLiquidation(account.healthFactor), dailyNow)
+        : null;
+    const runway =
+      daysNow === null ? null : daysNow < 1 ? "a day away" : `${Math.round(daysNow)} days away`;
+
     return {
       stats: [
         {
@@ -243,9 +256,12 @@ export const healthMonitor: AgentPlugin = {
         { label: "Collateral", value: `$${account.collateralBase.toFixed(2)}` },
         { label: "Debt", value: `$${account.debtBase.toFixed(2)}` },
         {
-          label: "Liquidation at",
-          value: `${(account.thresholdBps / 100).toFixed(1)}%`,
-          hint: "weighted threshold",
+          label: "Room to fall",
+          value:
+            account.debtBase === 0
+              ? "—"
+              : `${(dropToLiquidation(account.healthFactor) * 100).toFixed(0)}%`,
+          hint: runway === null ? "before liquidation" : `about ${runway}`,
         },
       ],
       table: {

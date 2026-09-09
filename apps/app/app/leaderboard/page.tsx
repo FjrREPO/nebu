@@ -1,5 +1,5 @@
 import { apyHistory, marketId, poolLink, sparkOf, tokenLink, tokenLogos } from "@nebu/core";
-import { bestApy, pct, spreadBps, yieldRadar } from "@nebu/plugin-lending";
+import { bestApy, pct, spreadBps, type VenueQuote, yieldRadar } from "@nebu/plugin-lending";
 import { compactUsd, livePools, shortlist } from "@nebu/plugin-pancakeswap";
 import { RowSpark } from "@/components/charts";
 import { Chip, GridLines, Muted, TokenMarks } from "@/components/ui";
@@ -17,6 +17,10 @@ const cell =
   "font-manrope text-[13px] px-[16px] py-[12px] border-b border-white/5 whitespace-nowrap";
 const head =
   "font-manrope text-white/50 text-[11px] uppercase tracking-wide font-normal px-[16px] py-[12px] border-b border-white/10";
+
+/** How much of the better-paying venue is already lent out. */
+const crowdedAt = (quote: VenueQuote) =>
+  ((quote.aaveApy ?? 0) >= (quote.venusApy ?? 0) ? quote.aaveUsed : quote.venusUsed) ?? Number.NaN;
 
 export default async function LeaderboardPage() {
   const [pools, radar] = await Promise.all([
@@ -157,8 +161,9 @@ export default async function LeaderboardPage() {
           <Muted className="mb-[12px] max-w-[760px]">
             Lend out a coin and you earn interest. Aave and Venus are two places to do that, and
             they rarely pay the same — the gap is what the yield agent moves your money across. Both
-            rates are worked out from each app's own contracts rather than copied off a dashboard,
-            which is why they may differ slightly from what those sites display.
+            rates are worked out from each app's own contracts rather than copied off a dashboard.
+            "Lent out" is how much of the better-paying venue is already borrowed — past 90% the
+            money is there on paper and not in practice.
           </Muted>
           <div className="border border-white/15 overflow-x-auto">
             <table className="w-full border-collapse">
@@ -169,6 +174,7 @@ export default async function LeaderboardPage() {
                   <th className={`${head} text-right`}>Aave V3</th>
                   <th className={`${head} text-right`}>Venus</th>
                   <th className={`${head} text-right`}>Gap</th>
+                  <th className={`${head} text-right`}>Lent out</th>
                   <th className={`${head} text-right`}>Trend 30d</th>
                 </tr>
               </thead>
@@ -193,6 +199,15 @@ export default async function LeaderboardPage() {
                     <td className={`${cell} text-right text-white/70`}>{pct(quote.venusApy)}</td>
                     <td className={`${cell} text-right text-white/70`}>
                       {spreadBps(quote) === null ? "—" : `${spreadBps(quote)} bps`}
+                    </td>
+                    {/* Of whichever venue pays more, since that is the one you
+                        would move into — and past 90% it is hard to leave. */}
+                    <td
+                      className={`${cell} text-right ${
+                        crowdedAt(quote) >= 0.9 ? "text-[#ff8a8a]" : "text-white/70"
+                      }`}
+                    >
+                      {crowdedAt(quote) === null ? "—" : `${(crowdedAt(quote) * 100).toFixed(0)}%`}
                     </td>
                     <td className="px-[16px] py-[8px] border-b border-white/5 text-right">
                       <RowSpark values={assetSparks[index]} />

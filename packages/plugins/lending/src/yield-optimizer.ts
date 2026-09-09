@@ -267,6 +267,7 @@ export const yieldOptimizer: AgentPlugin = {
           { key: "aave", label: "Aave V3", align: "end" },
           { key: "venus", label: "Venus", align: "end" },
           { key: "spread", label: "Spread", align: "end" },
+          { key: "used", label: "Lent out", align: "end" },
         ],
         rows: radarIcons.map((quote, index) => ({
           id: quote.asset,
@@ -276,6 +277,13 @@ export const yieldOptimizer: AgentPlugin = {
           aave: pct(quote.aaveApy),
           venus: pct(quote.venusApy),
           spread: spreadBps(quote) === null ? "—" : `${spreadBps(quote)} bps`,
+          used: (() => {
+            // Of whichever venue pays more: that is the one worth moving into,
+            // and the one you might struggle to leave.
+            const better =
+              (quote.aaveApy ?? 0) >= (quote.venusApy ?? 0) ? quote.aaveUsed : quote.venusUsed;
+            return better === null ? "—" : `${(better * 100).toFixed(0)}%`;
+          })(),
           spark: sparks[index],
         })),
       },
