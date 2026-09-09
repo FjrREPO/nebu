@@ -192,10 +192,15 @@ export async function poolByAddress(address: string): Promise<PoolRow | null> {
       `${POOL_ENDPOINT}/${address.toLowerCase()}?include=base_token,quote_token`,
       { headers: { accept: "application/json" }, signal: AbortSignal.timeout(12_000) },
     );
-    if (!response.ok) return null;
+    // Throwing rather than returning null matters more than it looks: cached()
+    // keeps whatever resolves, so a single 429 answered with null would be
+    // remembered as "this pool has no data" for the next quarter of an hour.
+    // A rejection is dropped from the cache and retried, and the last good row
+    // stands in the meantime.
+    if (!response.ok) throw new Error(`geckoterminal answered ${response.status}`);
     const body = (await response.json()) as { data?: GeckoPool; included?: GeckoToken[] };
     const pool = body.data;
-    if (!pool) return null;
+    if (!pool) throw new Error("geckoterminal returned no pool");
 
     const brief = (id: string): TokenBrief => {
       const token = (body.included ?? []).find((entry) => entry.id === id);
