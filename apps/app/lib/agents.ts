@@ -41,11 +41,25 @@ export const findAgentMeta = (id: string) => {
   return plugin ? meta(plugin) : null;
 };
 
+/**
+ * The last chart each agent managed to draw.
+ *
+ * The pages rebuild themselves every minute, and a rebuild that the candle
+ * feed refuses replaces a page that had charts with one that reads "no
+ * history in window" — worst right after a deploy, when the process is new
+ * and has nothing cached to fall back on. A chart from ten minutes ago is
+ * closer to the truth than no chart, and the feed refusing us says nothing
+ * about the agent.
+ */
+const lastGoodSeries = new Map<string, AgentSeries>();
+
 /** Cards carry a live reading, so one throttled feed must not blank the page. */
 export async function agentCards(): Promise<AgentCard[]> {
   return Promise.all(
     plugins.map(async (plugin) => {
-      const series = await plugin.series(plugin.example).catch(() => null);
+      const fresh = await plugin.series(plugin.example).catch(() => null);
+      if (fresh) lastGoodSeries.set(plugin.id, fresh);
+      const series = fresh ?? lastGoodSeries.get(plugin.id) ?? null;
       try {
         return {
           ...meta(plugin),
