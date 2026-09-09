@@ -4,16 +4,8 @@ import { Bot, ChevronDown, Copy, LogOut, Menu, Wallet, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { formatBnb as formatAgentBnb, useAgentWallet } from "@/lib/agent-wallet";
-import {
-  CHAIN,
-  connectWallet,
-  disconnectWallet,
-  formatBnb,
-  short,
-  switchToChain,
-  useWallet,
-} from "@/lib/use-wallet";
+import { formatBnb as formatAgentBnb, signOut, useAgentWallet } from "@/lib/agent-wallet";
+import { CHAIN, connectWallet, formatBnb, short, switchToChain, useWallet } from "@/lib/use-wallet";
 import { ChainMark, WalletMark } from "./ui";
 
 const PAGES = [
@@ -110,7 +102,7 @@ function WalletMenu({ address, balance }: { address: `0x${string}`; balance: big
               type="button"
               className={menuItem}
               onClick={() => {
-                disconnectWallet();
+                signOut();
                 setOpen(false);
               }}
             >
@@ -324,7 +316,7 @@ export function Nav() {
                 <button
                   type="button"
                   onClick={() => {
-                    disconnectWallet();
+                    signOut();
                     setMenuOpen(false);
                   }}
                   className="font-manrope text-white/50 text-[12px] uppercase tracking-wide hover:text-white transition-colors"

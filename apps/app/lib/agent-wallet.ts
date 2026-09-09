@@ -20,7 +20,7 @@ import {
   parseEther,
 } from "viem";
 import { bsc, bscTestnet } from "viem/chains";
-import { connectWallet, switchToChain } from "./use-wallet";
+import { connectWallet, disconnectWallet, switchToChain } from "./use-wallet";
 
 /**
  * The chain sessions are granted on. It has to match the chain the agents
@@ -72,6 +72,13 @@ const emit = (next: AgentWalletState) => {
 };
 
 const WALLET_KEY = "nebu2.wallet";
+/**
+ * Locked, not forgotten. The credential and the address stay exactly where
+ * they were — this only says the session is over, so the wallet does not
+ * quietly reopen itself on the next page load. Anything else would be a
+ * disconnect button that loses people their money.
+ */
+const LOCKED_KEY = "nebu2.wallet.locked";
 type SavedWallet = { address: `0x${string}`; credential?: PasskeyCredential };
 
 function loadSaved(): SavedWallet | null {
@@ -107,6 +114,15 @@ function restore() {
   restored = true;
   const saved = loadSaved();
   if (!saved) return;
+  try {
+    // Signed out last time: show that a wallet exists, but do not open it.
+    if (localStorage.getItem(LOCKED_KEY)) {
+      emit({ known: saved.address, address: null, signer: null, balance: null });
+      return;
+    }
+  } catch {
+    // Unreadable storage means no record of a sign-out, so carry on.
+  }
   // Rebuilding from a stored credential asks nothing of the user and nothing
   // of the chain, so the wallet is simply there on load. The biometric prompt
   // arrives later, when something is actually signed.
@@ -133,6 +149,12 @@ export async function openAgentWallet(): Promise<{
   signer: PasskeySigner;
 }> {
   if (state.address && state.signer) return { address: state.address, signer: state.signer };
+
+  try {
+    localStorage.removeItem(LOCKED_KEY);
+  } catch {
+    // Nothing to clear if storage will not answer.
+  }
 
   const saved = loadSaved();
   if (saved?.credential) {
@@ -192,3 +214,21 @@ export async function fundAgentWallet(amountBnb: string) {
 
 export const formatBnb = (wei: bigint | null) =>
   wei === null ? "—" : `${Number(formatEther(wei)).toFixed(4)} BNB`;
+
+/**
+ * End the session for both wallets at once.
+ *
+ * They are two halves of one thing — yours funds the agent's — so signing out
+ * of one and leaving the other open is a half-finished action. The agent
+ * wallet is locked rather than dropped: its address and credential stay put,
+ * and unlocking it needs nothing more than the passkey that made it.
+ */
+export function signOut() {
+  try {
+    localStorage.setItem(LOCKED_KEY, "1");
+  } catch {
+    // Blocked storage costs the memory, not the sign-out.
+  }
+  emit({ known: state.known, address: null, signer: null, balance: null });
+  disconnectWallet();
+}
