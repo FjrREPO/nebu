@@ -1,4 +1,4 @@
-import { bscClient } from "@nebu/core";
+import { bnbUsd, bscClient } from "@nebu/core";
 import { livePools } from "@nebu/plugin-pancakeswap";
 import { plugins } from "@nebu/plugins";
 import Link from "next/link";
@@ -28,7 +28,7 @@ const CONTRACTS = [
 ] as const;
 
 export default async function StatusPage() {
-  const [head, pools, agents] = await Promise.all([
+  const [head, pools, bnb, agents] = await Promise.all([
     bscClient
       .getBlockNumber()
       .then(String)
@@ -36,6 +36,11 @@ export default async function StatusPage() {
     livePools()
       .then((rows) => rows.length)
       .catch(() => null),
+    // One price everybody knows, printed where it can be checked at a glance.
+    // The desk converts every position into BNB, so a wrong one is wrong
+    // everywhere at once — and this feed answered with the wrong token's price
+    // for a fortnight before anybody thought to look at the number itself.
+    bnbUsd().catch(() => null),
     agentHealth().catch(() => []),
   ]);
   const answering = agents.filter((agent) => agent.error === null).length;
@@ -52,6 +57,12 @@ export default async function StatusPage() {
       note: "how much each market traded and how often · refreshed every 15 minutes",
       detail: pools === null ? "not answering" : `${pools} markets in the last refresh`,
       ok: pools !== null,
+    },
+    {
+      name: "BNB price",
+      note: "what every position on the desk is converted into",
+      detail: bnb === null ? "not answering" : `$${bnb.toFixed(2)}`,
+      ok: bnb !== null,
     },
     {
       name: "DefiLlama yields",

@@ -40,6 +40,10 @@ export const agentAuto = (id: string, wallet: string) =>
 export const agentOutlook = (id: string, params: Record<string, string>) =>
   call<AgentOutlook | null>(`/api/agents/${id}/outlook?${query(params)}`);
 
+/** What the agent already has at work, in BNB. */
+export const agentDeployed = (id: string, params: Record<string, string>) =>
+  call<number | null>(`/api/agents/${id}/deployed?${query(params)}`);
+
 /** The narrowest session that still lets the agent do its job. */
 export const agentScope = (id: string, params: Record<string, string>) =>
   call<SessionScope>(`/api/agents/${id}/scope?${query(params)}`);

@@ -3,6 +3,7 @@ import {
   feesEarned,
   formatPrice,
   inRange,
+  positionAmounts,
   priceToTick,
   snapToSpacing,
   tickToPrice,
@@ -106,4 +107,35 @@ assert.equal(
   assert.equal(driftPastRange({ tick: 0, tickLower: -100, tickUpper: 100 }), 0);
   const out = driftPastRange({ tick: 1100, tickLower: -100, tickUpper: 100 });
   assert.ok(out > 0.09 && out < 0.12, `1000 ticks past should be ~10%, got ${out}`);
+}
+
+// A position is all of one token below its range and all of the other above
+// it, with both in between — the shape that makes a V3 range a range.
+{
+  const range = {
+    liquidity: 10n ** 18n,
+    tickLower: -1000,
+    tickUpper: 1000,
+    decimals0: 18,
+    decimals1: 18,
+  };
+
+  const below = positionAmounts({ ...range, tick: -2000 });
+  assert.ok(below.amount0 > 0 && below.amount1 === 0, "below the range it is all token0");
+
+  const above = positionAmounts({ ...range, tick: 2000 });
+  assert.ok(above.amount1 > 0 && above.amount0 === 0, "above it, all token1");
+
+  const middle = positionAmounts({ ...range, tick: 0 });
+  assert.ok(middle.amount0 > 0 && middle.amount1 > 0, "inside, both");
+  // Centred on the range with matching decimals, the two sides are worth the
+  // same at a price of 1.
+  assert.ok(Math.abs(middle.amount0 - middle.amount1) / middle.amount0 < 1e-6, "and balanced");
+
+  // Decimals are a display detail, not a quantity: six-decimal token0 holds
+  // the same value in a twelfth of the number.
+  const usdcish = positionAmounts({ ...range, tick: 0, decimals0: 6 });
+  assert.ok(
+    Math.abs(usdcish.amount0 * 1e6 - middle.amount0 * 1e18) / (middle.amount0 * 1e18) < 1e-9,
+  );
 }

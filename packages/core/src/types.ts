@@ -174,6 +174,12 @@ export interface AgentPlugin {
    * today simply does not compete for the money.
    */
   outlook?(params: AgentParams): Promise<AgentOutlook | null>;
+  /**
+   * What this agent is already working with, in BNB, so the desk can compare
+   * where the money is against where it should be. Zero is an answer — the
+   * agent holds nothing — and null means it cannot price what it holds.
+   */
+  deployed?(params: AgentParams): Promise<number | null>;
 }
 
 /** The caller sent bad params — a 400, not a broken agent. */

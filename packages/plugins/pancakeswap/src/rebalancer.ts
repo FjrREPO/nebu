@@ -9,6 +9,7 @@ import {
   type AutoParams,
   approveIfShort,
   bnbInto,
+  bnbValue,
   bscClient,
   dailyVolatility,
   InvalidParams,
@@ -33,6 +34,7 @@ import {
   formatPrice,
   inRange,
   poolAddress,
+  positionAmounts,
   positionsOf,
   priceToTick,
   slot0,
@@ -550,6 +552,25 @@ export const pancakeRebalancer: AgentPlugin = {
         risk === null ? "" : ` and moves ${(risk * 100).toFixed(1)}% a day`
       }`,
     };
+  },
+
+  /** The position's two sides, priced in BNB. Nothing yet opened is nothing. */
+  async deployed(params): Promise<number | null> {
+    if (!params.tokenId) return 0;
+    const position = await loadPosition(tokenId(params));
+    const { amount0, amount1 } = positionAmounts({
+      liquidity: position.liquidity,
+      tick: position.tick,
+      tickLower: position.tickLower,
+      tickUpper: position.tickUpper,
+      decimals0: position.meta0.decimals,
+      decimals1: position.meta1.decimals,
+    });
+    const [side0, side1] = await Promise.all([
+      bnbValue(position.token0, amount0),
+      bnbValue(position.token1, amount1),
+    ]);
+    return side0 === null || side1 === null ? null : side0 + side1;
   },
 
   async scope(params): Promise<SessionScope> {

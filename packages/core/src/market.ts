@@ -115,13 +115,19 @@ async function get(path: string) {
 /**
  * Hourly closes for a pool, oldest first.
  *
- * `priceOf` names the token to quote, in the other token's units — the same
- * thing a V3 tick means. Leave it out and the feed answers in USD, which does
- * not line up with anything read from the pool contract.
+ * `priceOf` names the token to quote. In `token` units that is the same thing a
+ * V3 tick means; in `usd` it is that token's dollar price. Leave it out and the
+ * feed answers with the pool's base token in USD, which is only the token you
+ * meant when it happens to be the base one.
  */
-export function poolSeries(pool: string, hours = 48, priceOf?: string): Promise<SeriesPoint[]> {
-  const denomination = priceOf ? `&currency=token&token=${priceOf.toLowerCase()}` : "";
-  return cached(`pool:${pool}:${hours}:${priceOf ?? "usd"}`, async () => {
+export function poolSeries(
+  pool: string,
+  hours = 48,
+  priceOf?: string,
+  currency: "token" | "usd" = "token",
+): Promise<SeriesPoint[]> {
+  const denomination = priceOf ? `&currency=${currency}&token=${priceOf.toLowerCase()}` : "";
+  return cached(`pool:${pool}:${hours}:${priceOf ?? "base"}:${currency}`, async () => {
     const body = (await get(
       `/pools/${pool.toLowerCase()}/ohlcv/hour?limit=${hours}${denomination}`,
     )) as { data?: { attributes?: { ohlcv_list?: number[][] } } };
@@ -150,10 +156,19 @@ export function tokenTopPool(token: string): Promise<string | null> {
   ).catch(() => null);
 }
 
-/** Hourly closes for whatever pool prices this token, oldest first. */
+/**
+ * Hourly closes for this token in dollars, oldest first.
+ *
+ * Naming the token matters more than it looks. Left out, the feed answers with
+ * the pool's *base* token — and the deepest pool a token trades in is often one
+ * where it is the quote side. Asking for WBNB that way returned the price of
+ * ATC, the other half of its busiest pair: $3,699 instead of $739. Everything
+ * downstream believed it, from what a position is worth to how far a
+ * collateral moves in a day.
+ */
 export async function tokenSeries(token: string, hours = 48): Promise<SeriesPoint[]> {
   const pool = await tokenTopPool(token);
-  return pool ? poolSeries(pool, hours) : [];
+  return pool ? poolSeries(pool, hours, token, "usd") : [];
 }
 
 /**

@@ -117,6 +117,39 @@ const Q128 = 1n << 128n;
 const Q256 = 1n << 256n;
 const wrapSub = (a: bigint, b: bigint) => (a - b + Q256) % Q256;
 
+/**
+ * What a position actually holds, from its liquidity and where the price sits.
+ *
+ * A V3 position is not a pile of two tokens, it is a curve: the same liquidity
+ * is all of one side below its range, all of the other above it, and a mix in
+ * between. These are the standard formulas for that, in whole tokens.
+ *
+ * Done in floating point rather than the fixed-point the pool uses. That is
+ * exact enough to value a position and nowhere near exact enough to build a
+ * transaction from — nothing here is used for calldata.
+ */
+export function positionAmounts(input: {
+  liquidity: bigint;
+  tick: number;
+  tickLower: number;
+  tickUpper: number;
+  decimals0: number;
+  decimals1: number;
+}) {
+  const liquidity = Number(input.liquidity);
+  const root = (tick: number) => 1.0001 ** (tick / 2);
+  const lower = root(input.tickLower);
+  const upper = root(input.tickUpper);
+  // Outside its range the price is clamped to the edge, which is what makes
+  // one of the two amounts fall to zero.
+  const here = Math.min(Math.max(root(input.tick), lower), upper);
+
+  return {
+    amount0: (liquidity * (1 / here - 1 / upper)) / 10 ** input.decimals0,
+    amount1: (liquidity * (here - lower)) / 10 ** input.decimals1,
+  };
+}
+
 export function feesEarned(input: {
   liquidity: bigint;
   tickCurrent: number;

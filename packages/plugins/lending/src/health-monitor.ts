@@ -478,6 +478,14 @@ export const healthMonitor: AgentPlugin = {
     };
   },
 
+  /**
+   * Nothing. Its cover is BNB sitting in the wallet waiting to be needed,
+   * which is the opposite of deployed.
+   */
+  async deployed(): Promise<number> {
+    return 0;
+  },
+
   async scope(params): Promise<SessionScope> {
     const account = await loadAccount(params);
     const debt = await largestDebt(account.wallet).catch(() => null);

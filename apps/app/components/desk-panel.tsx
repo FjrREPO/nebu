@@ -10,7 +10,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatEther } from "viem";
-import { agentAuto, agentOutlook } from "@/lib/agent-api";
+import { agentAuto, agentDeployed, agentOutlook } from "@/lib/agent-api";
 import { useAgentWallet } from "@/lib/agent-wallet";
 import type { AgentMeta } from "@/lib/agents";
 import { hiredAgents } from "@/lib/hires";
@@ -22,7 +22,13 @@ const legend = "font-manrope text-white/50 text-[11px] leading-[14px] uppercase 
 const pct = (share: number) => `${(share * 100).toFixed(share >= 0.1 ? 0 : 1)}%`;
 const apr = (value: number) => `${(value * 100).toFixed(value >= 1 ? 0 : 1)}%`;
 
-type Row = { meta: AgentMeta; outlook: AgentOutlook | null; hired: boolean };
+type Row = {
+  meta: AgentMeta;
+  outlook: AgentOutlook | null;
+  /** BNB this agent already has at work, as far as it can tell. */
+  held: number | null;
+  hired: boolean;
+};
 
 /** With nothing in the wallet there is still a split to show, just a notional one. */
 const PREVIEW_BNB = 1;
@@ -43,10 +49,14 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
           // marketplace's example is still a live position worth pricing.
           const chosen = owner ? await agentAuto(meta.id, owner) : null;
           const params = chosen?.ok && chosen.data ? chosen.data.params : meta.example;
-          const outlook = await agentOutlook(meta.id, params as Record<string, string>);
+          const [outlook, held] = await Promise.all([
+            agentOutlook(meta.id, params as Record<string, string>),
+            agentDeployed(meta.id, params as Record<string, string>),
+          ]);
           return {
             meta,
             outlook: outlook.ok ? outlook.data : null,
+            held: held.ok ? held.data : null,
             hired: hiredAgents(owner).includes(meta.id),
           };
         }),
@@ -80,6 +90,10 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
   const byId = new Map(split.map((entry) => [entry.id, entry]));
   const blended = blendedApr(deskAgents, split);
   const funded = split.filter((entry) => entry.amount > 0);
+  // The wallet's free BNB is one pot; what the agents already hold is another.
+  // Saying both is the difference between "you have half a BNB" and "half a
+  // BNB spare, this much already working".
+  const atWork = (rows ?? []).reduce((sum, row) => sum + (row.held ?? 0), 0);
 
   return (
     <div className="space-y-[28px]">
@@ -91,12 +105,12 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
             total > 0 ? "Capital" : "Capital · example",
             total > 0 ? `${total.toFixed(4)} BNB` : `${PREVIEW_BNB} BNB`,
           ],
+          ["At work", rows ? `${atWork.toFixed(4)} BNB` : "—"],
           ["Agents in the split", String(funded.length)],
           // The caveat about what these rates are lives in the footnote with
           // the other rules; in a tile label it wrapped and threw the row out
           // of line on a phone.
           ["Blended return", rows ? apr(blended) : "—"],
-          ["Working", rows ? pct(funded.reduce((sum, entry) => sum + entry.share, 0)) : "—"],
         ].map(([label, value]) => (
           <div key={label} className="px-[16px] py-[14px]">
             <span className={legend}>{label}</span>
@@ -138,7 +152,7 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
       </div>
 
       <div className="border border-white/15 divide-y divide-white/10">
-        {(rows ?? agents.map((meta) => ({ meta, outlook: null, hired: false }))).map(
+        {(rows ?? agents.map((meta) => ({ meta, outlook: null, held: null, hired: false }))).map(
           (row, index) => {
             const entry: Allocation | undefined = byId.get(row.meta.id);
             return (
@@ -181,7 +195,7 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
                     : row.outlook
                       ? `${entry?.note ?? row.outlook.reason}${
                           row.outlook.kind === "return" ? ` · ${apr(row.outlook.apr)} a year` : ""
-                        }`
+                        }${row.held ? ` · ${row.held.toFixed(4)} BNB already at work` : ""}`
                       : "no view today"}
                 </p>
               </div>

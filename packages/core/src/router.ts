@@ -83,6 +83,21 @@ export async function bnbUsd(): Promise<number | null> {
   return last && last > 0 ? last : null;
 }
 
+/**
+ * What an amount of some token is worth in BNB.
+ *
+ * The desk counts in BNB because that is what people deposit, and the agents
+ * hold everything but: pool liquidity, a lending deposit, half a ladder. Null
+ * when the feed will not price it, which is different from nothing.
+ */
+export async function bnbValue(token: Address, amount: number): Promise<number | null> {
+  if (!(amount > 0)) return 0;
+  if (token.toLowerCase() === WBNB.toLowerCase()) return amount;
+  const [points, bnb] = await Promise.all([tokenSeries(token, 6), bnbUsd()]);
+  const usd = points.at(-1)?.v;
+  return usd && bnb ? (amount * usd) / bnb : null;
+}
+
 export async function spendableBnb(wallet: Address) {
   const balance = await bscClient.getBalance({ address: wallet });
   return balance > GAS_RESERVE_WEI ? balance - GAS_RESERVE_WEI : 0n;

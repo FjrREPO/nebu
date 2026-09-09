@@ -7,6 +7,7 @@ import {
   type AgentStatus,
   type AutoParams,
   bnbInto,
+  bnbValue,
   bscClient,
   dailyVolatility,
   InvalidParams,
@@ -384,6 +385,16 @@ export const pancakeGrid: AgentPlugin = {
       kind: "return",
       reason: `${(cell * 100).toFixed(2)}% rungs, about ${fillsPerDay.toFixed(1)} fills a day at ${(risk * 100).toFixed(1)}% daily movement`,
     };
+  },
+
+  /** Both sides of the ladder's inventory, priced in BNB. */
+  async deployed(params): Promise<number | null> {
+    const market = await loadMarket(params);
+    const [side0, side1] = await Promise.all([
+      bnbValue(market.meta0.address, market.base),
+      bnbValue(market.meta1.address, market.quote),
+    ]);
+    return side0 === null || side1 === null ? null : side0 + side1;
   },
 
   async scope(params): Promise<SessionScope> {

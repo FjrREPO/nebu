@@ -10,6 +10,7 @@ import {
   alignDaily,
   apyHistory,
   bnbInto,
+  bnbValue,
   bscClient,
   dailyVolatility,
   InvalidParams,
@@ -407,6 +408,13 @@ export const yieldOptimizer: AgentPlugin = {
         risk === null ? "" : `, which moves ${(risk * 100).toFixed(2)}% a day`
       }`,
     };
+  },
+
+  /** Whatever is already lent out, wherever it sits, priced in BNB. */
+  async deployed(params): Promise<number | null> {
+    const market = await loadMarket(params);
+    const supplied = market.venues.reduce((sum, venue) => sum + venue.supplied, 0);
+    return bnbValue(market.asset, supplied);
   },
 
   async scope(params): Promise<SessionScope> {
