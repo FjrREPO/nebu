@@ -148,19 +148,19 @@ export function DeskPanel({ agents }: { agents: AgentMeta[] }) {
                   </span>
                 )}
                 <span className="ml-auto font-graphik text-white text-[18px] leading-[22px]">
-                  {rows === null ? "—" : entry?.amount ? `${entry.amount} BNB` : "0"}
+                  {rows === null || !entry?.amount ? "—" : `${entry.amount} BNB`}
                 </span>
                 <span className="w-[52px] text-right font-manrope text-white/50 text-[12px]">
-                  {rows === null ? "" : entry ? pct(entry.share) : ""}
+                  {rows === null || !entry?.amount ? "" : pct(entry.share)}
                 </span>
                 <p className="w-full font-manrope text-white/45 text-[11px] leading-[15px]">
+                  {/* The agent's own words already carry the movement; only the
+                      year it adds up to is missing. */}
                   {rows === null
                     ? "reading the market…"
                     : row.outlook
                       ? `${entry?.note ?? row.outlook.reason}${
-                          row.outlook.kind === "return"
-                            ? ` · ${apr(row.outlook.apr)} a year${row.outlook.risk === null ? "" : `, ${(row.outlook.risk * 100).toFixed(1)}% daily move`}`
-                            : ""
+                          row.outlook.kind === "return" ? ` · ${apr(row.outlook.apr)} a year` : ""
                         }`
                       : "no view today"}
                 </p>
