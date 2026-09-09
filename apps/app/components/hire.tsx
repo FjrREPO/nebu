@@ -15,7 +15,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { agentAuto, agentScope, buildPlan } from "@/lib/agent-api";
 import {
-  CONFIG,
   EXPLORER,
   formatBnb,
   NETWORK,
@@ -36,6 +35,8 @@ type Grant = {
 };
 
 const storageKey = (id: string) => `nebu2.grant.${id}`;
+
+const CHAIN_OF: Record<SessionNetwork, number> = { mainnet: 56, testnet: 97 };
 
 /**
  * What the agent holds back for gas. Mirrors GAS_RESERVE_WEI in @nebu/core,
@@ -89,7 +90,15 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
    * loudly — a call to an address with no code succeeds — so the panel would
    * report a transaction while nothing happened. Refuse instead.
    */
-  const wrongChain = agent.chainId !== CONFIG.chainId;
+  /**
+   * Against the chain the session is actually on, which is the grant's when
+   * there is one. Comparing with the current config instead let a grant made
+   * before the app moved to mainnet keep its "testnet" and still pass — the
+   * Run button would then send mainnet calldata to a testnet session, which is
+   * the very thing this guard exists to stop.
+   */
+  const sessionChain = CHAIN_OF[grant?.network ?? NETWORK];
+  const wrongChain = agent.chainId !== sessionChain;
   /**
    * Not "has no BNB" but "has nothing it can act with". Below the gas reserve
    * there is nothing to deploy and nothing to pay for deploying it.
@@ -233,9 +242,11 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
       {grant && session ? (
         <div className="mt-[16px] space-y-[14px]">
           <p className="font-manrope text-white text-[13px] leading-[18px]">
-            {expired
-              ? "Its time is up. Hire it again to keep it working."
-              : `Working until ${expiresAt(session).toISOString().slice(0, 10)}, within the limits you set.`}
+            {wrongChain
+              ? `This session is on BNB ${grant.network}, but the agent works on chain ${agent.chainId}. Revoke it and hire again.`
+              : expired
+                ? "Its time is up. Hire it again to keep it working."
+                : `Working until ${expiresAt(session).toISOString().slice(0, 10)}, within the limits you set.`}
           </p>
           {auto && (
             <p className="font-manrope text-white/50 text-[11px] leading-[15px]">{auto.reason}</p>
@@ -346,10 +357,8 @@ export function HirePanel({ agent }: { agent: AgentMeta }) {
                 )}
                 {wrongChain && (
                   <p className="font-manrope text-[#ff8a8a] text-[11px] leading-[15px]">
-                    This agent works on BNB Smart Chain, and hiring is currently set to BNB testnet.
-                    Its transactions name contracts that do not exist there, so it would report
-                    success and do nothing. Set NEXT_PUBLIC_SESSION_NETWORK=mainnet to hire it for
-                    real.
+                    This agent works on chain {agent.chainId}, and hiring is set to BNB {NETWORK}.
+                    Its transactions name contracts that are not there.
                   </p>
                 )}
 
