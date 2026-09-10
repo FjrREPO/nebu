@@ -141,11 +141,15 @@ export type Holding = {
 export type AgentHoldings = {
   items: Holding[];
   /**
-   * What today's holding was worth in BNB, hour by hour, over the last two
-   * days. Not a record of the account — the amounts are today's — but it is
-   * what the market did to them, which is the part nobody stores.
+   * What today's holding was worth, hour by hour, over the last two days. Not
+   * a record of the account — the amounts are today's — but it is what the
+   * market did to them, which is the part nobody stores.
+   *
+   * In BNB and in dollars, because they say different things: a wallet holding
+   * only BNB is flat in BNB and not flat at all in dollars.
    */
   history: SeriesPoint[];
+  usd: SeriesPoint[];
 };
 
 /** Everything the agent detail page shows beyond a headline. */

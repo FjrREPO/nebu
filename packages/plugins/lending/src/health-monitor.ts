@@ -493,7 +493,7 @@ export const healthMonitor: AgentPlugin = {
   },
 
   async holdings(): Promise<AgentHoldings> {
-    return { items: [], history: [] };
+    return { items: [], history: [], usd: [] };
   },
 
   async scope(params): Promise<SessionScope> {

@@ -1,12 +1,13 @@
 "use client";
 
-import { type AgentSeries, fallbackLogo, type Holding } from "@nebu/core";
+import { type AgentSeries, fallbackLogo, type Holding, type SeriesPoint } from "@nebu/core";
 import { useCallback, useEffect, useState } from "react";
 import { formatEther } from "viem";
-import { agentAuto, agentHoldings } from "@/lib/agent-api";
+import { agentAuto, agentHoldings, agentOutlook, bnbMarket } from "@/lib/agent-api";
 import { useAgentWallet } from "@/lib/agent-wallet";
 import type { AgentMeta } from "@/lib/agents";
 import { depositedInto } from "@/lib/deposits";
+import { hiredAgents } from "@/lib/hires";
 import { DetailChart } from "./charts";
 import { TokenMarks } from "./ui";
 
@@ -19,59 +20,73 @@ type Position = {
   meta: AgentMeta;
   items: Holding[];
   bnb: number;
-  history: { t: number; v: number }[];
+  /** What this holding was worth in dollars, hour by hour. */
+  usd: { t: number; v: number }[];
+  /** What it expects to earn, for the headline rate. */
+  apr: number | null;
   pending: boolean;
 };
 
 const bnb = (value: number) => `${value.toFixed(4)} BNB`;
+const usd = (value: number) =>
+  `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const move = (fraction: number) => `${fraction >= 0 ? "+" : ""}${(fraction * 100).toFixed(2)}%`;
 const share = (part: number, whole: number) =>
   whole > 0 ? `${((part / whole) * 100).toFixed(0)}%` : "—";
-
-/** Two histories over the same hours, added up. */
-function combine(all: { t: number; v: number }[][]) {
-  const totals = new Map<number, number>();
-  const counts = new Map<number, number>();
-  for (const series of all) {
-    for (const point of series) {
-      totals.set(point.t, (totals.get(point.t) ?? 0) + point.v);
-      counts.set(point.t, (counts.get(point.t) ?? 0) + 1);
-    }
-  }
-  // Only hours every position could be priced for. A total that silently drops
-  // a position for an hour draws a cliff that never happened.
-  return [...totals.entries()]
-    .filter(([t]) => counts.get(t) === all.length)
-    .sort(([a], [b]) => a - b)
-    .map(([t, v]) => ({ t, v }));
-}
 
 export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
   const wallet = useAgentWallet();
   const [positions, setPositions] = useState<Position[] | null>(null);
   const [deposited, setDeposited] = useState(0);
+  const [market, setMarket] = useState<{ usd: number | null; history: SeriesPoint[] }>({
+    usd: null,
+    history: [],
+  });
 
-  useEffect(() => setDeposited(depositedInto(wallet.address)), [wallet.address]);
+  // One price everything here is read in, fetched once for the panel.
+  useEffect(() => {
+    let alive = true;
+    void bnbMarket().then((answer) => {
+      if (alive && answer.ok) setMarket(answer.data);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const [hired, setHired] = useState<string[]>([]);
+  useEffect(() => {
+    setDeposited(depositedInto(wallet.address));
+    setHired(hiredAgents(wallet.address));
+  }, [wallet.address]);
 
   const load = useCallback(
     (alive: () => boolean) => {
       const owner = wallet.address;
       if (!owner) return setPositions(null);
-      setPositions(agents.map((meta) => ({ meta, items: [], bnb: 0, history: [], pending: true })));
+      setPositions(
+        agents.map((meta) => ({ meta, items: [], bnb: 0, usd: [], apr: null, pending: true })),
+      );
 
       for (const meta of agents) {
         void (async () => {
           const chosen = await agentAuto(meta.id, owner);
           if (!chosen.ok || !chosen.data) {
-            if (alive()) settle(meta.id, { items: [], bnb: 0, history: [] });
+            if (alive()) settle(meta.id, { items: [], bnb: 0, usd: [], apr: null });
             return;
           }
-          const held = await agentHoldings(meta.id, chosen.data.params as Record<string, string>);
+          const params = chosen.data.params as Record<string, string>;
+          const [held, view] = await Promise.all([
+            agentHoldings(meta.id, params),
+            agentOutlook(meta.id, params),
+          ]);
           if (!alive()) return;
           const items = held.ok ? held.data.items.filter((item) => item.amount > 0) : [];
           settle(meta.id, {
             items,
             bnb: items.reduce((sum, item) => sum + (item.bnb ?? 0), 0),
-            history: held.ok ? held.data.history : [],
+            usd: held.ok ? held.data.usd : [],
+            apr: view.ok && view.data?.kind === "return" ? view.data.apr : null,
           });
         })();
       }
@@ -105,28 +120,53 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
   const settled = positions?.every((position) => !position.pending) ?? false;
   const change = deposited > 0 ? total - deposited : null;
 
-  // The wallet's own BNB does not move against itself, so the chart is the
-  // positions plus a flat line for the cash beside them.
-  const histories = held.map((position) => position.history).filter((points) => points.length > 1);
-  const combined =
-    histories.length === held.length && histories.length > 0 ? combine(histories) : [];
-  // With something to measure against, the interesting line is the difference,
-  // not the total: what the market has done to you since you funded this.
-  // Without one it is just what the wallet is worth.
+  /**
+   * The line, in dollars.
+   *
+   * A wallet holding nothing but BNB is flat against BNB and has a real story
+   * against the dollar, which is the story most people are actually asking
+   * for. Positions bring their own dollar history; the free BNB is priced with
+   * the same hours.
+   */
+  const bnbAt = new Map(market.history.map((point) => [point.t, point.v]));
+  const parts = held.map((position) => position.usd).filter((points) => points.length > 1);
+  const hours = market.history.length > 1 ? market.history.map((point) => point.t) : [];
+  const dollars = hours
+    .map((t) => {
+      const price = bnbAt.get(t);
+      if (price === undefined) return null;
+      let value = free * price;
+      for (const points of parts) {
+        const at = points.find((point) => point.t === t);
+        if (at === undefined) return null;
+        value += at.v;
+      }
+      return { t, v: value };
+    })
+    .filter((point): point is { t: number; v: number } => point !== null);
+
+  const nowUsd = market.usd === null ? null : total * market.usd;
+  // A day ago, as close as the feed gets to one.
+  const dayAgo = dollars.find((point) => point.t >= (dollars.at(-1)?.t ?? 0) - 86_400);
+  const dayMove =
+    dayAgo && dollars.length > 1 && dayAgo.v > 0
+      ? ((dollars.at(-1) as { v: number }).v - dayAgo.v) / dayAgo.v
+      : null;
+  const earning = held.reduce(
+    (sum, position) => sum + (position.apr ?? 0) * (total > 0 ? position.bnb / total : 0),
+    0,
+  );
+
   const series: AgentSeries | null =
-    combined.length > 1
+    dollars.length > 1
       ? {
-          label:
-            deposited > 0
-              ? `Profit and loss · against the ${bnb(deposited)} you sent`
-              : "What the wallet holds, priced back over two days",
-          unit: " BNB",
-          points: combined.map((point) => ({
-            t: point.t,
-            v: point.v + free - (deposited > 0 ? deposited : 0),
-          })),
-          // Break-even, so the line has something to be above or below.
-          ...(deposited > 0 ? { band: { from: 0, to: 0 } } : {}),
+          label: "Portfolio · priced back over two days",
+          unit: "$",
+          points: dollars,
+          // What you sent, in today's dollars: the line to be above.
+          ...(deposited > 0 && market.usd
+            ? { band: { from: deposited * market.usd, to: deposited * market.usd } }
+            : {}),
         }
       : null;
 
@@ -151,6 +191,31 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
               </>
             )}
           </p>
+        </div>
+
+        {/* The four numbers people actually ask for. */}
+        <div className="grid grid-cols-2 md:grid-cols-4 border-t border-white/10 divide-x divide-y md:divide-y-0 divide-white/10">
+          {[
+            ["Value", settled && nowUsd !== null ? usd(nowUsd) : "—"],
+            [
+              "24 hours",
+              dayMove === null ? "—" : move(dayMove),
+              dayMove === null ? "" : dayMove >= 0 ? "text-[#AFDDFF]" : "text-[#ff9d9d]",
+            ],
+            ["Hired", hired.length === 0 ? "none" : `${hired.length}`],
+            // Weighted by what each agent is actually holding, so an agent with
+            // nothing in it cannot lift the number.
+            ["Earning at", settled ? (earning > 0 ? move(earning).replace("+", "") : "idle") : "—"],
+          ].map(([label, value, tone]) => (
+            <div key={label} className="px-[14px] py-[11px]">
+              <span className={legend}>{label}</span>
+              <p
+                className={`font-graphik text-[17px] leading-[22px] mt-[4px] ${tone || "text-white"}`}
+              >
+                {value}
+              </p>
+            </div>
+          ))}
         </div>
 
         {/* One bar, the same order as the rows under it. */}
@@ -240,8 +305,9 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
       </div>
 
       <p className="font-manrope text-white/40 text-[11px] leading-[15px]">
-        Positions are read from the chain and priced in BNB. The line is today's holding priced back
-        over two days, which is what the market did to it rather than a record of what you did.
+        Positions are read from the chain. The line is what today's holding was worth hour by hour
+        over the last two days — what the market did to it, not a record of what you did — and the
+        dashed line, when there is one, is what you sent.
       </p>
     </div>
   );

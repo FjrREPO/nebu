@@ -1,4 +1,10 @@
-import type { AgentHoldings, AgentOutlook, AutoParams, SessionScope } from "@nebu/core";
+import type {
+  AgentHoldings,
+  AgentOutlook,
+  AutoParams,
+  SeriesPoint,
+  SessionScope,
+} from "@nebu/core";
 
 /**
  * The panel talks to the agents over the same HTTP API everyone else uses.
@@ -63,3 +69,7 @@ export async function buildPlan(
   );
   return result.ok ? { ok: true, data: result.data.action } : result;
 }
+
+/** BNB in dollars, now and over the last two days. */
+export const bnbMarket = () =>
+  call<{ usd: number | null; history: SeriesPoint[] }>("/api/market/bnb");

@@ -14,39 +14,39 @@ import type { AgentHoldings, Holding, SeriesPoint } from "./types.ts";
 const isWbnb = (token: string) => token.toLowerCase() === WBNB.toLowerCase();
 
 /** Two days of hourly prices applied to one set of amounts. */
-async function history(items: Holding[]): Promise<SeriesPoint[]> {
+async function history(items: Holding[]): Promise<{ bnb: SeriesPoint[]; usd: SeriesPoint[] }> {
   const held = items.filter((item) => item.amount > 0);
-  if (held.length === 0) return [];
+  if (held.length === 0) return { bnb: [], usd: [] };
 
   const [bnb, ...prices] = await Promise.all([
     tokenSeries(WBNB, 48),
     ...held.map((item) => (isWbnb(item.token) ? Promise.resolve([]) : tokenSeries(item.token, 48))),
   ]);
-  if (bnb.length < 2) return [];
+  if (bnb.length < 2) return { bnb: [], usd: [] };
 
   const priced = held.map((item, index) => ({
     item,
     at: new Map(prices[index].map((point) => [point.t, point.v])),
   }));
 
-  const out: SeriesPoint[] = [];
+  const inBnb: SeriesPoint[] = [];
+  const inUsd: SeriesPoint[] = [];
   for (const point of bnb) {
-    let total = 0;
+    let dollars = 0;
     // An hour missing one token's price is an hour we cannot value, and a
     // portfolio drawn with a piece missing is worse than one hour short.
     const complete = priced.every(({ item, at }) => {
-      if (isWbnb(item.token)) {
-        total += item.amount;
-        return true;
-      }
-      const usd = at.get(point.t);
+      // BNB's own dollar price is the series we are walking.
+      const usd = isWbnb(item.token) ? point.v : at.get(point.t);
       if (usd === undefined) return false;
-      total += (item.amount * usd) / point.v;
+      dollars += item.amount * usd;
       return true;
     });
-    if (complete) out.push({ t: point.t, v: total });
+    if (!complete) continue;
+    inUsd.push({ t: point.t, v: dollars });
+    inBnb.push({ t: point.t, v: dollars / point.v });
   }
-  return out;
+  return { bnb: inBnb, usd: inUsd };
 }
 
 /** Price a set of amounts, now and over the last two days. */
@@ -59,7 +59,8 @@ export async function holdingsOf(
       bnb: await bnbValue(item.token as `0x${string}`, item.amount),
     })),
   );
-  return { items: priced, history: await history(priced) };
+  const both = await history(priced);
+  return { items: priced, history: both.bnb, usd: both.usd };
 }
 
 /** What a set of holdings comes to, or null when a piece of it has no price. */

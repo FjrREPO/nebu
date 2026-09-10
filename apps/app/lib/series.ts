@@ -4,6 +4,13 @@ import type { AgentSeries } from "@nebu/core";
 export function fmt(value: number, unit?: string) {
   if (unit?.trim() === "bps") return `${Math.round(value)}${unit}`;
   if (unit === "%") return `${value.toFixed(1)}%`;
+  // Money is written in front of the number, not behind it.
+  if (unit === "$") {
+    return `${value < 0 ? "-" : ""}$${Math.abs(value).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  }
   const magnitude = Math.abs(value);
   return `${value.toFixed(magnitude >= 1 ? 2 : 6)}${unit ?? ""}`;
 }

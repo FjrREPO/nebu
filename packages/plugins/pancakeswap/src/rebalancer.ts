@@ -558,7 +558,7 @@ export const pancakeRebalancer: AgentPlugin = {
 
   /** The two sides of the position, in whole tokens. */
   async holdings(params): Promise<AgentHoldings> {
-    if (!params.tokenId) return { items: [], history: [] };
+    if (!params.tokenId) return { items: [], history: [], usd: [] };
     const position = await loadPosition(tokenId(params));
     const { amount0, amount1 } = positionAmounts({
       liquidity: position.liquidity,
