@@ -49,6 +49,28 @@ async function history(items: Holding[]): Promise<{ bnb: SeriesPoint[]; usd: Ser
   return { bnb: inBnb, usd: inUsd };
 }
 
+/**
+ * How long the history is worth waiting for.
+ *
+ * Pricing two unknown tokens hour by hour is four requests through a feed that
+ * allows one every two seconds, so a position in an obscure pair can take
+ * twenty. The amounts and what they are worth now cost a fraction of that, and
+ * they are the part somebody is actually looking at — the line can arrive on
+ * the next load, from the cache those requests are still filling.
+ */
+const HISTORY_PATIENCE = 6_000;
+
+/**
+ * Whatever this returns in time, or the fallback.
+ *
+ * Used wherever a nicer number is worth some waiting and not much: the feed
+ * allows one request every two seconds, so anything needing four of them can
+ * hold a page hostage. The rougher answer now beats the better one in twenty
+ * seconds, and the better one lands in the cache for the next load anyway.
+ */
+export const soon = <T>(work: Promise<T>, fallback: T, ms = HISTORY_PATIENCE) =>
+  Promise.race([work, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+
 /** Price a set of amounts, now and over the last two days. */
 export async function holdingsOf(
   items: { token: string; symbol: string; amount: number }[],
@@ -59,7 +81,7 @@ export async function holdingsOf(
       bnb: await bnbValue(item.token as `0x${string}`, item.amount),
     })),
   );
-  const both = await history(priced);
+  const both = await soon(history(priced), { bnb: [], usd: [] });
   return { items: priced, history: both.bnb, usd: both.usd };
 }
 

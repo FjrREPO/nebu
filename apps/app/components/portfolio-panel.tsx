@@ -117,7 +117,11 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
   const held = positions?.filter((position) => position.bnb > 0) ?? [];
   const atWork = held.reduce((sum, position) => sum + position.bnb, 0);
   const total = free + atWork;
-  const settled = positions?.every((position) => !position.pending) ?? false;
+  // Positions only ever add to the total, so there is no reason to hide it
+  // until the last agent answers. One slow lending read was blanking the
+  // value, the rate and the portfolio line all at once.
+  const reading = positions?.some((position) => position.pending) ?? true;
+  const settled = !reading;
   const change = deposited > 0 ? total - deposited : null;
 
   /**
@@ -177,10 +181,10 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
         <div className="p-[20px]">
           <span className={legend}>Portfolio</span>
           <p className="font-graphik text-white text-[34px] leading-[1.05] mt-[8px]">
-            {settled ? bnb(total) : "—"}
+            {bnb(total)}
           </p>
           <p className="font-manrope text-white/50 text-[12px] leading-[16px] mt-[6px]">
-            {bnb(free)} free · {settled ? bnb(atWork) : "…"} at work
+            {bnb(free)} free · {bnb(atWork)} at work{reading && " · still reading"}
             {change !== null && settled && (
               <>
                 {" · "}
@@ -197,7 +201,7 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
         {/* The four numbers people actually ask for. */}
         <div className="grid grid-cols-2 md:grid-cols-4 border-t border-white/10 divide-x divide-y md:divide-y-0 divide-white/10">
           {[
-            ["Value", settled && nowUsd !== null ? usd(nowUsd) : "—"],
+            ["Value", nowUsd === null ? "—" : usd(nowUsd)],
             [
               "24 hours",
               dayMove === null ? "—" : move(dayMove),
@@ -206,7 +210,7 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
             ["Hired", hired.length === 0 ? "none" : `${hired.length}`],
             // Weighted by what each agent is actually holding, so an agent with
             // nothing in it cannot lift the number.
-            ["Earning at", settled ? (earning > 0 ? move(earning).replace("+", "") : "idle") : "—"],
+            ["Earning at", earning > 0 ? move(earning).replace("+", "") : reading ? "…" : "idle"],
           ].map(([label, value, tone]) => (
             <div key={label} className="px-[14px] py-[11px]">
               <span className={legend}>{label}</span>
@@ -221,7 +225,7 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
 
         {/* One bar, the same order as the rows under it. */}
         <div className="flex h-[10px] w-full border-t border-white/10 overflow-hidden">
-          {settled && total > 0 ? (
+          {total > 0 ? (
             <>
               {held.map((position) => (
                 <div
@@ -238,7 +242,7 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
             </>
           ) : (
             // Still reading is a pulse; nothing to show is just a line.
-            <div className={`w-full bg-white/[0.04] ${settled ? "" : "animate-pulse"}`} />
+            <div className={`w-full bg-white/[0.04] ${reading ? "animate-pulse" : ""}`} />
           )}
         </div>
       </div>
@@ -250,7 +254,7 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
       )}
 
       <div className="border border-white/15 divide-y divide-white/10">
-        {settled && held.length === 0 && (
+        {!reading && held.length === 0 && (
           <p className="px-[16px] py-[13px] font-manrope text-white/45 text-[12px] leading-[16px]">
             Nothing at work yet. Hire an agent and what it holds turns up here.
           </p>
@@ -300,7 +304,7 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
           </span>
           <span className="ml-auto font-manrope text-white text-[13px]">{bnb(free)}</span>
           <span className="w-[40px] text-right font-manrope text-white/50 text-[11px]">
-            {settled ? share(free, total) : ""}
+            {total > 0 ? share(free, total) : ""}
           </span>
         </div>
       </div>

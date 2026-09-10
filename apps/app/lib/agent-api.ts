@@ -21,18 +21,27 @@ export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
 /** bigint does not survive JSON; the wallet parses the value back. */
 export type WireTx = { to: `0x${string}`; data: `0x${string}`; value: string };
 
+/**
+ * Long enough for a cold lending market, short enough to be an answer.
+ *
+ * Without a deadline a request that never comes back leaves whatever was
+ * waiting on it waiting for ever — a row reading "…" with no way out.
+ */
+const PATIENCE = 45_000;
+
 async function call<T>(path: string, cache: RequestCache = "default"): Promise<ApiResult<T>> {
   try {
     // The route says how long each answer keeps; only a plan refuses to be
     // cached, and it asks for that itself.
-    const response = await fetch(path, { cache });
+    const response = await fetch(path, { cache, signal: AbortSignal.timeout(PATIENCE) });
     const body = await response.json().catch(() => null);
     if (!response.ok) {
       return { ok: false, error: body?.error ?? `the agent service answered ${response.status}` };
     }
     return { ok: true, data: body as T };
   } catch (err) {
-    return { ok: false, error: (err as Error).message.split("\n")[0] };
+    const message = (err as Error).message.split("\n")[0];
+    return { ok: false, error: message.includes("aborted") ? "the agent took too long" : message };
   }
 }
 

@@ -23,6 +23,7 @@ import {
   requireInt,
   type SessionScope,
   SMART_ROUTER,
+  soon,
   spendableBnb,
   tokenLogos,
   totalBnb,
@@ -542,9 +543,11 @@ export const pancakeRebalancer: AgentPlugin = {
       ) ?? (await poolByAddress(pool));
     if (!row) return null;
 
-    // Candles when the feed offers them, the day's move when it does not.
+    // Candles when the feed offers them quickly, the day's move when it does
+    // not. Waiting twenty seconds for a better second decimal is not a trade
+    // worth making on a page somebody is looking at.
     const risk =
-      dailyVolatility(await poolSeries(pool, 48)) ??
+      dailyVolatility(await soon(poolSeries(pool, 48), [])) ??
       (row.change24h === null ? null : volatilityFromDailyMove(row.change24h));
     return {
       apr: row.feeApr,

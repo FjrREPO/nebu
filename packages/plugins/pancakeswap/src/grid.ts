@@ -20,6 +20,7 @@ import {
   requireInt,
   requireNumber,
   type SessionScope,
+  soon,
   spendableBnb,
   tokenLogos,
   totalBnb,
@@ -355,7 +356,7 @@ export const pancakeGrid: AgentPlugin = {
     const pool = requireAddress(params, "pool");
     const [fee, candles, row] = await Promise.all([
       bscClient.readContract({ address: pool, abi: poolAbi, functionName: "fee" }),
-      poolSeries(pool, 48),
+      soon(poolSeries(pool, 48), []),
       poolByAddress(pool),
     ]);
     // The OHLCV endpoint is the throttled one. Without it the pool still
