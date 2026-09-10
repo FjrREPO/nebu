@@ -157,8 +157,9 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
     0,
   );
 
+  // An empty wallet drawn hour by hour is a flat line at nothing.
   const series: AgentSeries | null =
-    dollars.length > 1
+    dollars.length > 1 && total > 0
       ? {
           label: "Portfolio · priced back over two days",
           unit: "$",
