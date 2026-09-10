@@ -281,7 +281,10 @@ export const pancakeGrid: AgentPlugin = {
       abi: poolAbi,
       functionName: "token0",
     });
-    const history = await poolSeries(best.address, 48, token0);
+    // Six seconds for a measured range, then the default band. The feed is a
+    // throttled free tier and this is the first thing a visitor waits on: it
+    // was taking seventeen seconds to decide how wide a ladder should be.
+    const history = await soon(poolSeries(best.address, 48, token0), [], 10_000);
     const prices = history.map((point) => point.v).filter((value) => value > 0);
 
     // The chart feed is a throttled free tier. Losing it should cost the agent

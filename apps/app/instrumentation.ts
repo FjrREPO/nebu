@@ -18,15 +18,25 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
 
-  const [{ bnbUsd }, { livePools }] = await Promise.all([
+  const [{ bnbUsd }, { livePools }, { plugins }] = await Promise.all([
     import("@nebu/core"),
     import("@nebu/plugin-pancakeswap"),
+    import("@nebu/plugins"),
   ]);
 
+  // A wallet holding nothing, which is all these need: an agent choosing what
+  // it would do reads the screen and the prices, not the account. Those are
+  // the slow parts, and they are the same for everybody.
+  const NOBODY = "0x0000000000000000000000000000000000000000" as const;
+
   const warm = async () => {
-    const done = await Promise.allSettled([livePools(), bnbUsd()]);
+    const done = await Promise.allSettled([
+      livePools(),
+      bnbUsd(),
+      ...plugins.map((plugin) => plugin.autoParams(NOBODY)),
+    ]);
     const failed = done.filter((result) => result.status === "rejected").length;
-    if (failed) console.warn(`warm: ${failed} of ${done.length} feeds declined`);
+    if (failed) console.warn(`warm: ${failed} of ${done.length} reads declined`);
   };
 
   // Not awaited: the server should start serving now, not after the feed says
