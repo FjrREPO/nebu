@@ -69,7 +69,12 @@ const HISTORY_PATIENCE = 6_000;
  * seconds, and the better one lands in the cache for the next load anyway.
  */
 export const soon = <T>(work: Promise<T>, fallback: T, ms = HISTORY_PATIENCE) =>
-  Promise.race([work, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))]);
+  Promise.race([
+    // Whatever loses the race keeps running, and a rejection nobody is waiting
+    // for any more is an unhandled one.
+    work.catch(() => fallback),
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
 
 /** Price a set of amounts, now and over the last two days. */
 export async function holdingsOf(

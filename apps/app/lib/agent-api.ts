@@ -40,8 +40,16 @@ async function call<T>(path: string, cache: RequestCache = "default"): Promise<A
     }
     return { ok: true, data: body as T };
   } catch (err) {
-    const message = (err as Error).message.split("\n")[0];
-    return { ok: false, error: message.includes("aborted") ? "the agent took too long" : message };
+    // Chrome says "signal timed out", Node says "aborted due to timeout"; the
+    // name is the same in both, so match on that rather than on the prose.
+    const failure = err as Error;
+    return {
+      ok: false,
+      error:
+        failure.name === "TimeoutError"
+          ? "the agent took too long"
+          : failure.message.split("\n")[0],
+    };
   }
 }
 

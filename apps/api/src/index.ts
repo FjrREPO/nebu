@@ -92,7 +92,7 @@ app.get("/agents/:id/holdings", async (c) => {
 
   try {
     return c.json(
-      plugin.holdings ? await plugin.holdings(c.req.query()) : { items: [], history: [] },
+      plugin.holdings ? await plugin.holdings(c.req.query()) : { items: [], history: [], usd: [] },
     );
   } catch (err) {
     return fail(c, err);

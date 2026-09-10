@@ -71,7 +71,9 @@ export async function GET(
     // price what it holds.
     if (action === "deployed") return json(plugin.deployed ? await plugin.deployed(query) : null);
     if (action === "holdings") {
-      return json(plugin.holdings ? await plugin.holdings(query) : { items: [], history: [] });
+      return json(
+        plugin.holdings ? await plugin.holdings(query) : { items: [], history: [], usd: [] },
+      );
     }
     if (action === "status") return json(await plugin.status(query));
     if (action === "insights") return json(await plugin.insights(query));

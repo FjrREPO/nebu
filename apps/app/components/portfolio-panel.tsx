@@ -150,10 +150,13 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
     .filter((point): point is { t: number; v: number } => point !== null);
 
   const nowUsd = market.usd === null ? null : total * market.usd;
+  // Every position priced, or the line is about part of the wallet and the
+  // day's move would be read off that part as though it were the whole.
+  const whole = parts.length === held.length;
   // A day ago, as close as the feed gets to one.
   const dayAgo = dollars.find((point) => point.t >= (dollars.at(-1)?.t ?? 0) - 86_400);
   const dayMove =
-    dayAgo && dollars.length > 1 && dayAgo.v > 0
+    whole && dayAgo && dollars.length > 1 && dayAgo.v > 0
       ? ((dollars.at(-1) as { v: number }).v - dayAgo.v) / dayAgo.v
       : null;
   const earning = held.reduce(
@@ -165,7 +168,9 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
   const series: AgentSeries | null =
     dollars.length > 1 && total > 0
       ? {
-          label: "Portfolio · priced back over two days",
+          label: whole
+            ? "Portfolio · priced back over two days"
+            : "Free BNB and the positions that could be priced",
           unit: "$",
           points: dollars,
           // What you sent, in today's dollars: the line to be above.
@@ -312,7 +317,7 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
       <p className="font-manrope text-white/40 text-[11px] leading-[15px]">
         Positions are read from the chain. The line is what today's holding was worth hour by hour
         over the last two days — what the market did to it, not a record of what you did — and the
-        dashed line, when there is one, is what you sent.
+        dashed line, when there is one, is what you sent, at today's price.
       </p>
     </div>
   );
