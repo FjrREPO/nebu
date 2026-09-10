@@ -294,7 +294,9 @@ export function PortfolioPanel({ agents }: { agents: AgentMeta[] }) {
                   {position.items
                     .map(
                       (item) =>
-                        `${item.amount.toLocaleString("en-US", { maximumSignificantDigits: 6 })} ${item.symbol}`,
+                        // A token the feed will not price is missing from the
+                        // value beside it, so the value should not pretend.
+                        `${item.amount.toLocaleString("en-US", { maximumSignificantDigits: 6 })} ${item.symbol}${item.bnb === null ? " (unpriced)" : ""}`,
                     )
                     .join(" + ")}
                 </span>
